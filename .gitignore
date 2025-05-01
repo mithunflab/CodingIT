@@ -1,0 +1,22 @@
+out
+dist
+node_modules
+tmp
+.vscode-test/
+*.vsix
+venv
+
+.DS_Store
+
+pnpm-lock.yaml
+
+.codinitignore
+.venv
+.actrc
+
+# Ignore coverage directories and files
+coverage
+# But don't ignore the coverage scripts in .github/scripts/
+!.github/scripts/coverage/
+
+*evals.env
