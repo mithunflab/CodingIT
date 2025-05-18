@@ -33,7 +33,7 @@ Welcome to the CodinIT documentation - your comprehensive guide to using and ext
 
 ## Additional Resources
 
--   **CodinIT GitHub Repository:** [https://github.com/Cody/CodinIT](https://github.com/Cody/CodinIT)
+-   **CodinIT GitHub Repository:** [https://github.com/Gerome-Elassaad/CodinIT](https://github.com/Cody/CodinIT)
 -   **MCP Documentation:** [https://modelcontextprotocol.org/docs](https://modelcontextprotocol.org/docs)
 
 We're always looking to improve this documentation. If you have suggestions or find areas that could be enhanced, please let us know. Your feedback helps make CodinIT better for everyone.

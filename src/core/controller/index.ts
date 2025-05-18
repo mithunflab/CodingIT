@@ -16,7 +16,7 @@ import { handleFileServiceRequest } from "./file"
 import { selectImages } from "@integrations/misc/process-images"
 import { getTheme } from "@integrations/theme/getTheme"
 import WorkspaceTracker from "@integrations/workspace/WorkspaceTracker"
-import { CodinITAccountService } from "@services/account/CodinITAccountService"
+import { CodinITAccountService } from "@/services/account/codinitAccount"
 import { BrowserSession } from "@services/browser/BrowserSession"
 import { McpHub } from "@services/mcp/McpHub"
 import { searchWorkspaceFiles } from "@services/search/file-search"
@@ -47,8 +47,12 @@ import {
 	updateWorkspaceState,
 } from "../storage/state"
 import { Task, cwd } from "../task"
-import { CodinITRulesToggles } from "@shared/CodinIT-rules"
-import { createRuleFile, deleteRuleFile, refreshCodinITRulesToggles } from "../context/instructions/user-instructions/CodinIT-rules"
+import { CodinITRulesToggles } from "@shared/cline-rules"
+import {
+	createRuleFile,
+	deleteRuleFile,
+	refreshCodinITRulesToggles,
+} from "../context/instructions/user-instructions/codinit-rules"
 
 /*
 https://github.com/microsoft/vscode-webview-ui-toolkit-samples/blob/main/default/weather-webview/src/providers/WeatherViewProvider.ts
@@ -755,7 +759,7 @@ export class Controller {
 
 					// Toggle favorite status
 					const updatedFavorites = favoritedModelIds.includes(message.modelId)
-						? favoritedModelIds.filter((id) => id !== message.modelId)
+						? favoritedModelIds.filter((id: string) => id !== message.modelId)
 						: [...favoritedModelIds, message.modelId]
 
 					await updateGlobalState(this.context, "favoritedModelIds", updatedFavorites)
@@ -833,7 +837,7 @@ export class Controller {
 					await updateGlobalState(this.context, "previousModeModelId", apiConfiguration.apiModelId)
 					break
 				case "openrouter":
-				case "CodinIT":
+				case "codinit":
 					await updateGlobalState(this.context, "previousModeModelId", apiConfiguration.openRouterModelId)
 					await updateGlobalState(this.context, "previousModeModelInfo", apiConfiguration.openRouterModelInfo)
 					break
@@ -888,7 +892,7 @@ export class Controller {
 						await updateGlobalState(this.context, "apiModelId", newModelId)
 						break
 					case "openrouter":
-					case "CodinIT":
+					case "codinit":
 						await updateGlobalState(this.context, "openRouterModelId", newModelId)
 						await updateGlobalState(this.context, "openRouterModelInfo", newModelInfo)
 						break
@@ -1064,7 +1068,7 @@ export class Controller {
 				customToken,
 			})
 
-			const CodinITProvider: ApiProvider = "CodinIT"
+			const CodinITProvider: ApiProvider = "CodinIT" as ApiProvider
 			await updateGlobalState(this.context, "apiProvider", CodinITProvider)
 
 			// Update API configuration with the new provider and API key
@@ -1767,7 +1771,7 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 			userInfo,
 			mcpMarketplaceEnabled,
 			telemetrySetting,
-			planActSeparateModelsSetting,
+			planActSeparateModelsSetting = false,
 			globalCodinITRulesToggles,
 		} = await getAllExtensionState(this.context)
 
@@ -1779,12 +1783,14 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 			apiConfiguration,
 			customInstructions,
 			uriScheme: vscode.env.uriScheme,
-			currentTaskItem: this.task?.taskId ? (taskHistory || []).find((item) => item.id === this.task?.taskId) : undefined,
+			currentTaskItem: this.task?.taskId
+				? (taskHistory || []).find((item: HistoryItem) => item.id === this.task?.taskId)
+				: undefined,
 			checkpointTrackerErrorMessage: this.task?.checkpointTrackerErrorMessage,
 			CodinITMessages: this.task?.CodinITMessages || [],
 			taskHistory: (taskHistory || [])
-				.filter((item) => item.ts && item.task)
-				.sort((a, b) => b.ts - a.ts)
+				.filter((item: HistoryItem) => item.ts && item.task)
+				.sort((a: HistoryItem, b: HistoryItem) => b.ts - a.ts)
 				.slice(0, 100), // for now we're only getting the latest 100 tasks, but a better solution here is to only pass in 3 for recent task history, and then get the full task history on demand when going to the task history view (maybe with pagination?)
 			shouldShowAnnouncement: lastShownAnnouncementId !== this.latestAnnouncementId,
 			platform: process.platform as Platform,
@@ -1794,10 +1800,10 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 			userInfo,
 			mcpMarketplaceEnabled,
 			telemetrySetting,
-			planActSeparateModelsSetting,
 			vscMachineId: vscode.env.machineId,
 			globalCodinITRulesToggles: globalCodinITRulesToggles || {},
 			localCodinITRulesToggles: localCodinITRulesToggles || {},
+			planActSeparateModelsSetting,
 		}
 	}
 

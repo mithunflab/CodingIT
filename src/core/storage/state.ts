@@ -10,7 +10,7 @@ import { BrowserSettings } from "@shared/BrowserSettings"
 import { ChatSettings } from "@shared/ChatSettings"
 import { TelemetrySetting } from "@shared/TelemetrySetting"
 import { UserInfo } from "@shared/UserInfo"
-import { CodinITRulesToggles } from "@shared/CodinIT-rules"
+import { CodinITRulesToggles } from "@shared/cline-rules"
 /*
 	Storage
 	https://dev.to/kompotkot/how-to-use-secretstorage-in-your-vscode-extensions-2hco
@@ -218,7 +218,9 @@ export async function getAllExtensionState(context: vscode.ExtensionContext) {
 
 	const localCodinITRulesToggles = (await getWorkspaceState(context, "localCodinITRulesToggles")) as CodinITRulesToggles
 
-	const o3MiniReasoningEffort = vscode.workspace.getConfiguration("CodinIT.modelSettings.o3Mini").get("reasoningEffort", "medium")
+	const o3MiniReasoningEffort = vscode.workspace
+		.getConfiguration("CodinIT.modelSettings.o3Mini")
+		.get("reasoningEffort", "medium")
 
 	const mcpMarketplaceEnabled = vscode.workspace.getConfiguration("CodinIT").get<boolean>("mcpMarketplace.enabled", true)
 

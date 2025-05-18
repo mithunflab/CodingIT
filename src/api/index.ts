@@ -17,7 +17,7 @@ import { QwenHandler } from "./providers/qwen"
 import { MistralHandler } from "./providers/mistral"
 import { DoubaoHandler } from "./providers/doubao"
 import { VsCodeLmHandler } from "./providers/vscode-lm"
-import { CodinITHandler } from "./providers/CodinIT"
+import { ClineHandler } from "./providers/codinit"
 import { LiteLlmHandler } from "./providers/litellm"
 import { AskSageHandler } from "./providers/asksage"
 import { XAIHandler } from "./providers/xai"
@@ -68,8 +68,8 @@ export function buildApiHandler(configuration: ApiConfiguration): ApiHandler {
 			return new MistralHandler(options)
 		case "vscode-lm":
 			return new VsCodeLmHandler(options)
-		case "CodinIT":
-			return new CodinITHandler(options)
+		case "codinit":
+			return new ClineHandler(options)
 		case "litellm":
 			return new LiteLlmHandler(options)
 		case "asksage":

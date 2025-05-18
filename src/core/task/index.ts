@@ -12,7 +12,7 @@ import * as vscode from "vscode"
 import { Logger } from "@services/logging/Logger"
 import { ApiHandler, buildApiHandler } from "@api/index"
 import { AnthropicHandler } from "@api/providers/anthropic"
-import { CodinITHandler } from "@api/providers/CodinIT"
+import { ClineHandler } from "@api/providers/codinit"
 import { OpenRouterHandler } from "@api/providers/openrouter"
 import { ApiStream } from "@api/transform/stream"
 import CheckpointTracker from "@integrations/checkpoints/CheckpointTracker"
@@ -61,7 +61,7 @@ import { arePathsEqual, getReadablePath, isLocatedInWorkspace } from "@utils/pat
 import { fixModelHtmlEscaping, removeInvalidChars } from "@utils/string"
 import { AssistantMessageContent, parseAssistantMessage, ToolParamName, ToolUseName } from "@core/assistant-message"
 import { constructNewFileContent } from "@core/assistant-message/diff"
-import { CodinITIgnoreController } from "@core/ignore/CodinITIgnoreController"
+import { CodinITIgnoreController } from "@/core/ignore/CodinITIgnoreController"
 import { parseMentions } from "@core/mentions"
 import { formatResponse } from "@core/prompts/responses"
 import { addUserInstructions, SYSTEM_PROMPT } from "@core/prompts/system"
@@ -87,7 +87,7 @@ import {
 	getLocalCodinITRules,
 	refreshCodinITRulesToggles,
 	ensureLocalCodinITrulesDirExists,
-} from "@core/context/instructions/user-instructions/CodinIT-rules"
+} from "@/core/context/instructions/user-instructions/codinit-rules"
 import { getGlobalState } from "@core/storage/state"
 import { parseSlashCommands } from "@core/slash-commands"
 import WorkspaceTracker from "@integrations/workspace/WorkspaceTracker"
@@ -187,7 +187,7 @@ export class Task {
 		this.reinitExistingTaskFromId = reinitExistingTaskFromId
 		this.cancelTask = cancelTask
 		this.CodinITIgnoreController = new CodinITIgnoreController(cwd)
-		this.CodinITIgnoreController.initialize().catch((error) => {
+		this.CodinITIgnoreController.initialize().catch((error: any) => {
 			console.error("Failed to initialize CodinITIgnoreController:", error)
 		})
 		this.terminalManager = new TerminalManager()
@@ -315,7 +315,10 @@ export class Task {
 	async restoreCheckpoint(messageTs: number, restoreType: CodinITCheckpointRestore, offset?: number) {
 		const messageIndex = this.CodinITMessages.findIndex((m) => m.ts === messageTs) - (offset || 0)
 		// Find the last message before messageIndex that has a lastCheckpointHash
-		const lastHashIndex = findLastIndex(this.CodinITMessages.slice(0, messageIndex), (m) => m.lastCheckpointHash !== undefined)
+		const lastHashIndex = findLastIndex(
+			this.CodinITMessages.slice(0, messageIndex),
+			(m) => m.lastCheckpointHash !== undefined,
+		)
 		const message = this.CodinITMessages[messageIndex]
 		const lastMessageWithHash = this.CodinITMessages[lastHashIndex]
 
@@ -580,7 +583,10 @@ export class Task {
 		}
 
 		// Get last task completed
-		const lastTaskCompletedMessage = findLast(this.CodinITMessages.slice(0, messageIndex), (m) => m.say === "completion_result")
+		const lastTaskCompletedMessage = findLast(
+			this.CodinITMessages.slice(0, messageIndex),
+			(m) => m.say === "completion_result",
+		)
 
 		try {
 			// Get last task completed
@@ -908,8 +914,7 @@ export class Task {
 		// load the context history state
 		await this.contextManager.initializeContextHistory(await ensureTaskDirectoryExists(this.getContext(), this.taskId))
 
-		const lastCodinITMessage = this.CodinITMessages
-			.slice()
+		const lastCodinITMessage = this.CodinITMessages.slice()
 			.reverse()
 			.find((m) => !(m.ask === "resume_task" || m.ask === "resume_completed_task")) // could be multiple resume tasks
 
@@ -1495,7 +1500,7 @@ export class Task {
 			yield firstChunk.value
 			this.isWaitingForFirstChunk = false
 		} catch (error) {
-			const isOpenRouter = this.api instanceof OpenRouterHandler || this.api instanceof CodinITHandler
+			const isOpenRouter = this.api instanceof OpenRouterHandler || this.api instanceof ClineHandler
 			const isAnthropic = this.api instanceof AnthropicHandler
 			const isOpenRouterContextWindowError = checkIsOpenRouterContextWindowError(error) && isOpenRouter
 			const isAnthropicContextWindowError = checkIsAnthropicContextWindowError(error) && isAnthropic
@@ -3221,7 +3226,10 @@ export class Task {
 							// Add newchanges flag if there are new changes to the workspace
 
 							const hasNewChanges = await this.doesLatestTaskCompletionHaveNewChanges()
-							const lastCompletionResultMessage = findLast(this.CodinITMessages, (m) => m.say === "completion_result")
+							const lastCompletionResultMessage = findLast(
+								this.CodinITMessages,
+								(m) => m.say === "completion_result",
+							)
 							if (
 								lastCompletionResultMessage &&
 								hasNewChanges &&
@@ -3858,9 +3866,8 @@ export class Task {
 			.map((absolutePath) => path.relative(cwd, absolutePath))
 
 		// Filter paths through CodinITIgnoreController
-		const allowedVisibleFiles = this.CodinITIgnoreController
-			.filterPaths(visibleFilePaths)
-			.map((p) => p.toPosix())
+		const allowedVisibleFiles = this.CodinITIgnoreController.filterPaths(visibleFilePaths)
+			.map((p: any) => p.toPosix())
 			.join("\n")
 
 		if (allowedVisibleFiles) {
@@ -3877,9 +3884,8 @@ export class Task {
 			.map((absolutePath) => path.relative(cwd, absolutePath))
 
 		// Filter paths through CodinITIgnoreController
-		const allowedOpenTabs = this.CodinITIgnoreController
-			.filterPaths(openTabPaths)
-			.map((p) => p.toPosix())
+		const allowedOpenTabs = this.CodinITIgnoreController.filterPaths(openTabPaths)
+			.map((p: any) => p.toPosix())
 			.join("\n")
 
 		if (allowedOpenTabs) {

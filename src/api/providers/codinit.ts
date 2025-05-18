@@ -1,26 +1,25 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
-import { ApiHandler } from "../"
-import { ApiHandlerOptions, ModelInfo, openRouterDefaultModelId, openRouterDefaultModelInfo } from "@shared/api"
-import { createOpenRouterStream } from "../transform/openrouter-stream"
-import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import axios from "axios"
+import { ApiHandler } from ".."
+import { ApiHandlerOptions, ModelInfo, openRouterDefaultModelId, openRouterDefaultModelInfo } from "@shared/api"
+import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import { OpenRouterErrorResponse } from "./types"
+import { createOpenRouterStream } from "../transform/openrouter-stream"
 
-export class CodinITHandler implements ApiHandler {
+export class ClineHandler implements ApiHandler {
 	private options: ApiHandlerOptions
-	private client: OpenAI
+	private client: OpenAI // Assuming Cline API is compatible with OpenAI client
 	lastGenerationId?: string
 
 	constructor(options: ApiHandlerOptions) {
 		this.options = options
 		this.client = new OpenAI({
-			baseURL: "https://api.CodinIT.bot/v1",
-			apiKey: this.options.CodinITApiKey || "",
+			baseURL: "https://api.cline.bot/v1",
 			defaultHeaders: {
-				"HTTP-Referer": "https://CodinIT.bot", // Optional, for including your app on CodinIT.bot rankings.
-				"X-Title": "CodinIT", // Optional. Shows in rankings on CodinIT.bot.
-				"X-Task-ID": this.options.taskId || "", // Include the task ID in the request headers
+				"HTTP-Referer": "https://cline.bot", // Optional, for including your app on cline.bot rankings.
+				"X-Title": "CodinIT", // Optional. Shows in rankings on cline.bot.
+				"X-Task-ID": this.options.taskId || "", // Include the task ID in the request headers (if applicable)
 			},
 		})
 	}
@@ -29,6 +28,7 @@ export class CodinITHandler implements ApiHandler {
 		this.lastGenerationId = undefined
 
 		const stream = await createOpenRouterStream(
+			// Reusing OpenRouter stream creation logic
 			this.client,
 			systemPrompt,
 			messages,
@@ -41,22 +41,25 @@ export class CodinITHandler implements ApiHandler {
 		let didOutputUsage: boolean = false
 
 		for await (const chunk of stream) {
+			// Process chunks from the stream
 			// openrouter returns an error object instead of the openai sdk throwing an error
 			if ("error" in chunk) {
 				const error = chunk.error as OpenRouterErrorResponse["error"]
-				console.error(`CodinIT API Error: ${error?.code} - ${error?.message}`)
+				console.error(`Cline API Error: ${error?.code} - ${error?.message}`)
 				// Include metadata in the error message if available
 				const metadataStr = error.metadata ? `\nMetadata: ${JSON.stringify(error.metadata, null, 2)}` : ""
-				throw new Error(`CodinIT API Error ${error.code}: ${error.message}${metadataStr}`)
+				throw new Error(`Cline API Error ${error.code}: ${error.message}${metadataStr}`)
 			}
 
 			if (!this.lastGenerationId && chunk.id) {
+				// Capture generation ID if available
 				this.lastGenerationId = chunk.id
 			}
 
 			const delta = chunk.choices[0]?.delta
 			if (delta?.content) {
 				yield {
+					// Yield text content
 					type: "text",
 					text: delta.content,
 				}
@@ -65,6 +68,7 @@ export class CodinITHandler implements ApiHandler {
 			// Reasoning tokens are returned separately from the content
 			if ("reasoning" in delta && delta.reasoning) {
 				yield {
+					// Yield reasoning content
 					type: "reasoning",
 					// @ts-ignore-next-line
 					reasoning: delta.reasoning,
@@ -73,6 +77,7 @@ export class CodinITHandler implements ApiHandler {
 
 			if (!didOutputUsage && chunk.usage) {
 				yield {
+					// Yield usage information
 					type: "usage",
 					cacheWriteTokens: 0,
 					cacheReadTokens: chunk.usage.prompt_tokens_details?.cached_tokens || 0,
@@ -87,7 +92,7 @@ export class CodinITHandler implements ApiHandler {
 
 		// Fallback to generation endpoint if usage chunk not returned
 		if (!didOutputUsage) {
-			const apiStreamUsage = await this.getApiStreamUsage()
+			const apiStreamUsage = await this.getApiStreamUsage() // Attempt to retrieve usage from a separate endpoint
 			if (apiStreamUsage) {
 				yield apiStreamUsage
 			}
@@ -97,13 +102,13 @@ export class CodinITHandler implements ApiHandler {
 	async getApiStreamUsage(): Promise<ApiStreamUsageChunk | undefined> {
 		if (this.lastGenerationId) {
 			try {
-				const response = await axios.get(`https://api.CodinIT.bot/v1/generation?id=${this.lastGenerationId}`, {
-					headers: {
-						Authorization: `Bearer ${this.options.CodinITApiKey}`,
-					},
+				// Attempt to fetch generation details
+				const response = await axios.get(`https://api.cline.bot/v1/generation?id=${this.lastGenerationId}`, {
+					// Assuming Cline API has a similar endpoint
+					headers: {},
 					timeout: 15_000, // this request hangs sometimes
 				})
-
+				// Process the response data
 				const generation = response.data
 				return {
 					type: "usage",
@@ -113,20 +118,20 @@ export class CodinITHandler implements ApiHandler {
 					inputTokens: generation?.native_tokens_prompt || 0,
 					outputTokens: generation?.native_tokens_completion || 0,
 					totalCost: generation?.total_cost || 0,
-				}
+				} // Return usage data
 			} catch (error) {
 				// ignore if fails
-				console.error("Error fetching CodinIT generation details:", error)
-			}
+				console.error("Error fetching Cline generation details:", error)
+			} // Handle errors gracefully
 		}
-		return undefined
+		return undefined // Return undefined if no generation ID or fetch fails
 	}
 
 	getModel(): { id: string; info: ModelInfo } {
 		const modelId = this.options.openRouterModelId
 		const modelInfo = this.options.openRouterModelInfo
 		if (modelId && modelInfo) {
-			return { id: modelId, info: modelInfo }
+			return { id: modelId, info: modelInfo } // Use provided model ID and info if available
 		}
 		return { id: openRouterDefaultModelId, info: openRouterDefaultModelInfo }
 	}

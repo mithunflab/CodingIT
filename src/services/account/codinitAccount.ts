@@ -1,5 +1,5 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios"
-import type { BalanceResponse, PaymentTransaction, UsageTransaction } from "@shared/CodinITAccount"
+import type { BalanceResponse, PaymentTransaction, UsageTransaction } from "@shared/codinitAccount"
 import { ExtensionMessage } from "@shared/ExtensionMessage"
 
 export class CodinITAccountService {

@@ -17,7 +17,7 @@ export type ApiProvider =
 	| "doubao"
 	| "mistral"
 	| "vscode-lm"
-	| "CodinIT"
+	| "codinit"
 	| "litellm"
 	| "asksage"
 	| "xai"

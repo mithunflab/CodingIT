@@ -1,7 +1,7 @@
 import { readFile } from "fs/promises"
 import { describe, it, after } from "mocha"
 import path from "path"
-import "should"
+import should from "should"
 import * as vscode from "vscode"
 
 const packagePath = path.join(__dirname, "..", "..", "package.json")
@@ -46,7 +46,7 @@ describe("CodinIT Extension", () => {
 		`
 
 		// Verify panel exists
-		should.exist(panel)
+		panel.should.not.be.undefined()
 		panel.visible.should.be.true()
 
 		// Clean up

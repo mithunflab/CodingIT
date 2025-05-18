@@ -384,24 +384,27 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Register the command handler
 	context.subscriptions.push(
-		vscode.commands.registerCommand("CodinIT.fixWithCodinIT", async (range: vscode.Range, diagnostics: vscode.Diagnostic[]) => {
-			// Add this line to focus the chat input first
-			await vscode.commands.executeCommand("CodinIT.focusChatInput")
-			// Wait for a webview instance to become visible after focusing
-			await pWaitFor(() => !!WebviewProvider.getVisibleInstance())
-			const editor = vscode.window.activeTextEditor
-			if (!editor) {
-				return
-			}
+		vscode.commands.registerCommand(
+			"CodinIT.fixWithCodinIT",
+			async (range: vscode.Range, diagnostics: vscode.Diagnostic[]) => {
+				// Add this line to focus the chat input first
+				await vscode.commands.executeCommand("CodinIT.focusChatInput")
+				// Wait for a webview instance to become visible after focusing
+				await pWaitFor(() => !!WebviewProvider.getVisibleInstance())
+				const editor = vscode.window.activeTextEditor
+				if (!editor) {
+					return
+				}
 
-			const selectedText = editor.document.getText(range)
-			const filePath = editor.document.uri.fsPath
-			const languageId = editor.document.languageId
+				const selectedText = editor.document.getText(range)
+				const filePath = editor.document.uri.fsPath
+				const languageId = editor.document.languageId
 
-			// Send to sidebar provider with diagnostics
-			const visibleWebview = WebviewProvider.getVisibleInstance()
-			await visibleWebview?.controller.fixWithCodinIT(selectedText, filePath, languageId, diagnostics)
-		}),
+				// Send to sidebar provider with diagnostics
+				const visibleWebview = WebviewProvider.getVisibleInstance()
+				await visibleWebview?.controller.fixWithCodinIT(selectedText, filePath, languageId, diagnostics)
+			},
+		),
 	)
 
 	// Register the focusChatInput command handler

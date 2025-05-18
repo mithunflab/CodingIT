@@ -1,5 +1,5 @@
 import { describe, it } from "mocha"
-import "should"
+import should from "should"
 import { findLastIndex, findLast } from "./array"
 
 describe("Array Utilities", () => {
@@ -51,14 +51,14 @@ describe("Array Utilities", () => {
 		it("should find last matching element", () => {
 			const array = [1, 2, 3, 2, 1]
 			const element = findLast(array, (x) => x === 2)
-			should(element).not.be.undefined()
+			element!.should.not.be.undefined()
 			element!.should.equal(2)
 		})
 
 		it("should return undefined when no element matches", () => {
 			const array = [1, 2, 3]
 			const element = findLast(array, (x) => x === 4)
-			should(element).be.undefined()
+			should(element).be.undefined() // `should(undefined)` is a valid way to assert undefined
 		})
 
 		it("should handle empty arrays", () => {
@@ -74,7 +74,7 @@ describe("Array Utilities", () => {
 				{ id: 3, value: "a" },
 			]
 			const element = findLast(array, (x) => x.value === "a")
-			should(element).not.be.undefined()
+			element!.should.not.be.undefined()
 			element!.should.deepEqual({ id: 3, value: "a" })
 		})
 

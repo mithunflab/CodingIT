@@ -1,11 +1,11 @@
 import * as vscode from "vscode"
 import * as childProcess from "child_process"
 import * as path from "path"
+import { toPosixPath } from "@utils/path"
 import * as readline from "readline"
 import { fileExistsAtPath } from "@utils/fs"
-import { CodinITIgnoreController } from "@core/ignore/CodinITIgnoreController"
 
-/*
+/**
 This file provides functionality to perform regex searches on files using ripgrep.
 Inspired by: https://github.com/DiscreteTom/vscode-ripgrep-utils
 
@@ -57,6 +57,10 @@ interface SearchResult {
 	match: string
 	beforeContext: string[]
 	afterContext: string[]
+}
+
+interface CodinITIgnoreController {
+	validateAccess(filePath: string): boolean
 }
 
 const MAX_RESULTS = 300
@@ -120,7 +124,7 @@ export async function regexSearchFiles(
 	directoryPath: string,
 	regex: string,
 	filePattern?: string,
-	CodinITIgnoreController?: CodinITIgnoreController,
+	ignoreController?: CodinITIgnoreController,
 ): Promise<string> {
 	const vscodeAppRoot = vscode.env.appRoot
 	const rgPath = await getBinPath(vscodeAppRoot)
@@ -174,8 +178,8 @@ export async function regexSearchFiles(
 	}
 
 	// Filter results using CodinITIgnoreController if provided
-	const filteredResults = CodinITIgnoreController
-		? results.filter((result) => CodinITIgnoreController.validateAccess(result.filePath))
+	const filteredResults = ignoreController
+		? results.filter((result) => ignoreController.validateAccess(result.filePath))
 		: results
 
 	return formatResults(filteredResults, cwd)
@@ -201,7 +205,7 @@ function formatResults(results: SearchResult[], cwd: string): string {
 	})
 
 	for (const [filePath, fileResults] of Object.entries(groupedResults)) {
-		output += `${filePath.toPosix()}\n│----\n`
+		output += `${toPosixPath(filePath)}\n│----\n`
 
 		fileResults.forEach((result, index) => {
 			const allLines = [...result.beforeContext, result.match, ...result.afterContext]

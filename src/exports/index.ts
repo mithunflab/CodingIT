@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 import { Controller } from "@core/controller"
-import { CodinITAPI } from "./CodinIT"
+import { CodinITAPI } from "./codinit"
 import { getGlobalState } from "@core/storage/state"
 
 export function createCodinITAPI(outputChannel: vscode.OutputChannel, sidebarController: Controller): CodinITAPI {

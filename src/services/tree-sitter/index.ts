@@ -5,10 +5,7 @@ import { LanguageParser, loadRequiredLanguageParsers } from "./languageParser"
 import { fileExistsAtPath } from "@/utils/fs"
 
 // TODO: implement caching behavior to avoid having to keep analyzing project for new tasks.
-export async function parseSourceCodeForDefinitionsTopLevel(
-	dirPath: string,
-	CodinITIgnoreController?: any,
-): Promise<string> {
+export async function parseSourceCodeForDefinitionsTopLevel(dirPath: string, CodinITIgnoreController?: any): Promise<string> {
 	// check if the path exists
 	const dirExists = await fileExistsAtPath(path.resolve(dirPath))
 	if (!dirExists) {
@@ -50,9 +47,9 @@ export async function parseSourceCodeForDefinitionsTopLevel(
 	// 		if (!didFindUnparsedFiles) {
 	// 			result += "# Unparsed Files\n\n"
 	// 			didFindUnparsedFiles = true
-		// 		}
-		// 		result += `${path.relative(dirPath, file)}\n`
-		// 	})
+	// 		}
+	// 		result += `${path.relative(dirPath, file)}\n`
+	// 	})
 
 	return result ? result : "No source code definitions found."
 }

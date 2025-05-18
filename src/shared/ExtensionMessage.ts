@@ -8,8 +8,8 @@ import { ChatSettings } from "./ChatSettings"
 import { HistoryItem } from "./HistoryItem"
 import { McpServer, McpMarketplaceCatalog, McpDownloadResponse, McpViewTab } from "./mcp"
 import { TelemetrySetting } from "./TelemetrySetting"
-import type { BalanceResponse, UsageTransaction, PaymentTransaction } from "../shared/CodinITAccount"
-import { CodinITRulesToggles } from "./CodinIT-rules"
+import type { BalanceResponse, UsageTransaction, PaymentTransaction } from "./codinitAccount"
+import { CodinITRulesToggles } from "./cline-rules"
 
 // webview will hold state
 export interface ExtensionMessage {

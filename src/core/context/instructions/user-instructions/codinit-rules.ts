@@ -3,7 +3,7 @@ import { ensureRulesDirectoryExists, GlobalFileNames } from "@core/storage/disk"
 import { fileExistsAtPath, isDirectory, readDirectory } from "@utils/fs"
 import { formatResponse } from "@core/prompts/responses"
 import fs from "fs/promises"
-import { CodinITRulesToggles } from "@shared/CodinIT-rules"
+import { CodinITRulesToggles } from "@shared/cline-rules"
 import { getGlobalState, getWorkspaceState, updateGlobalState, updateWorkspaceState } from "@core/storage/state"
 import * as vscode from "vscode"
 
@@ -86,7 +86,10 @@ export const getLocalCodinITRules = async (cwd: string, toggles: CodinITRulesTog
 				const rulesFilePaths = await readDirectory(CodinITRulesFilePath)
 				const rulesFilesTotalContent = await getCodinITRulesFilesTotalContent(rulesFilePaths, cwd, toggles)
 				if (rulesFilesTotalContent) {
-					CodinITRulesFileInstructions = formatResponse.CodinITRulesLocalDirectoryInstructions(cwd, rulesFilesTotalContent)
+					CodinITRulesFileInstructions = formatResponse.CodinITRulesLocalDirectoryInstructions(
+						cwd,
+						rulesFilesTotalContent,
+					)
 				}
 			} catch {
 				console.error(`Failed to read .CodinITrules directory at ${CodinITRulesFilePath}`)

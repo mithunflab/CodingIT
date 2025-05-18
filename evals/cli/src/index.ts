@@ -10,7 +10,10 @@ import { evalsEnvHandler } from "./commands/evals-env"
 const program = new Command()
 
 // Set up CLI metadata
-program.name("CodinIT-eval").description("CLI tool for orchestrating CodinIT evaluations across multiple benchmarks").version("0.1.0")
+program
+	.name("CodinIT-eval")
+	.description("CLI tool for orchestrating CodinIT evaluations across multiple benchmarks")
+	.version("0.1.0")
 
 // Setup command
 program
