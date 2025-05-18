@@ -16,7 +16,7 @@ const HistoryPreview = ({ showHistoryView }: HistoryPreviewProps) => {
 	const handleHistorySelect = (id: string) => {
 		// TaskServiceClient.showTaskWithId({ value: id }).catch((error: any) => console.error("Error showing task:", error))
 		// TODO: Re-implement task selection based on new service definitions or state management
-		console.log("Attempted to show task with ID:", id, " - Functionality needs update.");
+		console.log("Attempted to show task with ID:", id, " - Functionality needs update.")
 	}
 
 	const toggleExpanded = () => {

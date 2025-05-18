@@ -76,8 +76,8 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		// 	console.error("Error loading task history:", error)
 		// }
 		// TODO: Re-implement task history loading based on new service definitions or state management
-		console.log("Attempted to load task history - Functionality needs update.");
-		setFilteredTasks([]);
+		console.log("Attempted to load task history - Functionality needs update.")
+		setFilteredTasks([])
 	}, [showFavoritesOnly, showCurrentWorkspaceOnly, searchQuery, sortOption, taskHistory])
 
 	// Load when filters change
@@ -124,7 +124,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 			// 	}, 1000)
 			// }
 			// TODO: Re-implement favorite toggling
-			console.log("Attempted to toggle favorite for task:", taskId, " - Functionality needs update.");
+			console.log("Attempted to toggle favorite for task:", taskId, " - Functionality needs update.")
 		},
 		[showFavoritesOnly, loadTaskHistory],
 	)
@@ -154,7 +154,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 	const handleShowTaskWithId = useCallback((id: string) => {
 		// TaskServiceClient.showTaskWithId({ value: id }).catch((error: any) => console.error("Error showing task:", error))
 		// TODO: Re-implement task showing
-		console.log("Attempted to show task with ID:", id, " - Functionality needs update.");
+		console.log("Attempted to show task with ID:", id, " - Functionality needs update.")
 	}, [])
 
 	const handleHistorySelect = useCallback((itemId: string, checked: boolean) => {
@@ -170,7 +170,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 	const handleDeleteHistoryItem = useCallback((id: string) => {
 		// TaskServiceClient.deleteTasksWithIds({ value: [id] })
 		// TODO: Re-implement task deletion
-		console.log("Attempted to delete task with ID:", id, " - Functionality needs update.");
+		console.log("Attempted to delete task with ID:", id, " - Functionality needs update.")
 	}, [])
 
 	const handleDeleteSelectedHistoryItems = useCallback((ids: string[]) => {
@@ -179,8 +179,8 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		// 	setSelectedItems([])
 		// }
 		// TODO: Re-implement batch task deletion
-		console.log("Attempted to delete tasks with IDs:", ids, " - Functionality needs update.");
-		if (ids.length > 0) setSelectedItems([]);
+		console.log("Attempted to delete tasks with IDs:", ids, " - Functionality needs update.")
+		if (ids.length > 0) setSelectedItems([])
 	}, [])
 
 	const formatDate = useCallback((timestamp: number) => {
@@ -729,7 +729,7 @@ const ExportButton = ({ itemId }: { itemId: string }) => (
 			e.stopPropagation()
 			// TaskServiceClient.exportTaskWithId({ value: itemId }).catch((err: any) => console.error("Failed to export task:", err))
 			// TODO: Re-implement task exporting
-			console.log("Attempted to export task with ID:", itemId, " - Functionality needs update.");
+			console.log("Attempted to export task with ID:", itemId, " - Functionality needs update.")
 		}}>
 		<div style={{ fontSize: "11px", fontWeight: 500, opacity: 1 }}>EXPORT</div>
 	</VSCodeButton>

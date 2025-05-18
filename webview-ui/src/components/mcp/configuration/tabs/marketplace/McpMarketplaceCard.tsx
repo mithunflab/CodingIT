@@ -119,9 +119,9 @@ const McpMarketplaceCard = ({ item, installedServers }: McpMarketplaceCardProps)
 										// 	console.error("Failed to download MCP:", error)
 										// }
 										// TODO: Re-implement MCP download/installation
-										console.log("Attempted to download MCP:", item.mcpId, " - Functionality needs update.");
+										console.log("Attempted to download MCP:", item.mcpId, " - Functionality needs update.")
 										// Simulate download finishing for UI purposes, as the actual mechanism is removed/changed
-										setTimeout(() => setIsDownloading(false), 1000);
+										setTimeout(() => setIsDownloading(false), 1000)
 									}
 								}}
 								style={{}}>

@@ -822,19 +822,19 @@ const ApiOptions = ({
 								const isCustom = e.target.value === "custom"
 								if (isCustom) {
 									// TODO: Handle custom Bedrock model selection if re-enabled
-									console.warn("Custom Bedrock model selection is currently disabled.");
+									console.warn("Custom Bedrock model selection is currently disabled.")
 									setApiConfiguration({
 										...apiConfiguration,
-										apiModelId: "", 
+										apiModelId: "",
 										// awsBedrockCustomSelected: true, // Property removed
 										// awsBedrockCustomModelBaseId: bedrockDefaultModelId, // Property removed
-									});
+									})
 								} else {
 									setApiConfiguration({
 										...apiConfiguration,
 										apiModelId: e.target.value,
 										// awsBedrockCustomSelected: false, // Property removed
-									});
+									})
 								}
 							}}
 							style={{ width: "100%" }}>
@@ -901,10 +901,9 @@ const ApiOptions = ({
 							</DropdownContainer>
 						</div>
 					)} */}
-					{(selectedModelId === "anthropic.claude-3-7-sonnet-20250219-v1:0" 
+					{selectedModelId === "anthropic.claude-3-7-sonnet-20250219-v1:0" && (
 						// (apiConfiguration?.awsBedrockCustomSelected && // Property removed
 						// 	apiConfiguration?.awsBedrockCustomModelBaseId === "anthropic.claude-3-7-sonnet-20250219-v1:0") // Property removed
-						) && (
 						<ThinkingBudgetSlider apiConfiguration={apiConfiguration} setApiConfiguration={setApiConfiguration} />
 					)}
 					<ModelInfoView
@@ -2078,9 +2077,8 @@ const ApiOptions = ({
 								<span style={{ fontWeight: 500 }}>Model</span>
 							</label>
 							{selectedProvider === "anthropic" && createDropdown(anthropicModels)}
-							{selectedProvider === "vertex" &&
-								createDropdown(vertexModels)} 
-								{/* Was: apiConfiguration?.vertexRegion === "global" ? vertexGlobalModels : vertexModels */}
+							{selectedProvider === "vertex" && createDropdown(vertexModels)}
+							{/* Was: apiConfiguration?.vertexRegion === "global" ? vertexGlobalModels : vertexModels */}
 							{selectedProvider === "gemini" && createDropdown(geminiModels)}
 							{selectedProvider === "openai-native" && createDropdown(openAiNativeModels)}
 							{selectedProvider === "deepseek" && createDropdown(deepSeekModels)}
@@ -2204,8 +2202,7 @@ const formatTiers = (
 
 	// Assuming PriceTier is the type of elements in inputPriceTiers/outputPriceTiers
 	// If not, this 'any' might need to be replaced with the actual PriceTier type definition if available
-	type PriceTier = { tokenLimit: number; price: number; contextWindow?: number };
-
+	type PriceTier = { tokenLimit: number; price: number; contextWindow?: number }
 
 	return priceTiers
 		.map((tier: PriceTier, index: number, arr: PriceTier[]) => {
@@ -2215,7 +2212,7 @@ const formatTiers = (
 			if (price === undefined) return null
 
 			// Use tier.tokenLimit as PriceTier has tokenLimit, not contextWindow directly for limit definition
-			const currentLimit = tier.tokenLimit 
+			const currentLimit = tier.tokenLimit
 
 			return (
 				<span style={{ paddingLeft: "15px" }} key={index}>
@@ -2255,7 +2252,6 @@ export const ModelInfoView = ({
 	// const hasTiers = !!modelInfo.tiers && modelInfo.tiers.length > 0 // 'tiers' does not exist
 	const hasInputPriceTiers = !!modelInfo.inputPriceTiers && modelInfo.inputPriceTiers.length > 0
 	const hasOutputPriceTiers = !!modelInfo.outputPriceTiers && modelInfo.outputPriceTiers.length > 0
-
 
 	// Create elements for input pricing
 	const inputPriceElement = hasInputPriceTiers ? (
