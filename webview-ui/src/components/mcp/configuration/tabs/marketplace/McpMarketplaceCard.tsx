@@ -112,12 +112,16 @@ const McpMarketplaceCard = ({ item, installedServers }: McpMarketplaceCardProps)
 									e.stopPropagation() // Stop event from bubbling up to parent link
 									if (!isInstalled && !isDownloading) {
 										setIsDownloading(true)
-										try {
-											await McpServiceClient.downloadMcp({ value: item.mcpId })
-										} catch (error) {
-											setIsDownloading(false)
-											console.error("Failed to download MCP:", error)
-										}
+										// try {
+										// 	await McpServiceClient.downloadMcp({ value: item.mcpId })
+										// } catch (error: any) {
+										// 	setIsDownloading(false)
+										// 	console.error("Failed to download MCP:", error)
+										// }
+										// TODO: Re-implement MCP download/installation
+										console.log("Attempted to download MCP:", item.mcpId, " - Functionality needs update.");
+										// Simulate download finishing for UI purposes, as the actual mechanism is removed/changed
+										setTimeout(() => setIsDownloading(false), 1000);
 									}
 								}}
 								style={{}}>

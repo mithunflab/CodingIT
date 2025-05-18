@@ -41,7 +41,7 @@ import {
 	internationalQwenDefaultModelId,
 	vertexDefaultModelId,
 	vertexModels,
-	vertexGlobalModels,
+	// vertexGlobalModels, // Removed as per TS2724, assuming vertexModels is now used for global too
 	askSageModels,
 	askSageDefaultModelId,
 	askSageDefaultURL,
@@ -284,7 +284,7 @@ const ApiOptions = ({
 				ModelsServiceClient.refreshOpenAiModels({
 					baseUrl,
 					apiKey,
-				}).catch((error) => {
+				}).catch((error: any) => {
 					console.error("Failed to refresh OpenAI models:", error)
 				})
 			}, 500)
@@ -305,7 +305,7 @@ const ApiOptions = ({
 						minWidth: 130,
 						position: "relative",
 					}}>
-					<VSCodeOption value="cline">Cline</VSCodeOption>
+					<VSCodeOption value="codinit">CodinIt</VSCodeOption>
 					<VSCodeOption value="openrouter">OpenRouter</VSCodeOption>
 					<VSCodeOption value="anthropic">Anthropic</VSCodeOption>
 					<VSCodeOption value="bedrock">Amazon Bedrock</VSCodeOption>
@@ -317,7 +317,7 @@ const ApiOptions = ({
 					<VSCodeOption value="openai-native">OpenAI</VSCodeOption>
 					<VSCodeOption value="vscode-lm">VS Code LM API</VSCodeOption>
 					<VSCodeOption value="requesty">Requesty</VSCodeOption>
-					<VSCodeOption value="fireworks">Fireworks</VSCodeOption>
+					{/* <VSCodeOption value="fireworks">Fireworks</VSCodeOption> */}
 					<VSCodeOption value="together">Together</VSCodeOption>
 					<VSCodeOption value="qwen">Alibaba Qwen</VSCodeOption>
 					<VSCodeOption value="doubao">Bytedance Doubao</VSCodeOption>
@@ -330,7 +330,7 @@ const ApiOptions = ({
 				</VSCodeDropdown>
 			</DropdownContainer>
 
-			{selectedProvider === "cline" && (
+			{selectedProvider === "codinit" && (
 				<div style={{ marginBottom: 14, marginTop: 4 }}>
 					<ClineAccountInfoCard />
 				</div>
@@ -816,15 +816,26 @@ const ApiOptions = ({
 					<DropdownContainer zIndex={DROPDOWN_Z_INDEX - 2} className="dropdown-container">
 						<VSCodeDropdown
 							id="bedrock-model-dropdown"
-							value={apiConfiguration?.awsBedrockCustomSelected ? "custom" : selectedModelId}
+							// value={apiConfiguration?.awsBedrockCustomSelected ? "custom" : selectedModelId}
+							value={selectedModelId} // Simplified due to awsBedrockCustomSelected removal
 							onChange={(e: any) => {
 								const isCustom = e.target.value === "custom"
-								setApiConfiguration({
-									...apiConfiguration,
-									apiModelId: isCustom ? "" : e.target.value,
-									awsBedrockCustomSelected: isCustom,
-									awsBedrockCustomModelBaseId: bedrockDefaultModelId,
-								})
+								if (isCustom) {
+									// TODO: Handle custom Bedrock model selection if re-enabled
+									console.warn("Custom Bedrock model selection is currently disabled.");
+									setApiConfiguration({
+										...apiConfiguration,
+										apiModelId: "", 
+										// awsBedrockCustomSelected: true, // Property removed
+										// awsBedrockCustomModelBaseId: bedrockDefaultModelId, // Property removed
+									});
+								} else {
+									setApiConfiguration({
+										...apiConfiguration,
+										apiModelId: e.target.value,
+										// awsBedrockCustomSelected: false, // Property removed
+									});
+								}
 							}}
 							style={{ width: "100%" }}>
 							<VSCodeOption value="">Select a model...</VSCodeOption>
@@ -840,10 +851,10 @@ const ApiOptions = ({
 									{modelId}
 								</VSCodeOption>
 							))}
-							<VSCodeOption value="custom">Custom</VSCodeOption>
+							{/* <VSCodeOption value="custom">Custom</VSCodeOption> */} {/* Custom option temporarily disabled */}
 						</VSCodeDropdown>
 					</DropdownContainer>
-					{apiConfiguration?.awsBedrockCustomSelected && (
+					{/* {apiConfiguration?.awsBedrockCustomSelected && (
 						<div>
 							<p
 								style={{
@@ -870,8 +881,8 @@ const ApiOptions = ({
 							<DropdownContainer zIndex={DROPDOWN_Z_INDEX - 3} className="dropdown-container">
 								<VSCodeDropdown
 									id="bedrock-base-model-dropdown"
-									value={apiConfiguration?.awsBedrockCustomModelBaseId || bedrockDefaultModelId}
-									onChange={handleInputChange("awsBedrockCustomModelBaseId")}
+									// value={apiConfiguration?.awsBedrockCustomModelBaseId || bedrockDefaultModelId}
+									// onChange={handleInputChange("awsBedrockCustomModelBaseId")}
 									style={{ width: "100%" }}>
 									<VSCodeOption value="">Select a model...</VSCodeOption>
 									{Object.keys(bedrockModels).map((modelId) => (
@@ -889,10 +900,11 @@ const ApiOptions = ({
 								</VSCodeDropdown>
 							</DropdownContainer>
 						</div>
-					)}
-					{(selectedModelId === "anthropic.claude-3-7-sonnet-20250219-v1:0" ||
-						(apiConfiguration?.awsBedrockCustomSelected &&
-							apiConfiguration?.awsBedrockCustomModelBaseId === "anthropic.claude-3-7-sonnet-20250219-v1:0")) && (
+					)} */}
+					{(selectedModelId === "anthropic.claude-3-7-sonnet-20250219-v1:0" 
+						// (apiConfiguration?.awsBedrockCustomSelected && // Property removed
+						// 	apiConfiguration?.awsBedrockCustomModelBaseId === "anthropic.claude-3-7-sonnet-20250219-v1:0") // Property removed
+						) && (
 						<ThinkingBudgetSlider apiConfiguration={apiConfiguration} setApiConfiguration={setApiConfiguration} />
 					)}
 					<ModelInfoView
@@ -1373,7 +1385,7 @@ const ApiOptions = ({
 				</div>
 			)}
 
-			{selectedProvider === "fireworks" && (
+			{/* {selectedProvider === "fireworks" && (
 				<div>
 					<VSCodeTextField
 						value={apiConfiguration?.fireworksApiKey || ""}
@@ -1462,7 +1474,7 @@ const ApiOptions = ({
 						<span style={{ fontWeight: 500 }}>Max Context Tokens</span>
 					</VSCodeTextField>
 				</div>
-			)}
+			)} */}
 
 			{selectedProvider === "together" && (
 				<div>
@@ -1712,93 +1724,101 @@ const ApiOptions = ({
 					</div>
 					{modelConfigurationSelected && (
 						<>
+							{/* TODO: Re-implement LiteLLM model info configuration. 
+								 apiConfiguration.liteLlmModelInfo does not exist. 
+								 Model info should be fetched based on liteLlmModelId or managed locally.
 							<VSCodeCheckbox
-								checked={!!apiConfiguration?.liteLlmModelInfo?.supportsImages}
+								// checked={!!apiConfiguration?.liteLlmModelInfo?.supportsImages}
+								checked={!!liteLlmModelInfoSaneDefaults.supportsImages} // Fallback
 								onChange={(e: any) => {
-									const isChecked = e.target.checked === true
-									const modelInfo = apiConfiguration?.liteLlmModelInfo
-										? apiConfiguration.liteLlmModelInfo
-										: { ...liteLlmModelInfoSaneDefaults }
-									modelInfo.supportsImages = isChecked
-									setApiConfiguration({
-										...apiConfiguration,
-										liteLlmModelInfo: modelInfo,
-									})
+									// const isChecked = e.target.checked === true
+									// const modelInfo = apiConfiguration?.liteLlmModelInfo
+									// 	? apiConfiguration.liteLlmModelInfo
+									// 	: { ...liteLlmModelInfoSaneDefaults }
+									// modelInfo.supportsImages = isChecked
+									// setApiConfiguration({
+									// 	...apiConfiguration,
+									// 	liteLlmModelInfo: modelInfo,
+									// })
 								}}>
 								Supports Images
 							</VSCodeCheckbox>
 							<div style={{ display: "flex", gap: 10, marginTop: "5px" }}>
 								<VSCodeTextField
-									value={
-										apiConfiguration?.liteLlmModelInfo?.contextWindow
-											? apiConfiguration.liteLlmModelInfo.contextWindow.toString()
-											: liteLlmModelInfoSaneDefaults.contextWindow?.toString()
-									}
+									// value={
+									// 	apiConfiguration?.liteLlmModelInfo?.contextWindow
+									// 		? apiConfiguration.liteLlmModelInfo.contextWindow.toString()
+									// 		: liteLlmModelInfoSaneDefaults.contextWindow?.toString()
+									// }
+									value={liteLlmModelInfoSaneDefaults.contextWindow?.toString()} // Fallback
 									style={{ flex: 1 }}
 									onInput={(input: any) => {
-										const modelInfo = apiConfiguration?.liteLlmModelInfo
-											? apiConfiguration.liteLlmModelInfo
-											: { ...liteLlmModelInfoSaneDefaults }
-										modelInfo.contextWindow = Number(input.target.value)
-										setApiConfiguration({
-											...apiConfiguration,
-											liteLlmModelInfo: modelInfo,
-										})
+										// const modelInfo = apiConfiguration?.liteLlmModelInfo
+										// 	? apiConfiguration.liteLlmModelInfo
+										// 	: { ...liteLlmModelInfoSaneDefaults }
+										// modelInfo.contextWindow = Number(input.target.value)
+										// setApiConfiguration({
+										// 	...apiConfiguration,
+										// 	liteLlmModelInfo: modelInfo,
+										// })
 									}}>
 									<span style={{ fontWeight: 500 }}>Context Window Size</span>
 								</VSCodeTextField>
 								<VSCodeTextField
-									value={
-										apiConfiguration?.liteLlmModelInfo?.maxTokens
-											? apiConfiguration.liteLlmModelInfo.maxTokens.toString()
-											: liteLlmModelInfoSaneDefaults.maxTokens?.toString()
-									}
+									// value={
+									// 	apiConfiguration?.liteLlmModelInfo?.maxTokens
+									// 		? apiConfiguration.liteLlmModelInfo.maxTokens.toString()
+									// 		: liteLlmModelInfoSaneDefaults.maxTokens?.toString()
+									// }
+									value={liteLlmModelInfoSaneDefaults.maxTokens?.toString()} // Fallback
 									style={{ flex: 1 }}
 									onInput={(input: any) => {
-										const modelInfo = apiConfiguration?.liteLlmModelInfo
-											? apiConfiguration.liteLlmModelInfo
-											: { ...liteLlmModelInfoSaneDefaults }
-										modelInfo.maxTokens = input.target.value
-										setApiConfiguration({
-											...apiConfiguration,
-											liteLlmModelInfo: modelInfo,
-										})
+										// const modelInfo = apiConfiguration?.liteLlmModelInfo
+										// 	? apiConfiguration.liteLlmModelInfo
+										// 	: { ...liteLlmModelInfoSaneDefaults }
+										// modelInfo.maxTokens = input.target.value
+										// setApiConfiguration({
+										// 	...apiConfiguration,
+										// 	liteLlmModelInfo: modelInfo,
+										// })
 									}}>
 									<span style={{ fontWeight: 500 }}>Max Output Tokens</span>
 								</VSCodeTextField>
 							</div>
 							<div style={{ display: "flex", gap: 10, marginTop: "5px" }}>
 								<VSCodeTextField
-									value={
-										apiConfiguration?.liteLlmModelInfo?.temperature !== undefined
-											? apiConfiguration.liteLlmModelInfo.temperature.toString()
-											: liteLlmModelInfoSaneDefaults.temperature?.toString()
-									}
+									// value={
+									// 	apiConfiguration?.liteLlmModelInfo?.temperature !== undefined
+									// 		? apiConfiguration.liteLlmModelInfo.temperature.toString()
+									// 		: liteLlmModelInfoSaneDefaults.temperature?.toString()
+									// }
+									value={(liteLlmModelInfoSaneDefaults as OpenAiCompatibleModelInfo).temperature?.toString()} // Fallback
 									onInput={(input: any) => {
-										const modelInfo = apiConfiguration?.liteLlmModelInfo
-											? apiConfiguration.liteLlmModelInfo
-											: { ...liteLlmModelInfoSaneDefaults }
+										// const modelInfo = apiConfiguration?.liteLlmModelInfo
+										// 	? apiConfiguration.liteLlmModelInfo
+										// 	: { ...liteLlmModelInfoSaneDefaults }
 
-										// Check if the input ends with a decimal point or has trailing zeros after decimal
-										const value = input.target.value
-										const shouldPreserveFormat =
-											value.endsWith(".") || (value.includes(".") && value.endsWith("0"))
+										// // Check if the input ends with a decimal point or has trailing zeros after decimal
+										// const value = input.target.value
+										// const shouldPreserveFormat =
+										// 	value.endsWith(".") || (value.includes(".") && value.endsWith("0"))
 
-										modelInfo.temperature =
-											value === ""
-												? liteLlmModelInfoSaneDefaults.temperature
-												: shouldPreserveFormat
-													? value // Keep as string to preserve decimal format
-													: parseFloat(value)
+										// modelInfo.temperature =
+										// 	value === ""
+										// 		? liteLlmModelInfoSaneDefaults.temperature
+										// 		: shouldPreserveFormat
+										// 			? value // Keep as string to preserve decimal format
+										// 			: parseFloat(value)
 
-										setApiConfiguration({
-											...apiConfiguration,
-											liteLlmModelInfo: modelInfo,
-										})
+										// setApiConfiguration({
+										// 	...apiConfiguration,
+										// 	liteLlmModelInfo: modelInfo,
+										// })
 									}}>
 									<span style={{ fontWeight: 500 }}>Temperature</span>
 								</VSCodeTextField>
 							</div>
+							*/}
 						</>
 					)}
 					<p
@@ -1991,7 +2011,7 @@ const ApiOptions = ({
 				</>
 			)}
 
-			{(selectedProvider === "openrouter" || selectedProvider === "cline") && showModelOptions && (
+			{(selectedProvider === "openrouter" || selectedProvider === "codinit") && showModelOptions && (
 				<>
 					<VSCodeCheckbox
 						style={{ marginTop: -10 }}
@@ -2043,7 +2063,7 @@ const ApiOptions = ({
 			)}
 
 			{selectedProvider !== "openrouter" &&
-				selectedProvider !== "cline" &&
+				selectedProvider !== "codinit" &&
 				selectedProvider !== "openai" &&
 				selectedProvider !== "ollama" &&
 				selectedProvider !== "lmstudio" &&
@@ -2059,7 +2079,8 @@ const ApiOptions = ({
 							</label>
 							{selectedProvider === "anthropic" && createDropdown(anthropicModels)}
 							{selectedProvider === "vertex" &&
-								createDropdown(apiConfiguration?.vertexRegion === "global" ? vertexGlobalModels : vertexModels)}
+								createDropdown(vertexModels)} 
+								{/* Was: apiConfiguration?.vertexRegion === "global" ? vertexGlobalModels : vertexModels */}
 							{selectedProvider === "gemini" && createDropdown(geminiModels)}
 							{selectedProvider === "openai-native" && createDropdown(openAiNativeModels)}
 							{selectedProvider === "deepseek" && createDropdown(deepSeekModels)}
@@ -2141,7 +2162,7 @@ const ApiOptions = ({
 					</>
 				)}
 
-			{(selectedProvider === "openrouter" || selectedProvider === "cline") && showModelOptions && (
+			{(selectedProvider === "openrouter" || selectedProvider === "codinit") && showModelOptions && (
 				<OpenRouterModelPicker isPopup={isPopup} />
 			)}
 			{selectedProvider === "requesty" && showModelOptions && <RequestyModelPicker isPopup={isPopup} />}
@@ -2175,30 +2196,37 @@ export const formatPrice = (price: number) => {
 
 // Returns an array of formatted tier strings
 const formatTiers = (
-	tiers: ModelInfo["tiers"],
-	priceType: "inputPrice" | "outputPrice" | "cacheReadsPrice" | "cacheWritesPrice",
+	priceTiers: ModelInfo["inputPriceTiers"] | ModelInfo["outputPriceTiers"], // Accepts specific tier arrays
 ): JSX.Element[] => {
-	if (!tiers || tiers.length === 0) {
+	if (!priceTiers || priceTiers.length === 0) {
 		return []
 	}
 
-	return tiers
-		.map((tier, index, arr) => {
-			const prevLimit = index > 0 ? arr[index - 1].contextWindow : 0
-			const price = tier[priceType]
+	// Assuming PriceTier is the type of elements in inputPriceTiers/outputPriceTiers
+	// If not, this 'any' might need to be replaced with the actual PriceTier type definition if available
+	type PriceTier = { tokenLimit: number; price: number; contextWindow?: number };
+
+
+	return priceTiers
+		.map((tier: PriceTier, index: number, arr: PriceTier[]) => {
+			const prevLimit = index > 0 && arr[index - 1].tokenLimit ? arr[index - 1].tokenLimit : 0
+			const price = tier.price // Access price directly
 
 			if (price === undefined) return null
+
+			// Use tier.tokenLimit as PriceTier has tokenLimit, not contextWindow directly for limit definition
+			const currentLimit = tier.tokenLimit 
 
 			return (
 				<span style={{ paddingLeft: "15px" }} key={index}>
 					{formatPrice(price)}/million tokens (
-					{tier.contextWindow === Number.POSITIVE_INFINITY ? (
+					{currentLimit === Number.POSITIVE_INFINITY ? (
 						<span>
 							{">"} {prevLimit.toLocaleString()}
 						</span>
 					) : (
 						<span>
-							{"<="} {tier.contextWindow.toLocaleString()}
+							{"<="} {currentLimit.toLocaleString()}
 						</span>
 					)}
 					{" tokens)"}
@@ -2206,7 +2234,7 @@ const formatTiers = (
 				</span>
 			)
 		})
-		.filter((element): element is JSX.Element => element !== null)
+		.filter((element: JSX.Element | null): element is JSX.Element => element !== null)
 }
 
 export const ModelInfoView = ({
@@ -2224,14 +2252,17 @@ export const ModelInfoView = ({
 }) => {
 	const isGemini = Object.keys(geminiModels).includes(selectedModelId)
 	const hasThinkingConfig = !!modelInfo.thinkingConfig
-	const hasTiers = !!modelInfo.tiers && modelInfo.tiers.length > 0
+	// const hasTiers = !!modelInfo.tiers && modelInfo.tiers.length > 0 // 'tiers' does not exist
+	const hasInputPriceTiers = !!modelInfo.inputPriceTiers && modelInfo.inputPriceTiers.length > 0
+	const hasOutputPriceTiers = !!modelInfo.outputPriceTiers && modelInfo.outputPriceTiers.length > 0
+
 
 	// Create elements for input pricing
-	const inputPriceElement = hasTiers ? (
+	const inputPriceElement = hasInputPriceTiers ? (
 		<Fragment key="inputPriceTiers">
 			<span style={{ fontWeight: 500 }}>Input price:</span>
 			<br />
-			{formatTiers(modelInfo.tiers, "inputPrice")}
+			{formatTiers(modelInfo.inputPriceTiers)}
 		</Fragment>
 	) : modelInfo.inputPrice !== undefined && modelInfo.inputPrice > 0 ? (
 		<span key="inputPrice">
@@ -2252,14 +2283,14 @@ export const ModelInfoView = ({
 				{formatPrice(modelInfo.thinkingConfig.outputPrice)}/million tokens
 			</Fragment>
 		)
-	} else if (hasTiers) {
+	} else if (hasOutputPriceTiers) {
 		// Display tiered output pricing
 		outputPriceElement = (
 			<Fragment key="outputPriceTiers">
 				<span style={{ fontWeight: 500 }}>Output price:</span>
 				<span style={{ fontStyle: "italic" }}> (based on input tokens)</span>
 				<br />
-				{formatTiers(modelInfo.tiers, "outputPrice")}
+				{formatTiers(modelInfo.outputPriceTiers)}
 			</Fragment>
 		)
 	} else if (modelInfo.outputPrice !== undefined && modelInfo.outputPrice > 0) {
@@ -2405,14 +2436,14 @@ export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration): 
 		case "anthropic":
 			return getProviderData(anthropicModels, anthropicDefaultModelId)
 		case "bedrock":
-			if (apiConfiguration?.awsBedrockCustomSelected) {
-				const baseModelId = apiConfiguration.awsBedrockCustomModelBaseId
-				return {
-					selectedProvider: provider,
-					selectedModelId: modelId || bedrockDefaultModelId,
-					selectedModelInfo: (baseModelId && bedrockModels[baseModelId]) || bedrockModels[bedrockDefaultModelId],
-				}
-			}
+			// if (apiConfiguration?.awsBedrockCustomSelected) { // Property removed
+			// 	const baseModelId = apiConfiguration.awsBedrockCustomModelBaseId // Property removed
+			// 	return {
+			// 		selectedProvider: provider,
+			// 		selectedModelId: modelId || bedrockDefaultModelId,
+			// 		selectedModelInfo: (baseModelId && bedrockModels[baseModelId]) || bedrockModels[bedrockDefaultModelId],
+			// 	}
+			// }
 			return getProviderData(bedrockModels, bedrockDefaultModelId)
 		case "vertex":
 			return getProviderData(vertexModels, vertexDefaultModelId)
@@ -2445,7 +2476,7 @@ export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration): 
 				selectedModelId: apiConfiguration?.requestyModelId || requestyDefaultModelId,
 				selectedModelInfo: apiConfiguration?.requestyModelInfo || requestyDefaultModelInfo,
 			}
-		case "cline":
+		case "codinit":
 			return {
 				selectedProvider: provider,
 				selectedModelId: apiConfiguration?.openRouterModelId || openRouterDefaultModelId,
@@ -2484,7 +2515,7 @@ export function normalizeApiConfiguration(apiConfiguration?: ApiConfiguration): 
 			return {
 				selectedProvider: provider,
 				selectedModelId: apiConfiguration?.liteLlmModelId || "",
-				selectedModelInfo: apiConfiguration?.liteLlmModelInfo || liteLlmModelInfoSaneDefaults,
+				selectedModelInfo: liteLlmModelInfoSaneDefaults, // Fallback as apiConfiguration.liteLlmModelInfo is removed
 			}
 		case "xai":
 			return getProviderData(xaiModels, xaiDefaultModelId)

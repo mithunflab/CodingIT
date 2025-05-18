@@ -146,8 +146,8 @@ export const checkIfImageUrl = async (url: string): Promise<boolean> => {
 
 			// Create the actual service call
 			const servicePromise = WebServiceClient.checkIsImageUrl({ value: url })
-				.then((result) => result.isImage)
-				.catch((error) => {
+				.then((result: any) => result.isImage)
+				.catch((error: any) => {
 					console.error("Error checking if URL is an image via gRPC:", error)
 					return false
 				})

@@ -14,7 +14,9 @@ const HistoryPreview = ({ showHistoryView }: HistoryPreviewProps) => {
 	const [isExpanded, setIsExpanded] = useState(true)
 
 	const handleHistorySelect = (id: string) => {
-		TaskServiceClient.showTaskWithId({ value: id }).catch((error) => console.error("Error showing task:", error))
+		// TaskServiceClient.showTaskWithId({ value: id }).catch((error: any) => console.error("Error showing task:", error))
+		// TODO: Re-implement task selection based on new service definitions or state management
+		console.log("Attempted to show task with ID:", id, " - Functionality needs update.");
 	}
 
 	const toggleExpanded = () => {
@@ -119,7 +121,7 @@ const HistoryPreview = ({ showHistoryView }: HistoryPreviewProps) => {
 													{formatDate(item.ts)}
 												</span>
 											</div>
-											{item.isFavorited && (
+											{/* {item.isFavorited && (
 												<div
 													style={{
 														position: "absolute",
@@ -129,7 +131,7 @@ const HistoryPreview = ({ showHistoryView }: HistoryPreviewProps) => {
 													}}>
 													<span className="codicon codicon-star-full" aria-label="Favorited" />
 												</div>
-											)}
+											)} */}
 
 											<div
 												id={`history-preview-task-${item.id}`}

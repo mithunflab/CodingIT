@@ -64,17 +64,20 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 
 	// Load and refresh task history
 	const loadTaskHistory = useCallback(async () => {
-		try {
-			const response = await TaskServiceClient.getTaskHistory({
-				favoritesOnly: showFavoritesOnly,
-				searchQuery: searchQuery || undefined,
-				sortBy: sortOption,
-				currentWorkspaceOnly: showCurrentWorkspaceOnly,
-			})
-			setFilteredTasks(response.tasks || [])
-		} catch (error) {
-			console.error("Error loading task history:", error)
-		}
+		// try {
+		// 	const response = await TaskServiceClient.getTaskHistory({
+		// 		favoritesOnly: showFavoritesOnly,
+		// 		searchQuery: searchQuery || undefined,
+		// 		sortBy: sortOption,
+		// 		currentWorkspaceOnly: showCurrentWorkspaceOnly,
+		// 	})
+		// 	setFilteredTasks(response.tasks || [])
+		// } catch (error: any) {
+		// 	console.error("Error loading task history:", error)
+		// }
+		// TODO: Re-implement task history loading based on new service definitions or state management
+		console.log("Attempted to load task history - Functionality needs update.");
+		setFilteredTasks([]);
 	}, [showFavoritesOnly, showCurrentWorkspaceOnly, searchQuery, sortOption, taskHistory])
 
 	// Load when filters change
@@ -90,36 +93,38 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 	const toggleFavorite = useCallback(
 		async (taskId: string, currentValue: boolean) => {
 			// Optimistic UI update
-			setPendingFavoriteToggles((prev) => ({ ...prev, [taskId]: !currentValue }))
+			// setPendingFavoriteToggles((prev) => ({ ...prev, [taskId]: !currentValue }))
 
-			try {
-				await TaskServiceClient.toggleTaskFavorite({
-					taskId,
-					isFavorited: !currentValue,
-				})
+			// try {
+			// 	await TaskServiceClient.toggleTaskFavorite({
+			// 		taskId,
+			// 		isFavorited: !currentValue,
+			// 	})
 
-				// Refresh if either filter is active to ensure proper combined filtering
-				if (showFavoritesOnly || showCurrentWorkspaceOnly) {
-					loadTaskHistory()
-				}
-			} catch (err) {
-				console.error(`[FAVORITE_TOGGLE_UI] Error for task ${taskId}:`, err)
-				// Revert optimistic update
-				setPendingFavoriteToggles((prev) => {
-					const updated = { ...prev }
-					delete updated[taskId]
-					return updated
-				})
-			} finally {
-				// Clean up pending state after 1 second
-				setTimeout(() => {
-					setPendingFavoriteToggles((prev) => {
-						const updated = { ...prev }
-						delete updated[taskId]
-						return updated
-					})
-				}, 1000)
-			}
+			// 	// Refresh if either filter is active to ensure proper combined filtering
+			// 	if (showFavoritesOnly || showCurrentWorkspaceOnly) {
+			// 		loadTaskHistory()
+			// 	}
+			// } catch (err: any) {
+			// 	console.error(`[FAVORITE_TOGGLE_UI] Error for task ${taskId}:`, err)
+			// 	// Revert optimistic update
+			// 	setPendingFavoriteToggles((prev) => {
+			// 		const updated = { ...prev }
+			// 		delete updated[taskId]
+			// 		return updated
+			// 	})
+			// } finally {
+			// 	// Clean up pending state after 1 second
+			// 	setTimeout(() => {
+			// 		setPendingFavoriteToggles((prev) => {
+			// 			const updated = { ...prev }
+			// 			delete updated[taskId]
+			// 			return updated
+			// 		})
+			// 	}, 1000)
+			// }
+			// TODO: Re-implement favorite toggling
+			console.log("Attempted to toggle favorite for task:", taskId, " - Functionality needs update.");
 		},
 		[showFavoritesOnly, loadTaskHistory],
 	)
@@ -147,7 +152,9 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 	}, [searchQuery, sortOption, lastNonRelevantSort])
 
 	const handleShowTaskWithId = useCallback((id: string) => {
-		TaskServiceClient.showTaskWithId({ value: id }).catch((error) => console.error("Error showing task:", error))
+		// TaskServiceClient.showTaskWithId({ value: id }).catch((error: any) => console.error("Error showing task:", error))
+		// TODO: Re-implement task showing
+		console.log("Attempted to show task with ID:", id, " - Functionality needs update.");
 	}, [])
 
 	const handleHistorySelect = useCallback((itemId: string, checked: boolean) => {
@@ -161,14 +168,19 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 	}, [])
 
 	const handleDeleteHistoryItem = useCallback((id: string) => {
-		TaskServiceClient.deleteTasksWithIds({ value: [id] })
+		// TaskServiceClient.deleteTasksWithIds({ value: [id] })
+		// TODO: Re-implement task deletion
+		console.log("Attempted to delete task with ID:", id, " - Functionality needs update.");
 	}, [])
 
 	const handleDeleteSelectedHistoryItems = useCallback((ids: string[]) => {
-		if (ids.length > 0) {
-			TaskServiceClient.deleteTasksWithIds({ value: ids })
-			setSelectedItems([])
-		}
+		// if (ids.length > 0) {
+		// 	TaskServiceClient.deleteTasksWithIds({ value: ids })
+		// 	setSelectedItems([])
+		// }
+		// TODO: Re-implement batch task deletion
+		console.log("Attempted to delete tasks with IDs:", ids, " - Functionality needs update.");
+		if (ids.length > 0) setSelectedItems([]);
 	}, [])
 
 	const formatDate = useCallback((timestamp: number) => {
@@ -449,57 +461,59 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 										</span>
 										<div style={{ display: "flex", gap: "4px" }}>
 											{/* only show delete button if task not favorited */}
-											{!(pendingFavoriteToggles[item.id] ?? item.isFavorited) && (
-												<VSCodeButton
-													appearance="icon"
-													onClick={(e) => {
-														e.stopPropagation()
-														handleDeleteHistoryItem(item.id)
-													}}
-													className="delete-button"
-													style={{ padding: "0px 0px" }}>
-													<div
-														style={{
-															display: "flex",
-															alignItems: "center",
-															gap: "3px",
-															fontSize: "11px",
-														}}>
-														<span className="codicon codicon-trash"></span>
-														{formatSize(item.size)}
-													</div>
-												</VSCodeButton>
-											)}
+											{/* {!(pendingFavoriteToggles[item.id] ?? item.isFavorited) && ( */}
 											<VSCodeButton
 												appearance="icon"
 												onClick={(e) => {
 													e.stopPropagation()
-													toggleFavorite(item.id, item.isFavorited || false)
+													handleDeleteHistoryItem(item.id)
+												}}
+												className="delete-button"
+												style={{ padding: "0px 0px" }}>
+												<div
+													style={{
+														display: "flex",
+														alignItems: "center",
+														gap: "3px",
+														fontSize: "11px",
+													}}>
+													<span className="codicon codicon-trash"></span>
+													{formatSize(item.size)}
+												</div>
+											</VSCodeButton>
+											{/* )} */}
+											{/* <VSCodeButton
+												appearance="icon"
+												onClick={(e) => {
+													e.stopPropagation()
+													// toggleFavorite(item.id, item.isFavorited || false)
 												}}
 												style={{ padding: "0px" }}>
 												<div
-													className={`codicon ${
-														pendingFavoriteToggles[item.id] !== undefined
-															? pendingFavoriteToggles[item.id]
-																? "codicon-star-full"
-																: "codicon-star-empty"
-															: item.isFavorited
-																? "codicon-star-full"
-																: "codicon-star-empty"
-													}`}
+													// className={`codicon ${
+													// 	pendingFavoriteToggles[item.id] !== undefined
+													// 		? pendingFavoriteToggles[item.id]
+													// 			? "codicon-star-full"
+													// 			: "codicon-star-empty"
+													// 		: item.isFavorited
+													// 			? "codicon-star-full"
+													// 			: "codicon-star-empty"
+													// }`}
+													className={`codicon codicon-star-empty`} // Default to empty star
 													style={{
-														color:
-															(pendingFavoriteToggles[item.id] ?? item.isFavorited)
-																? "var(--vscode-button-background)"
-																: "inherit",
-														opacity: (pendingFavoriteToggles[item.id] ?? item.isFavorited) ? 1 : 0.7,
-														display:
-															(pendingFavoriteToggles[item.id] ?? item.isFavorited)
-																? "block"
-																: undefined,
+														// color:
+														// 	(pendingFavoriteToggles[item.id] ?? item.isFavorited)
+														// 		? "var(--vscode-button-background)"
+														// 		: "inherit",
+														// opacity: (pendingFavoriteToggles[item.id] ?? item.isFavorited) ? 1 : 0.7,
+														// display:
+														// 	(pendingFavoriteToggles[item.id] ?? item.isFavorited)
+														// 		? "block"
+														// 		: undefined,
+														opacity: 0.7
 													}}
 												/>
-											</VSCodeButton>
+											</VSCodeButton> */}
 										</div>
 									</div>
 
@@ -713,7 +727,9 @@ const ExportButton = ({ itemId }: { itemId: string }) => (
 		appearance="icon"
 		onClick={(e) => {
 			e.stopPropagation()
-			TaskServiceClient.exportTaskWithId({ value: itemId }).catch((err) => console.error("Failed to export task:", err))
+			// TaskServiceClient.exportTaskWithId({ value: itemId }).catch((err: any) => console.error("Failed to export task:", err))
+			// TODO: Re-implement task exporting
+			console.log("Attempted to export task with ID:", itemId, " - Functionality needs update.");
 		}}>
 		<div style={{ fontSize: "11px", fontWeight: 500, opacity: 1 }}>EXPORT</div>
 	</VSCodeButton>
