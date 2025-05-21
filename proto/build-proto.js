@@ -5,20 +5,20 @@ import * as path from "path"
 import { execSync } from "child_process"
 import { globby } from "globby"
 import chalk from "chalk"
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from "url"
 
 import { createRequire } from "module"
 const require = createRequire(import.meta.url)
 
 // Get script directory and root directory
-const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const ROOT_DIR = path.resolve(SCRIPT_DIR, "..")
 
 const protoc = path.join(require.resolve("grpc-tools"), "../bin/protoc")
 let tsProtoPlugin = path.resolve(ROOT_DIR, "node_modules", ".bin", "protoc-gen-ts_proto")
 
 if (process.platform === "win32") {
-	tsProtoPlugin += ".cmd";
+	tsProtoPlugin += ".cmd"
 }
 
 async function main() {
