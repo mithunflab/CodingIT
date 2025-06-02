@@ -19,7 +19,7 @@ CodinIT is an open-source AI-powered code generator, and we welcome contribution
 
 ## 📜 Code of Conduct
 
-This project and everyone participating in it is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [conduct@codinit.dev](mailto:conduct@codinit.dev).
+This project and everyone participating in it is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [conduct@codinit.dev](mailto:gerome.e24@gmail.com).
 
 ## 🤝 How Can I Contribute?
 
@@ -577,7 +577,7 @@ We follow [Semantic Versioning](https://semver.org/):
 
 ## 📄 License
 
-By contributing to CodinIT, you agree that your contributions will be licensed under the same [MIT License](LICENSE) that covers the project.
+By contributing to CodinIT, you agree that your contributions will be licensed under the same [Apache 2.0](LICENSE) that covers the project.
 
 ---
 
