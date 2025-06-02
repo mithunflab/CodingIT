@@ -1,5 +1,8 @@
 # CodinIT
 
+![interface-codinit)](https://github.com/user-attachments/assets/8cb324ff-a924-46bc-a22b-32f89c6aed55)
+
+
 ## Powered by the [E2B SDK](https://github.com/e2b-dev/code-interpreter).
 
 ## Features
