@@ -1,1 +1,0 @@
-See [https://CodinIT.bot/privacy](https://CodinIT.bot/privacy) for our privacy policy.

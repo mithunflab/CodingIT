@@ -1,22 +1,29 @@
-out
-dist
-node_modules
-tmp
-.vscode-test/
-*.vsix
-venv
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-.DS_Store
+# dependencies
+/node_modules
 
-pnpm-lock.yaml
+# next.js
+/.next/
+/out/
 
-.codinitignore
-.venv
-.actrc
+# production
+/build
 
-# Ignore coverage directories and files
-coverage
-# But don't ignore the coverage scripts in .github/scripts/
-!.github/scripts/coverage/
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
-*evals.env
+# env files
+.env*
+.env.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+.vercel
