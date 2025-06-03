@@ -61,10 +61,10 @@ jobs:
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-
       - name: Install dependencies
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
+      - name: Remove API source directories before build
+        run: rm -rf ./app/api ./pages/api || true
       - name: Build with Next.js
         run: ${{ steps.detect-package-manager.outputs.runner }} next build
-      - name: Remove API routes before export
-        run: rm -rf ./app/api || true
       - name: Export static site
         run: ${{ steps.detect-package-manager.outputs.runner }} next export
       - name: Upload artifact
