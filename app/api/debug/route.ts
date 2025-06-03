@@ -1,9 +1,11 @@
 import { RequestTracker } from "@/lib/debug"
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const tracker = RequestTracker.getInstance()
   const stats = tracker.getStats()
-  const recentRequests = tracker.getAllRequests().slice(0, 20) // Last 20 requests
+  const recentRequests = tracker.getAllRequests().slice(0, 20)
 
   return Response.json({
     stats,

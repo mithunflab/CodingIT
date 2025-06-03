@@ -41,7 +41,7 @@ export const useChatSidebarStore = create<ChatSidebarStore>()(
   persist(
     (set, get) => ({
       // Initial state
-      isOpen: true,
+      isOpen: false, // Sidebar is now always hidden
       activeTab: "chats",
       searchQuery: "",
       selectedChatId: null,
@@ -51,7 +51,7 @@ export const useChatSidebarStore = create<ChatSidebarStore>()(
       projects: [],
 
       // Basic actions
-      setIsOpen: (isOpen) => set({ isOpen }),
+      setIsOpen: () => {}, // No-op as sidebar is always hidden
       setActiveTab: (activeTab) => set({ activeTab }),
       setSearchQuery: (searchQuery) => set({ searchQuery }),
       setSelectedChatId: (selectedChatId) => set({ selectedChatId }),
@@ -189,7 +189,7 @@ export const useChatSidebarStore = create<ChatSidebarStore>()(
     {
       name: "chat-sidebar-storage",
       partialize: (state) => ({
-        isOpen: state.isOpen,
+        // isOpen: state.isOpen, // No longer persisted as it's always effectively false
         activeTab: state.activeTab,
         chatSessions: state.chatSessions,
         projects: state.projects,

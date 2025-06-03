@@ -58,7 +58,7 @@ export function ChatSidebar({ className, onChatSelect, onNewChat }: ChatSidebarP
     // projects, // Removed unused variable
     isLoading,
     error,
-    setIsOpen,
+    // setIsOpen, // Commented out as we will force sidebar to be closed
     setActiveTab,
     setSearchQuery,
     getFilteredChats,
@@ -69,43 +69,49 @@ export function ChatSidebar({ className, onChatSelect, onNewChat }: ChatSidebarP
   } = useChatSidebarStore()
 
   const [showSaveDialog, setShowSaveDialog] = useState(false)
-  const [showSettingsDialog, setShowSettingsDialog] = useState(false)
-  const [selectedChatForProject, setSelectedChatForProject] = useState<string | null>(null)
+  // const [showSaveDialog, setShowSaveDialog] = useState(false) // Not needed if sidebar is hidden
+  // const [showSettingsDialog, setShowSettingsDialog] = useState(false) // Not needed if sidebar is hidden
+  // const [selectedChatForProject, setSelectedChatForProject] = useState<string | null>(null) // Not needed if sidebar is hidden
 
-  const filteredChats = getFilteredChats()
-  const filteredProjects = getFilteredProjects()
+  // const filteredChats = getFilteredChats() // Not needed if sidebar is hidden
+  // const filteredProjects = getFilteredProjects() // Not needed if sidebar is hidden
 
-  const handleSaveAsProject = (chatId: string) => {
-    setSelectedChatForProject(chatId)
-    setShowSaveDialog(true)
-  }
+  // const handleSaveAsProject = (chatId: string) => { // Not needed if sidebar is hidden
+  //   setSelectedChatForProject(chatId)
+  //   setShowSaveDialog(true)
+  // }
 
-  const handleExport = () => {
-    const data = exportData()
-    const blob = new Blob([data], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `chat-history-${new Date().toISOString().split("T")[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
+  // const handleExport = () => { // Not needed if sidebar is hidden
+  //   const data = exportData()
+  //   const blob = new Blob([data], { type: "application/json" })
+  //   const url = URL.createObjectURL(blob)
+  //   const a = document.createElement("a")
+  //   a.href = url
+  //   a.download = `chat-history-${new Date().toISOString().split("T")[0]}.json`
+  //   document.body.appendChild(a)
+  //   a.click()
+  //   document.body.removeChild(a)
+  //   URL.revokeObjectURL(url)
+  // }
 
-  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  // const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => { // Not needed if sidebar is hidden
+  //   const file = event.target.files?.[0]
+  //   if (!file) return
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const content = e.target?.result as string
-      importData(content)
-    }
-    reader.readAsText(file)
-    event.target.value = "" // Reset input
-  }
+  //   const reader = new FileReader()
+  //   reader.onload = (e) => {
+  //     const content = e.target?.result as string
+  //     importData(content)
+  //   }
+  //   reader.readAsText(file)
+  //   event.target.value = "" // Reset input
+  // }
 
+  // Sidebar is always hidden
+  return null
+
+  // Original code for reference if we need to restore:
+  /*
   if (!isOpen) {
     return (
       <div className={cn("flex flex-col h-full w-10 border-r bg-background", className)}>
@@ -120,7 +126,7 @@ export function ChatSidebar({ className, onChatSelect, onNewChat }: ChatSidebarP
 
   return (
     <div className={cn("flex flex-col h-full w-80 border-r bg-background", className)}>
-      {/* Header */}
+      // Header
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center space-x-2">
           <h2 className="font-semibold text-lg">Chat History</h2>
@@ -167,7 +173,7 @@ export function ChatSidebar({ className, onChatSelect, onNewChat }: ChatSidebarP
         </div>
       </div>
 
-      {/* Search */}
+      // Search
       <div className="p-4 border-b">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -180,7 +186,7 @@ export function ChatSidebar({ className, onChatSelect, onNewChat }: ChatSidebarP
         </div>
       </div>
 
-      {/* Tabs */}
+      // Tabs
       <div className="flex border-b">
         <Button
           variant={activeTab === "chats" ? "default" : "ghost"}
@@ -200,7 +206,7 @@ export function ChatSidebar({ className, onChatSelect, onNewChat }: ChatSidebarP
         </Button>
       </div>
 
-      {/* Content */}
+      // Content
       <ScrollArea className="flex-1">
         <div className="p-4">
           {error && <div className="p-3 mb-2 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>}
@@ -254,10 +260,11 @@ export function ChatSidebar({ className, onChatSelect, onNewChat }: ChatSidebarP
         </div>
       </ScrollArea>
 
-      {/* Dialogs */}
+      // Dialogs
       <SaveProjectDialog open={showSaveDialog} onOpenChange={setShowSaveDialog} chatId={selectedChatForProject} />
 
       <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} />
     </div>
   )
+  */
 }

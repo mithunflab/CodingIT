@@ -84,7 +84,7 @@ Improve the user experience:
 
 1. **Fork and clone the repository**
    ```bash
-   git clone https://github.com/yourusername/codinit.git
+   git clone https://github./Gerome-Elassaad/codinit.git
    cd codinit
    ```
 
@@ -538,8 +538,8 @@ We believe in recognizing our contributors:
 
 ### Where to Get Help
 
-- **🐛 Bugs**: [GitHub Issues](https://github.com/yourusername/codinit/issues)
-- **💬 Discussions**: [GitHub Discussions](https://github.com/yourusername/codinit/discussions)
+- **🐛 Bugs**: [GitHub Issues](https://github./Gerome-Elassaad/codinit/codinit/issues)
+- **💬 Discussions**: [GitHub Discussions](https://github./Gerome-Elassaad/codinit/codinit/discussions)
 - **📧 Email**: [support@codinit.dev](mailto:support@codinit.dev)
 - **💭 Discord**: [Join our community](https://discord.gg/codinit)
 - **📖 Documentation**: [docs.codinit.dev](https://docs.codinit.dev)

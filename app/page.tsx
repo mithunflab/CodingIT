@@ -21,7 +21,6 @@ import { experimental_useObject as useObject } from "ai/react"
 import { usePostHog } from "posthog-js/react"
 import { type SetStateAction, useCallback, useEffect, useState } from "react"
 import { useLocalStorage } from "usehooks-ts"
-import { SidebarProvider, Sidebar } from "@/components/ui/sidebar"
 
 export default function Home() {
   const [chatInput, setChatInput] = useLocalStorage("chat", "")
@@ -548,85 +547,80 @@ export default function Home() {
 
   return (
     <div className="flex h-screen max-h-screen">
-      {/* Sidebar and main content area */}
-      <SidebarProvider>
-      <Sidebar>
-        {/* Sidebar content */}
-      </Sidebar>
+      {/* Main content area - removed sidebar */}
       <div className="flex flex-1 min-h-0">
         {/* Main chat area */}
         <div className={`flex-1 grid w-full min-h-0 ${fragment ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
-        {/* AuthDialog */}
-        {supabase && (
-          <AuthDialog open={isAuthDialogOpen} setOpen={setAuthDialog} view={authView} supabase={supabase} />
-        )}
+          {/* AuthDialog */}
+          {supabase && (
+            <AuthDialog open={isAuthDialogOpen} setOpen={setAuthDialog} view={authView} supabase={supabase} />
+          )}
 
-        {/* Chat Area */}
-        <div className="flex flex-col w-full max-w-4xl max-h-full mx-auto px-4 overflow-y-auto">
-          <NavBar
-          session={session}
-          showLogin={() => setAuthDialog(true)}
-          signOut={logout}
-          onSocialClick={handleSocialClick}
-          onClear={handleClearChat}
-          canClear={messages.length > 0}
-          canUndo={messages.length > 1 && !isSubmitting}
-          onUndo={handleUndo}
-          authError={authError}
-          onRetryAuth={handleRetryAuth}
-          />
-          <Chat messages={messages} isLoading={isSubmitting} setCurrentPreview={setCurrentPreview} />
-          <div className="mt-auto">
-          <VercelV0Chat
-            input={chatInput}
-            handleInputChange={handleSaveInputChange}
-            handleSubmit={handleSubmitAuth}
-            isLoading={isSubmitting}
-            isErrored={error !== undefined}
-            errorMessage={errorMessage}
-            isRateLimited={isRateLimited}
-            retry={retry}
-            stop={stop}
-            isMultiModal={currentModel?.multiModal || false}
-            files={files}
-            handleFileChange={handleFileChange}
-            // ChatPicker props
-            templates={templates}
-            selectedTemplate={selectedTemplate}
-            onSelectedTemplateChange={setSelectedTemplate}
-            models={filteredModels}
-            languageModel={languageModel}
-            onLanguageModelChange={handleLanguageModelChange}
-            // ChatSettings props
-            apiKeyConfigurable={!process.env.NEXT_PUBLIC_NO_API_KEY_INPUT}
-            baseURLConfigurable={!process.env.NEXT_PUBLIC_NO_BASE_URL_INPUT}
-          />
+          {/* Chat Area */}
+          <div className="flex flex-col w-full max-w-4xl max-h-full mx-auto px-4 overflow-y-auto">
+            <NavBar
+              session={session}
+              showLogin={() => setAuthDialog(true)}
+              signOut={logout}
+              onSocialClick={handleSocialClick}
+              onClear={handleClearChat}
+              canClear={messages.length > 0}
+              canUndo={messages.length > 1 && !isSubmitting}
+              onUndo={handleUndo}
+              authError={authError}
+              onRetryAuth={handleRetryAuth}
+            />
+            <Chat messages={messages} isLoading={isSubmitting} setCurrentPreview={setCurrentPreview} />
+            <div className="mt-auto">
+              <VercelV0Chat
+                input={chatInput}
+                handleInputChange={handleSaveInputChange}
+                handleSubmit={handleSubmitAuth}
+                isLoading={isSubmitting}
+                isErrored={error !== undefined}
+                errorMessage={errorMessage}
+                isRateLimited={isRateLimited}
+                retry={retry}
+                stop={stop}
+                isMultiModal={currentModel?.multiModal || false}
+                files={files}
+                handleFileChange={handleFileChange}
+                // ChatPicker props
+                templates={templates}
+                selectedTemplate={selectedTemplate}
+                onSelectedTemplateChange={setSelectedTemplate}
+                models={filteredModels}
+                languageModel={languageModel}
+                onLanguageModelChange={handleLanguageModelChange}
+                // ChatSettings props
+                apiKeyConfigurable={!process.env.NEXT_PUBLIC_NO_API_KEY_INPUT}
+                baseURLConfigurable={!process.env.NEXT_PUBLIC_NO_BASE_URL_INPUT}
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Preview Area: only shown if fragment exists */}
-        {fragment && (
-          <div className="hidden md:flex md:flex-col max-h-full overflow-y-auto">
-          <Preview
-            teamID={userTeam?.id}
-            accessToken={session?.access_token}
-            selectedTab={currentTab}
-            onSelectedTabChange={setCurrentTab}
-            isChatLoading={isSubmitting}
-            isPreviewLoading={isPreviewLoading}
-            fragment={fragment}
-            result={result as ExecutionResult}
-            onClose={() => {
-            setFragment(undefined)
-            setResult(undefined)
-            setCurrentTab("code")
-            }}
-          />
-          </div>
-        )}
+          {/* Preview Area: only shown if fragment exists */}
+          {fragment && (
+            <div className="hidden md:flex md:flex-col max-h-full overflow-y-auto">
+              <Preview
+                teamID={userTeam?.id}
+                accessToken={session?.access_token}
+                selectedTab={currentTab}
+                onSelectedTabChange={setCurrentTab}
+                isChatLoading={isSubmitting}
+                isPreviewLoading={isPreviewLoading}
+                fragment={fragment}
+                result={result as ExecutionResult}
+                onClose={() => {
+                  setFragment(undefined)
+                  setResult(undefined)
+                  setCurrentTab("code")
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
-      </SidebarProvider>
     </div>
   )
 }
