@@ -13,9 +13,9 @@ import { useState } from 'react'
 export function FragmentCode({
   files,
 }: {
-  files: { name: string; content: string }[]
+  files: { name: string; content: string; path?: string }[]
 }) {
-  const [currentFile, setCurrentFile] = useState(files[0].name)
+  const [currentFile, setCurrentFile] = useState(files[0]?.name || '')
   const currentFileContent = files.find(
     (file) => file.name === currentFile,
   )?.content
@@ -37,9 +37,9 @@ export function FragmentCode({
     <div className="flex flex-col h-full">
       <div className="flex items-center px-2 pt-1 gap-2">
         <div className="flex flex-1 gap-2 overflow-x-auto">
-          {files.map((file) => (
+          {files.map((file, index) => (
             <div
-              key={file.name}
+              key={file.path || `${file.name}-${index}`}
               className={`flex gap-2 select-none cursor-pointer items-center text-sm text-muted-foreground px-2 py-1 rounded-md hover:bg-muted border ${
                 file.name === currentFile ? 'bg-muted border-muted' : ''
               }`}

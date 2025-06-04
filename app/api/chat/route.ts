@@ -1,4 +1,3 @@
-// app/api/chat/route.ts - Enhanced with better error handling and project analysis
 import type { Duration } from "@/lib/duration"
 import type { LLMModel, LLMModelConfig } from "@/lib/models"
 import { getModelClient } from "@/lib/models"
@@ -21,13 +20,13 @@ export async function POST(req: Request) {
   const requestId = generateRequestId()
 
   try {
-    console.log(`[Enhanced Chat API ${requestId}] Processing request`)
+    console.log(`[Chat API ${requestId}] Processing request`)
 
     // Parse request body with enhanced error handling
     let body: any
     try {
       body = await req.json()
-      console.log(`[Enhanced Chat API ${requestId}] Request body parsed, keys:`, Object.keys(body))
+      console.log(`[Chat API ${requestId}] Request body parsed successfully`)
     } catch (error) {
       logError("Request body parsing", error, { requestId })
       return new Response(
@@ -50,8 +49,8 @@ export async function POST(req: Request) {
       template,
       model,
       config,
-      uploadedFiles, // New: support for uploaded files
-      analysisInstructions, // New: specific instructions for analysis
+      uploadedFiles,
+      analysisInstructions,
     }: {
       messages: CoreMessage[]
       userID: string
@@ -81,33 +80,21 @@ export async function POST(req: Request) {
       )
     }
 
-    console.log(`[Enhanced Chat API ${requestId}] Validation passed:`, {
-      userID: userID.substring(0, 8) + "...",
-      teamID: teamID.substring(0, 8) + "...",
-      modelId: model.id,
-      provider: model.providerId,
-      messagesCount: messages.length,
-      hasUploadedFiles: !!(uploadedFiles && uploadedFiles.length > 0),
-    })
+    console.log(`[Chat API ${requestId}] Validation passed for model: ${model.id} (${model.providerId})`)
 
     // Analyze uploaded files if present
     let projectStructure: ProjectStructure | undefined
     if (uploadedFiles && uploadedFiles.length > 0) {
       try {
-        console.log(`[Enhanced Chat API ${requestId}] Analyzing ${uploadedFiles.length} uploaded files`)
+        console.log(`[Chat API ${requestId}] Analyzing ${uploadedFiles.length} uploaded files`)
         const analyzer = new ProjectAnalyzer()
         const analysis = await analyzer.analyzeProject(uploadedFiles)
         projectStructure = analysis.structure
         
-        console.log(`[Enhanced Chat API ${requestId}] Project analysis completed:`, {
-          filesAnalyzed: uploadedFiles.length,
-          dependenciesFound: projectStructure.dependencies.size,
-          componentsFound: projectStructure.components.size,
-          architectureType: projectStructure.architecture.type,
-        })
+        console.log(`[Chat API ${requestId}] Project analysis completed`)
       } catch (analysisError) {
         logError("Project analysis failed", analysisError, { requestId, filesCount: uploadedFiles.length })
-        console.warn(`[Enhanced Chat API ${requestId}] Project analysis failed, continuing without analysis:`, analysisError)
+        console.warn(`[Chat API ${requestId}] Project analysis failed, continuing without analysis`)
       }
     }
 
@@ -118,7 +105,7 @@ export async function POST(req: Request) {
         : false
 
       if (limit) {
-        console.log(`[Enhanced Chat API ${requestId}] Rate limit hit:`, limit)
+        console.log(`[Chat API ${requestId}] Rate limit hit`)
         return new Response(
           JSON.stringify({
             error: "You have reached your request limit for the day.",
@@ -137,7 +124,6 @@ export async function POST(req: Request) {
           },
         )
       }
-      console.log(`[Enhanced Chat API ${requestId}] Rate limit check passed`)
     } catch (error) {
       logError("Rate limiting check failed", error, { requestId })
       // Continue without rate limiting if it fails
@@ -146,9 +132,9 @@ export async function POST(req: Request) {
     // Create model client with enhanced error handling
     let modelClient: LanguageModel
     try {
-      console.log(`[Enhanced Chat API ${requestId}] Creating model client for:`, model.providerId, model.id)
+      console.log(`[Chat API ${requestId}] Creating model client for: ${model.providerId}/${model.id}`)
       modelClient = getModelClient(model, config) as LanguageModel
-      console.log(`[Enhanced Chat API ${requestId}] Model client created successfully`)
+      console.log(`[Chat API ${requestId}] Model client created successfully`)
     } catch (error: any) {
       logError("Model client creation failed", error, { requestId, provider: model.providerId, modelId: model.id })
 
@@ -180,15 +166,14 @@ export async function POST(req: Request) {
     let systemPrompt: string
     try {
       if (projectStructure && userPrompt) {
-        console.log(`[Enhanced Chat API ${requestId}] Generating enhanced prompt with project context`)
+        console.log(`[Chat API ${requestId}] Generating enhanced prompt with project context`)
         systemPrompt = toEnhancedPrompt(template, userPrompt, projectStructure)
       } else {
-        console.log(`[Enhanced Chat API ${requestId}] Using standard prompt generation`)
-        // Fallback to existing prompt system
+        console.log(`[Chat API ${requestId}] Using standard prompt generation`)
         systemPrompt = generateFallbackPrompt(template)
       }
       
-      console.log(`[Enhanced Chat API ${requestId}] System prompt generated, length:`, systemPrompt.length)
+      console.log(`[Chat API ${requestId}] System prompt generated`)
     } catch (error: any) {
       logError("System prompt generation failed", error, { requestId })
       return new Response(
@@ -213,11 +198,7 @@ export async function POST(req: Request) {
       Object.entries(providerSpecificConfig).filter(([_, value]) => value !== undefined),
     )
 
-    console.log(`[Enhanced Chat API ${requestId}] Creating stream with params:`, {
-      providerSpecificConfigKeys: Object.keys(cleanProviderSpecificConfig),
-      systemPromptLength: systemPrompt.length,
-      hasProjectContext: !!projectStructure,
-    })
+    console.log(`[Chat API ${requestId}] Starting stream object creation`)
 
     try {
       const streamConfig = {
@@ -225,14 +206,12 @@ export async function POST(req: Request) {
         schema,
         system: systemPrompt,
         messages,
-        maxRetries: 2, // Increase retries for better reliability
+        maxRetries: 2,
         ...cleanProviderSpecificConfig,
       }
 
-      console.log(`[Enhanced Chat API ${requestId}] Starting stream object creation`)
       const stream = await streamObject(streamConfig)
-
-      console.log(`[Enhanced Chat API ${requestId}] Stream created successfully`)
+      console.log(`[Chat API ${requestId}] Stream created successfully`)
       return stream.toTextStreamResponse()
     } catch (error: any) {
       logError("Stream creation failed", error, { 
@@ -275,41 +254,6 @@ export async function POST(req: Request) {
         )
       }
 
-      if (
-        errorMessage.includes("timeout") ||
-        errorMessage.includes("ECONNRESET") ||
-        errorMessage.includes("ETIMEDOUT") ||
-        errorMessage.includes("ENOTFOUND")
-      ) {
-        return new Response(
-          JSON.stringify({
-            error: "Network timeout. Please check your connection and try again.",
-            code: "TIMEOUT_ERROR",
-            provider: model.providerId,
-            requestId,
-          }),
-          {
-            status: 408,
-            headers: { "Content-Type": "application/json" },
-          },
-        )
-      }
-
-      if (error.status === 503 || error.status === 502 || errorMessage.includes("overload")) {
-        return new Response(
-          JSON.stringify({
-            error: "Service temporarily unavailable. Please try again later.",
-            code: "SERVICE_UNAVAILABLE",
-            provider: model.providerId,
-            requestId,
-          }),
-          {
-            status: 503,
-            headers: { "Content-Type": "application/json" },
-          },
-        )
-      }
-
       if (errorMessage.includes("model") && errorMessage.includes("not found")) {
         return new Response(
           JSON.stringify({
@@ -326,22 +270,13 @@ export async function POST(req: Request) {
         )
       }
 
-      // Generic error with detailed information for debugging
       return new Response(
         JSON.stringify({
           error: "An unexpected error occurred while processing your request.",
-          code: "INTERNAL_ERROR",
+          code: "CHAT_PROCESSING_ERROR",
           provider: model.providerId,
           details: errorMessage,
           requestId,
-          // Include additional debug info in development
-          ...(process.env.NODE_ENV === "development" && {
-            debug: {
-              stack: error.stack,
-              errorType: error.constructor.name,
-              status: error.status,
-            },
-          }),
         }),
         {
           status: 500,

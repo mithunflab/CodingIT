@@ -1,30 +1,36 @@
-// components/enhanced-chat-input.tsx
 "use client"
 
 import type React from "react"
-import Image from "next/image"
 
-import { RepoBanner } from "./repo-banner"
-import { EnhancedProjectUploadModal } from "./modals/enhanced-project-upload-modal"
+import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { isFileInArray } from "@/lib/utils"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { cn, isFileInArray } from "@/lib/utils"
+import { useLocalStorage } from "usehooks-ts"
+import { ScreenshotCloneModal } from "@/components/modals/screenshot-clone-modal"
+import { FigmaImportModal } from "@/components/modals/figma-import-modal"
+import { GitHubImportModal } from "@/components/modals/github-import-modal"
+import { EnhancedProjectUploadModal } from "@/components/modals/enhanced-project-upload-modal"
+import { handleCloneScreenshot, handleFigmaImport, handleUploadProject } from "@/lib/action-handlers"
 import { 
-  ArrowUp, 
-  Paperclip, 
+  Send, 
   Square, 
-  X, 
-  AlertTriangle, 
-  RefreshCw, 
-  FileCode, 
-  Zap,
-  CheckCircle,
+  RotateCcw, 
+  AlertCircle, 
+  X,
+  ImageIcon,
+  FileUp,
+  Figma,
+  Github,
+  Sparkles,
   Upload,
-  Wand2 // New icon for feature buttons
+  Eye,
+  EyeOff
 } from "lucide-react"
-import { type SetStateAction, useEffect, useMemo, useState, useCallback } from "react"
-import TextareaAutosize from "react-textarea-autosize"
+import { useEffect, useRef, useState } from "react"
 
 interface ProjectAnalysis {
   structure: {
@@ -50,455 +56,425 @@ interface ProjectAnalysis {
   recommendations: string[]
 }
 
-export function EnhancedChatInput({
-  retry,
-  isErrored,
-  errorMessage,
-  isLoading,
-  isRateLimited,
-  stop,
-  input,
-  handleInputChange,
-  handleSubmit,
-  isMultiModal,
-  files,
-  handleFileChange,
-  children,
-}: {
-  retry: () => void
-  isErrored: boolean
-  errorMessage: string
-  isLoading: boolean
-  isRateLimited: boolean
-  stop: () => void
+interface EnhancedChatInputProps {
   input: string
   handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
   handleSubmit: (e: React.FormEvent<HTMLFormElement>, projectFiles?: File[], projectAnalysis?: ProjectAnalysis) => void
-  isMultiModal: boolean
+  isLoading?: boolean
+  isErrored?: boolean
+  errorMessage?: string
+  isRateLimited?: boolean
+  retry?: () => void
+  stop?: () => void
+  isMultiModal?: boolean
   files: File[]
-  handleFileChange: (change: SetStateAction<File[]>) => void
-  children: React.ReactNode
-}) {
-  const [projectFiles, setProjectFiles] = useState<File[]>([])
-  const [projectAnalysis, setProjectAnalysis] = useState<ProjectAnalysis | null>(null)
-  const [projectInstructions, setProjectInstructions] = useState("")
+  handleFileChange: (files: File[] | ((prev: File[]) => File[])) => void
+  children?: React.ReactNode
+}
 
-  function handleFileInput(e: React.ChangeEvent<HTMLInputElement>) {
-    handleFileChange((prev) => {
-      const newFiles = Array.from(e.target.files || [])
-      const uniqueFiles = newFiles.filter((file) => !isFileInArray(file, prev))
-      return [...prev, ...uniqueFiles]
-    })
+export function EnhancedChatInput({
+  input,
+  handleInputChange,
+  handleSubmit,
+  isLoading = false,
+  isErrored = false,
+  errorMessage,
+  isRateLimited = false,
+  retry,
+  stop,
+  isMultiModal = false,
+  files,
+  handleFileChange,
+  children,
+}: EnhancedChatInputProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isDragActive, setIsDragActive] = useState(false)
+  const [projectContext, setProjectContext] = useState<{
+    files: File[]
+    analysis: ProjectAnalysis | null
+    source: 'upload' | 'github' | null
+    repositoryInfo?: { owner: string; repo: string }
+  }>({
+    files: [],
+    analysis: null,
+    source: null
+  })
+  const [showProjectPreview, setShowProjectPreview] = useState(false)
+  const [enabledFeatures, setEnabledFeatures] = useLocalStorage("enabled-features", {
+    screenshotClone: true,
+    figmaImport: true,
+    githubImport: true,
+    projectUpload: true,
+  })
+
+  const adjustTextareaHeight = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto"
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`
+    }
   }
 
-  const handleFileRemove = useCallback((file: File) => {
-    handleFileChange((prev) => prev.filter((f) => f !== file))
-  }, [handleFileChange])
+  useEffect(() => {
+    adjustTextareaHeight()
+  }, [input])
 
-  function handlePaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
-    const items = Array.from(e.clipboardData.items)
-
-    for (const item of items) {
-      if (item.type.indexOf("image") !== -1) {
-        e.preventDefault()
-
-        const file = item.getAsFile()
-        if (file) {
-          handleFileChange((prev) => {
-            if (!isFileInArray(file, prev)) {
-              return [...prev, file]
-            }
-            return prev
-          })
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      if (!isLoading) {
+        const form = e.currentTarget.closest("form")
+        if (form) {
+          form.requestSubmit()
         }
       }
     }
   }
 
-  const [dragActive, setDragActive] = useState(false)
-
-  function handleDrag(e: React.DragEvent) {
+  const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true)
+      setIsDragActive(true)
     } else if (e.type === "dragleave") {
-      setDragActive(false)
+      setIsDragActive(false)
     }
   }
 
-  function handleDrop(e: React.DragEvent) {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setDragActive(false)
+    setIsDragActive(false)
 
-    const droppedFiles = Array.from(e.dataTransfer.files).filter((file) => file.type.startsWith("image/"))
-
+    const droppedFiles = Array.from(e.dataTransfer.files)
     if (droppedFiles.length > 0) {
-      handleFileChange((prev) => {
-        const uniqueFiles = droppedFiles.filter((file) => !isFileInArray(file, prev))
-        return [...prev, ...uniqueFiles]
-      })
-    }
-  }
-
-  // Handle project upload
-  const handleProjectUpload = useCallback((uploadedFiles: File[], analysis?: ProjectAnalysis, instructions?: string) => {
-    setProjectFiles(uploadedFiles)
-    setProjectAnalysis(analysis || null)
-    setProjectInstructions(instructions || "")
-    
-    // Update the input with project context
-    if (instructions) {
-      handleInputChange({
-        target: { value: instructions }
-      } as React.ChangeEvent<HTMLTextAreaElement>)
-    }
-  }, [handleInputChange])
-
-  // Clear project data
-  const clearProjectData = useCallback(() => {
-    setProjectFiles([])
-    setProjectAnalysis(null)
-    setProjectInstructions("")
-  }, [])
-
-  const filePreview = useMemo(() => {
-    if (files.length === 0) return null
-    return Array.from(files).map((file) => {
-      return (
-        <div className="relative" key={file.name}>
-          <span
-            onClick={() => handleFileRemove(file)}
-            className="absolute top-[-8] right-[-8] bg-muted rounded-full p-1 cursor-pointer hover:bg-muted/80 transition-colors"
-          >
-            <X className="h-3 w-3" />
-          </span>
-          <Image
-            src={URL.createObjectURL(file) || "/placeholder.svg"}
-            alt={file.name}
-            width={40}
-            height={40}
-            className="rounded-xl w-10 h-10 object-cover"
-          />
-        </div>
+      const validFiles = droppedFiles.filter((file) => 
+        isMultiModal ? file.type.startsWith("image/") || file.type.startsWith("text/") : file.type.startsWith("image/")
       )
-    })
-  }, [files, handleFileRemove])
-
-  function onEnter(e: React.KeyboardEvent<HTMLFormElement>) {
-    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-      e.preventDefault()
-      if (e.currentTarget.checkValidity()) {
-        handleSubmit(e, projectFiles.length > 0 ? projectFiles : undefined, projectAnalysis || undefined)
-      } else {
-        e.currentTarget.reportValidity()
+      
+      if (validFiles.length > 0) {
+        const newFiles = validFiles.filter((file) => !isFileInArray(file, files))
+        handleFileChange((prev) => [...prev, ...newFiles])
       }
     }
   }
 
-  useEffect(() => {
-    if (!isMultiModal) {
-      handleFileChange([])
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const selectedFiles = Array.from(e.target.files)
+      const validFiles = selectedFiles.filter((file) => 
+        isMultiModal ? file.type.startsWith("image/") || file.type.startsWith("text/") : file.type.startsWith("image/")
+      )
+      
+      if (validFiles.length > 0) {
+        const newFiles = validFiles.filter((file) => !isFileInArray(file, files))
+        handleFileChange((prev) => [...prev, ...newFiles])
+      }
     }
-  }, [isMultiModal, handleFileChange])
-
-  // Enhanced error type detection
-  const isAuthError =
-    errorMessage.includes("Authentication error") ||
-    errorMessage.includes("Missing user") ||
-    errorMessage.includes("Missing team") ||
-    errorMessage.includes("sign out and sign in")
-
-  const isServerError =
-    errorMessage.includes("Server error") || errorMessage.includes("Internal") || errorMessage.includes("server error")
-
-  const isNetworkError =
-    errorMessage.includes("Network error") || errorMessage.includes("connection") || errorMessage.includes("timeout")
-
-  const isModelError = errorMessage.includes("model") || errorMessage.includes("API key")
-
-  // Determine error styling and actions
-  const getErrorStyling = () => {
-    if (isAuthError) return "bg-red-400/10 text-red-400 border border-red-400/20"
-    if (isServerError) return "bg-orange-400/10 text-orange-400 border border-orange-400/20"
-    if (isNetworkError) return "bg-blue-400/10 text-blue-400 border border-blue-400/20"
-    if (isRateLimited) return "bg-yellow-400/10 text-yellow-400 border border-yellow-400/20"
-    return "bg-red-400/10 text-red-400 border border-red-400/20"
   }
 
-  const getErrorIcon = () => {
-    if (isNetworkError) return <RefreshCw className="h-4 w-4" />
-    return <AlertTriangle className="h-4 w-4" />
+  const removeFile = (index: number) => {
+    handleFileChange((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const getErrorAction = () => {
-    if (isAuthError) {
-      return (
-        <button
-          className="px-2 py-1 rounded-sm bg-red-400/20 hover:bg-red-400/30 transition-colors"
-          onClick={() => window.location.reload()}
-        >
-          Refresh Page
-        </button>
-      )
-    }
+  const clearProjectContext = () => {
+    setProjectContext({
+      files: [],
+      analysis: null,
+      source: null,
+      repositoryInfo: undefined
+    })
+    setShowProjectPreview(false)
+  }
 
-    if (isServerError || isNetworkError || isModelError) {
-      return (
-        <button
-          className="px-2 py-1 rounded-sm bg-orange-400/20 hover:bg-orange-400/30 transition-colors"
-          onClick={retry}
-        >
-          Try Again
-        </button>
-      )
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (projectContext.files.length > 0) {
+      handleSubmit(e, projectContext.files, projectContext.analysis || undefined)
+    } else {
+      handleSubmit(e)
     }
+  }
 
-    if (isRateLimited) {
-      return (
-        <button
-          className="px-2 py-1 rounded-sm bg-yellow-400/20 hover:bg-yellow-400/30 transition-colors"
-          onClick={retry}
-        >
-          Retry
-        </button>
-      )
+  const handleProjectUpload = (uploadedFiles: File[], analysis?: ProjectAnalysis, instructions?: string) => {
+    setProjectContext({
+      files: uploadedFiles,
+      analysis: analysis || null,
+      source: 'upload'
+    })
+    setShowProjectPreview(true)
+    
+    if (instructions) {
+      // Append instructions to current input
+      const newInput = input ? `${input}\n\n${instructions}` : instructions
+      handleInputChange({ target: { value: newInput } } as React.ChangeEvent<HTMLTextAreaElement>)
     }
+  }
 
-    return (
-      <button className="px-2 py-1 rounded-sm bg-red-400/20 hover:bg-red-400/30 transition-colors" onClick={retry}>
-        Try Again
-      </button>
-    )
+  const handleGitHubImport = (importedFiles: any[], analysis: ProjectAnalysis, repositoryInfo: { owner: string; repo: string }) => {
+    setProjectContext({
+      files: importedFiles,
+      analysis,
+      source: 'github',
+      repositoryInfo
+    })
+    setShowProjectPreview(true)
+    
+    // Auto-fill input with repository context
+    const repoPrompt = `Analyze and enhance the ${repositoryInfo.owner}/${repositoryInfo.repo} repository. Focus on code quality, performance optimizations, and implementing best practices.`
+    handleInputChange({ target: { value: repoPrompt } } as React.ChangeEvent<HTMLTextAreaElement>)
   }
 
   return (
-    <form
-      onSubmit={(e) => handleSubmit(e, projectFiles.length > 0 ? projectFiles : undefined, projectAnalysis || undefined)}
-      onKeyDown={onEnter}
-      className="mb-2 mt-auto flex flex-col bg-background"
-      onDragEnter={isMultiModal ? handleDrag : undefined}
-      onDragLeave={isMultiModal ? handleDrag : undefined}
-      onDragOver={isMultiModal ? handleDrag : undefined}
-      onDrop={isMultiModal ? handleDrop : undefined}
-    >
-      {isErrored && (
-        <div className={`flex items-center p-3 text-sm font-medium mx-4 mb-4 rounded-xl ${getErrorStyling()}`}>
-          <div className="flex items-center gap-2 flex-1">
-            {getErrorIcon()}
-            <span className="flex-1">{errorMessage}</span>
-          </div>
-          <div className="ml-2">{getErrorAction()}</div>
-        </div>
+    <div className="w-full space-y-4">
+      {/* Error Message */}
+      {isErrored && errorMessage && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>{errorMessage}</span>
+            {retry && (
+              <Button variant="ghost" size="sm" onClick={retry} className="gap-2">
+                <RotateCcw className="h-4 w-4" />
+                Retry
+              </Button>
+            )}
+          </AlertDescription>
+        </Alert>
       )}
 
-      {/* Project Context Display */}
-      {projectFiles.length > 0 && (
-        <div className="mx-4 mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <FileCode className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                Project Context ({projectFiles.length} files)
-              </span>
-              {projectAnalysis && (
-                <Badge variant="secondary" className="text-xs">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  Analyzed
-                </Badge>
+      {/* Rate Limit Warning */}
+      {isRateLimited && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            You have reached the rate limit. Please try again later or use your own API key in settings.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Project Context Preview */}
+      {projectContext.files.length > 0 && showProjectPreview && (
+        <Card className="p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+          <div className="flex items-start justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                {projectContext.source === 'github' ? (
+                  <Github className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                ) : (
+                  <FileUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                )}
+                <span className="font-medium text-blue-900 dark:text-blue-100">
+                  {projectContext.source === 'github' && projectContext.repositoryInfo
+                    ? `GitHub: ${projectContext.repositoryInfo.owner}/${projectContext.repositoryInfo.repo}`
+                    : `Project: ${projectContext.files.length} files`
+                  }
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowProjectPreview(!showProjectPreview)}
+                  className="h-6 w-6 p-0"
+                >
+                  {showProjectPreview ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                </Button>
+              </div>
+              
+              {projectContext.analysis && (
+                <div className="space-y-2">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <span className="font-medium">{projectContext.analysis.structure.architecture.type}</span>
+                    {" • "}
+                    {projectContext.analysis.structure.dependencies.size} dependencies
+                    {" • "}
+                    {projectContext.analysis.structure.components.size} components
+                  </p>
+                  
+                  {projectContext.analysis.structure.frameworks.size > 0 && (
+                    <div className="flex gap-1 flex-wrap">
+                      {Array.from(projectContext.analysis.structure.frameworks).map((framework) => (
+                        <Badge key={framework} variant="secondary" className="text-xs">
+                          {framework}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
+            
             <Button
               variant="ghost"
               size="sm"
-              onClick={clearProjectData}
-              className="h-6 w-6 p-0 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+              onClick={clearProjectContext}
+              className="h-6 w-6 p-0 text-blue-600 dark:text-blue-400"
             >
               <X className="w-3 h-3" />
             </Button>
           </div>
-          
-          {projectAnalysis && (
-            <div className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
-              <div>Architecture: {projectAnalysis.structure.architecture.type}</div>
-              <div className="flex gap-4">
-                <span>Dependencies: {projectAnalysis.structure.dependencies.size}</span>
-                <span>Components: {projectAnalysis.structure.components.size}</span>
-                <span>Frameworks: {Array.from(projectAnalysis.structure.frameworks).join(', ') || 'None'}</span>
+        </Card>
+      )}
+
+      {/* File Attachments */}
+      {files.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Attached Files</div>
+          <div className="flex flex-wrap gap-2">
+            {files.map((file, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-2 px-3 py-2 bg-secondary rounded-lg text-sm"
+              >
+                <ImageIcon className="h-4 w-4" />
+                <span className="truncate max-w-32">{file.name}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeFile(index)}
+                  className="h-4 w-4 p-0"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
               </div>
-            </div>
-          )}
-          
-          <div className="flex flex-wrap gap-1 mt-2">
-            {projectFiles.slice(0, 5).map((file, index) => (
-              <Badge key={index} variant="outline" className="text-xs">
-                {file.name}
-              </Badge>
             ))}
-            {projectFiles.length > 5 && (
-              <Badge variant="outline" className="text-xs">
-                +{projectFiles.length - 5} more
-              </Badge>
-            )}
           </div>
         </div>
       )}
 
-      <div className="relative">
-        <RepoBanner className="absolute bottom-full inset-x-2 translate-y-1 z-0 pb-2" />
+      {/* Main Input Form */}
+      <form onSubmit={handleFormSubmit} className="space-y-3">
         <div
-          className={`shadow-md rounded-2xl relative z-10 bg-background border focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-background transition-shadow duration-200 ${
-            dragActive
-              ? "before:absolute before:inset-0 before:rounded-2xl before:border-2 before:border-dashed before:border-primary"
-              : ""
-          }`}
+          className={cn(
+            "relative rounded-lg border bg-background transition-all",
+            isDragActive && "border-primary bg-primary/10",
+            isErrored && "border-destructive"
+          )}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
         >
-          <div className="flex items-center px-3 py-2 gap-1">{children}</div>
-          <TextareaAutosize
-            autoFocus={true}
-            minRows={1}
-            maxRows={5}
-            className="text-normal px-3 resize-none ring-0 bg-inherit w-full m-0 outline-none placeholder:text-muted-foreground"
-            required={true}
-            placeholder={projectFiles.length > 0 ? "Describe what you want to build or modify..." : "Describe your app..."}
-            disabled={isErrored}
-            value={input}
-            onChange={handleInputChange}
-            onPaste={isMultiModal ? handlePaste : undefined}
-          />
-
-          {/* Feature Buttons Section */}
-          <div className="px-3 pt-2 pb-1 flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="text-xs"
-              onClick={() => handleInputChange({ target: { value: "Explain the selected code..." } } as React.ChangeEvent<HTMLTextAreaElement>)}
-            >
-              <Wand2 className="w-3 h-3 mr-1.5" />
-              Explain Code
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="text-xs"
-              onClick={() => handleInputChange({ target: { value: "Write unit tests for the following code..." } } as React.ChangeEvent<HTMLTextAreaElement>)}
-            >
-              <Wand2 className="w-3 h-3 mr-1.5" />
-              Write Tests
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="text-xs"
-              onClick={() => handleInputChange({ target: { value: "Refactor this code to improve readability and performance..." } } as React.ChangeEvent<HTMLTextAreaElement>)}
-            >
-              <Wand2 className="w-3 h-3 mr-1.5" />
-              Refactor
-            </Button>
-             <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="text-xs"
-              onClick={() => handleInputChange({ target: { value: "Generate documentation for this code..." } } as React.ChangeEvent<HTMLTextAreaElement>)}
-            >
-              <Wand2 className="w-3 h-3 mr-1.5" />
-              Document
-            </Button>
-          </div>
-
-          <div className="flex p-3 gap-2 items-center">
-            <input
-              type="file"
-              id="multimodal"
-              name="multimodal"
-              accept="image/*"
-              multiple={true}
-              className="hidden"
-              onChange={handleFileInput}
-            />
-            <div className="flex items-center flex-1 gap-2">
-              <TooltipProvider>
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      disabled={!isMultiModal || isErrored}
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="rounded-xl h-10 w-10"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        document.getElementById("multimodal")?.click()
-                      }}
-                    >
-                      <Paperclip className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Add images</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
+          {/* Action Buttons Row */}
+          <div className="flex items-center gap-1 p-2 border-b">
+            {enabledFeatures.screenshotClone && (
+              <ScreenshotCloneModal
+                onClone={(image, instructions) => {
+                  handleFileChange((prev) => [...prev, image])
+                  if (instructions) {
+                    const newInput = input ? `${input}\n\n${instructions}` : instructions
+                    handleInputChange({ target: { value: newInput } } as React.ChangeEvent<HTMLTextAreaElement>)
+                  }
+                }}
+                isLoading={isLoading}
+              />
+            )}
+            
+            {enabledFeatures.figmaImport && (
+              <FigmaImportModal
+                onImport={(figmaUrl, customPrompt) => {
+                  const prompt = customPrompt || `Import and recreate this Figma design: ${figmaUrl}`
+                  handleInputChange({ target: { value: prompt } } as React.ChangeEvent<HTMLTextAreaElement>)
+                }}
+                isLoading={isLoading}
+              />
+            )}
+            
+            {enabledFeatures.githubImport && (
+              <GitHubImportModal
+                onImport={handleGitHubImport}
+                isLoading={isLoading}
+              />
+            )}
+            
+            {enabledFeatures.projectUpload && (
               <EnhancedProjectUploadModal
                 onUpload={handleProjectUpload}
                 isLoading={isLoading}
               />
+            )}
+            
+            {isMultiModal && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="rainbow-button-content flex items-center gap-2 px-4 py-2 transition-colors border-none"
+              >
+                <Upload className="w-4 h-4" />
+                <span className="text-xs">Upload Images</span>
+              </Button>
+            )}
+          </div>
 
-              {files.length > 0 && filePreview}
-            </div>
-            <div>
-              {!isLoading ? (
-                <TooltipProvider>
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <Button
-                        disabled={isErrored}
-                        variant="default"
-                        size="icon"
-                        type="submit"
-                        className="rounded-xl h-10 w-10"
-                      >
-                        <ArrowUp className="h-5 w-5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Send message</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ) : (
-                <TooltipProvider>
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        className="rounded-xl h-10 w-10"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          stop()
-                        }}
-                      >
-                        <Square className="h-5 w-5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Stop generation</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+          {/* Textarea */}
+          <Textarea
+            ref={textareaRef}
+            value={input}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              projectContext.files.length > 0 
+                ? "Describe what you'd like to build or modify with your project files..."
+                : "Describe what you want to build..."
+            }
+            className="min-h-[60px] resize-none border-0 focus-visible:ring-0 text-base"
+            style={{ height: "auto" }}
+            disabled={isLoading}
+          />
+
+          {/* Submit Button */}
+          <div className="flex items-center justify-between p-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {projectContext.files.length > 0 && (
+                <span>{projectContext.files.length} project files loaded</span>
               )}
+              {files.length > 0 && (
+                <span>{files.length} image{files.length > 1 ? 's' : ''} attached</span>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {isLoading && stop && (
+                <Button type="button" variant="outline" size="sm" onClick={stop}>
+                  <Square className="h-4 w-4" />
+                </Button>
+              )}
+              
+              <Button 
+                type="submit" 
+                size="sm" 
+                disabled={isLoading || !input.trim()}
+                className="gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                    Send
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>
-      </div>
-      <p className="text-xs text-muted-foreground mt-2 text-center">
-        Powered By{" "}
-        <a href="https://e2b.dev" target="_blank" className="text-[#ff8800]" rel="noreferrer">
-          ✶ E2B
-        </a>
-      </p>
-    </form>
+
+        {children}
+      </form>
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFileInput}
+        className="hidden"
+      />
+    </div>
   )
 }

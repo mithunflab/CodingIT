@@ -36,7 +36,8 @@ export const metadata: Metadata = {
     title: "CodinIT - #1 Open Source AI App Builder",
     description: "Open-source alternative to lovable.dev, bolt.new & v0.dev. AI software engineer — live code execution, file uploads, & real-time chat blazing-fast.",
     images: ["/opengraph.png"],
-    url: "https://codinit.dev",
+    url: "https://codingit.vercel.app",
+    siteName: "CodinIT",
     type: "website"
   }
 }

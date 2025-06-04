@@ -1,3 +1,4 @@
+// File: app/page.tsx
 "use client"
 
 import type React from "react"
@@ -24,7 +25,6 @@ import { usePostHog } from "posthog-js/react"
 import { type SetStateAction, useCallback, useEffect, useState } from "react"
 import { useLocalStorage } from "usehooks-ts"
 
-// +++ ADDED CONSTANTS AND HELPER FUNCTIONS START +++
 const TEMPLATE_IDS = {
   CODE_INTERPRETER_V1: "code-interpreter-v1",
   NEXTJS_DEVELOPER: "nextjs-developer",
@@ -34,21 +34,21 @@ const TEMPLATE_IDS = {
   CODINIT_ENGINEER: "codinit-engineer",
 } as const;
 
+// Error types and handling
 type ParsedApiError = { code: string; message: string; rawData: any };
 
 const parseApiError = (error: Error | any): ParsedApiError => {
   let errorData: any = {};
-  let errorCode = "UNKNOWN_ERROR"; // Default error code
+  let errorCode = "UNKNOWN_ERROR";
   let errorMessage = error.message || "An unexpected error occurred";
 
   try {
     const errorText = error.message || "";
-    // Attempt to parse a JSON string if present in the error message
-    const jsonMatch = errorText.match(/\{[\s\S]*\}/); // Replaced 's' flag with [\s\S] for broader compatibility
+    const jsonMatch = errorText.match(/\{[\s\S]*\}/);
     if (jsonMatch && jsonMatch[0]) {
       errorData = JSON.parse(jsonMatch[0]);
       errorCode = errorData.code || errorCode;
-      errorMessage = errorData.error || errorData.message || errorMessage; // Prefer specific error fields
+      errorMessage = errorData.error || errorData.message || errorMessage;
     } else if (errorText.includes("Internal Server Error")) {
       errorCode = "INTERNAL_SERVER_ERROR";
       errorMessage = "Internal server error occurred. Please try again.";
@@ -59,10 +59,8 @@ const parseApiError = (error: Error | any): ParsedApiError => {
       errorCode = "REQUEST_ABORTED";
       errorMessage = "The request was cancelled.";
     }
-    // Add more specific error text checks if needed
   } catch (parseError) {
-    console.warn("[parseApiError] Failed to parse error response:", parseError, "Original error message:", error.message);
-    // Fallback to original error message if parsing fails, ensure errorCode is set
+    console.warn("[parseApiError] Failed to parse error response:", parseError);
     errorCode = errorCode === "UNKNOWN_ERROR" && error.message?.includes("rate limit") ? "RATE_LIMITED" : errorCode;
     errorMessage = error.message || "An unexpected error occurred after failing to parse error details.";
   }
@@ -78,12 +76,22 @@ const API_ERROR_DISPLAY_MESSAGES: Record<string, string> = {
   NETWORK_ERROR: "Network error. Please check your connection and try again.",
   TIMEOUT_ERROR: "Network error or timeout. Please check your connection and try again.",
   SERVICE_UNAVAILABLE: "AI service is temporarily unavailable. Please try again in a few moments.",
+  SERVICE_NOT_CONFIGURED: "Development environment service is not properly configured. Please contact support.",
   PROVIDER_OVERLOADED: "AI service is temporarily unavailable. Please try again in a few moments.",
   MODEL_NOT_FOUND: "The selected model is not available. Please choose a different model.",
   MODEL_INIT_ERROR: "Failed to initialize the AI model. Please try a different model or check your API key.",
   VALIDATION_ERROR: "Invalid request data. Please refresh the page and try again.",
+  SANDBOX_ERROR: "Failed to create development environment. Please try again.",
+  SANDBOX_TIMEOUT: "Development environment creation timed out. Please try again.",
+  SANDBOX_QUOTA_EXCEEDED: "Development environment quota exceeded. Please try again later.",
+  SANDBOX_AUTH_ERROR: "Development environment authentication failed. Please contact support.",
+  INVALID_TEMPLATE: "Invalid template selected. Please choose a different template.",
+  FILE_ERROR: "Error processing uploaded files. Please check your files and try again.",
+  CHAT_PROCESSING_ERROR: "Error processing chat request. Please try again.",
+  PROMPT_GENERATION_ERROR: "Error generating AI prompt. Please try again.",
   INTERNAL_SERVER_ERROR: "A server error occurred. Please try again or contact support if the issue persists.",
   INTERNAL_ERROR: "An internal error occurred. Please try again or contact support if the issue persists.",
+  REQUEST_PROCESSING_ERROR: "Failed to process request. Please try again.",
   REQUEST_ABORTED: "The operation was cancelled.",
   UNKNOWN_ERROR: "An unexpected error occurred. Please try again.",
 };
@@ -117,7 +125,6 @@ async function handleSandboxCreation(
     userID: sessionData?.userId,
     teamID: sessionData?.teamId,
     accessToken: sessionData?.accessToken,
-    TEMPLATE_IDS: TEMPLATE_IDS,
   };
 
   console.log("[handleSandboxCreation] Creating sandbox with payload:", {
@@ -142,9 +149,16 @@ async function handleSandboxCreation(
       statusText: response.statusText,
       data: responseData,
     });
-    // Ensure the error thrown has a meaningful message for the user
+    
     const apiErrorMessage = responseData.error || responseData.message || `Sandbox API error: ${response.status}`;
-    throw new Error(apiErrorMessage);
+    const errorCode = responseData.code || "SANDBOX_ERROR";
+    
+    const error = new Error(JSON.stringify({
+      code: errorCode,
+      error: apiErrorMessage,
+      message: apiErrorMessage
+    }));
+    throw error;
   }
 
   console.log("[handleSandboxCreation] Sandbox created successfully:", {
@@ -198,7 +212,7 @@ export default function Home() {
   const [result, setResult] = useState<ExecutionResult>()
   const [messages, setMessages] = useState<Message[]>([])
   const [fragment, setFragment] = useState<DeepPartial<FragmentSchema>>()
-  const [currentTab, setCurrentTab] = useState<"code" | "preview">("code") // Changed 'fragment' to 'preview'
+  const [currentTab, setCurrentTab] = useState<"code" | "preview">("code")
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
   const [isAuthDialogOpen, setAuthDialog] = useState(false)
   const [authView, setAuthView] = useState<ViewType>("sign_in")
@@ -229,7 +243,6 @@ export default function Home() {
     [setMessages],
   )
 
-  // Debug logging for auth state
   useEffect(() => {
     console.log("[Enhanced Chat] Auth state:", {
       sessionId: session?.user?.id?.substring(0, 8) + "...",
@@ -248,7 +261,6 @@ export default function Home() {
 
   const currentModel = filteredModels.find((model) => model.id === languageModel.model)
   const currentTemplate = selectedTemplate === "auto" ? templates : { [selectedTemplate]: templates[selectedTemplate] }
-  // const lastMessage = messages[messages.length - 1]; // Removed unused variable
 
   const {
     object,
@@ -260,7 +272,7 @@ export default function Home() {
     api: "/api/chat",
     schema,
     onError: (error) => {
-      console.error("[useObject] Error in onError:", error); // Added more specific log
+      console.error("[useObject] Error in onError:", error);
       const parsedError = parseApiError(error);
       const displayMessage = getDisplayErrorMessageForCode(parsedError.code, parsedError.message);
 
@@ -290,7 +302,7 @@ export default function Home() {
     },
     onFinish: async ({ object: completedFragment, error }) => {
       if (error) {
-        console.error("[useObject] Finished with error (also see onError for details):", error);
+        console.error("[useObject] Finished with error:", error);
         const parsedError = parseApiError(error);
         const displayMessage = getDisplayErrorMessageForCode(parsedError.code, parsedError.message);
         setErrorMessage(displayMessage);
@@ -307,7 +319,6 @@ export default function Home() {
         return;
       }
 
-      // Normalize template ID if it's the known incorrect variant from the AI
       if (completedFragment.template === "codinit template") {
         console.warn(
           `[useObject] Normalizing template ID from "codinit template" to "${TEMPLATE_IDS.CODINIT_ENGINEER}"`,
@@ -352,19 +363,14 @@ export default function Home() {
         setMessage({ result: sandboxResult });
 
         if (sandboxResult.template !== TEMPLATE_IDS.CODE_INTERPRETER_V1) {
-          // This is not a code-interpreter template, so we might expect a URL for preview.
-          // Explicitly check for 'url' property and its type.
           if ('url' in sandboxResult && typeof (sandboxResult as any).url === 'string' && (sandboxResult as any).url) {
             setCurrentTab("preview");
           } else {
-            // Non-interpreter template but no valid URL found.
             console.warn("[onFinish] Non-interpreter template but no valid URL on sandboxResult, defaulting to code tab. Template:", sandboxResult.template);
             setCurrentTab("code");
           }
         } else {
-          // This is TEMPLATE_IDS.CODE_INTERPRETER_V1, which defaults to the code tab.
           setCurrentTab("code");
-
         }
       } catch (sandboxError: any) {
         console.error("[useObject] Sandbox creation failed in onFinish:", sandboxError);
@@ -373,8 +379,8 @@ export default function Home() {
           parsedSandboxError = parseApiError(sandboxError);
         }
         const displayError = getDisplayErrorMessageForCode(
-          parsedSandboxError?.code || "INTERNAL_ERROR",
-          parsedSandboxError?.message || sandboxError.message || "Failed to create dev environment."
+          parsedSandboxError?.code || "SANDBOX_ERROR",
+          parsedSandboxError?.message || sandboxError.message || "Failed to create development environment."
         );
         setErrorMessage(displayError);
         setResult(undefined);
@@ -396,7 +402,6 @@ export default function Home() {
 
     setFragment(object)
 
-    // Update messages with current fragment state
     setMessages((prevMessages) => {
       const newAssistantContent: Message["content"] = [
         { type: "text", text: object.commentary || "Generating code..." }
@@ -470,7 +475,6 @@ export default function Home() {
       return
     }
 
-    // Generate request ID for tracking
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     setCurrentRequestId(requestId)
 
@@ -525,7 +529,6 @@ export default function Home() {
       setErrorMessage("")
       setIsRateLimited(false)
 
-      // Store project context for future reference
       if (projectFiles || projectAnalysis) {
         setProjectContext({
           files: projectFiles || [],
@@ -558,7 +561,6 @@ export default function Home() {
       return
     }
 
-    // Generate new request ID for retry
     const requestId = `retry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     setCurrentRequestId(requestId)
 
@@ -573,7 +575,6 @@ export default function Home() {
       template: currentTemplate,
       model: currentModel,
       config: languageModel,
-      // Include project context in retry
       uploadedFiles: projectContext.files.length > 0 ? projectContext.files : undefined,
       projectAnalysis: projectContext.analysis,
     }
@@ -656,7 +657,6 @@ export default function Home() {
     }
   }
 
-  // Show loading state while auth is initializing
   if (isLoading) {
     return (
       <main className="flex min-h-screen max-h-screen items-center justify-center">
@@ -670,16 +670,12 @@ export default function Home() {
 
   return (
     <div className="flex h-screen max-h-screen">
-      {/* Main content area */}
       <div className="flex flex-1 min-h-0">
-        {/* Main chat area */}
         <div className={`flex-1 grid w-full min-h-0 ${fragment ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
-          {/* AuthDialog */}
           {supabase && (
             <AuthDialog open={isAuthDialogOpen} setOpen={setAuthDialog} view={authView} supabase={supabase} />
           )}
 
-          {/* Chat Area */}
           <div className="flex flex-col w-full max-w-4xl max-h-full mx-auto px-4 overflow-y-auto">
             <NavBar
               session={session}
@@ -727,7 +723,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Preview Area: only shown if fragment exists */}
           {fragment && (
             <div className="hidden md:flex md:flex-col max-h-full overflow-y-auto">
               <Preview
