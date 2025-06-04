@@ -49,10 +49,10 @@ interface Session {
 export default function AccountPage() {
   const { toast } = useToast()
   const [accountData] = useState<AccountData>({
-    email: "john.doe@example.com",
+    email: "your email",
     emailVerified: true,
-    createdAt: "January 15, 2024",
-    lastSignIn: "2 hours ago",
+    createdAt: "",
+    lastSignIn: "",
     twoFactorEnabled: false,
     recoveryCodesGenerated: false
   })
@@ -60,27 +60,27 @@ export default function AccountPage() {
   const [sessions] = useState<Session[]>([
     {
       id: "1",
-      device: "Chrome on Windows",
-      location: "San Francisco, CA",
-      lastActive: "Active now",
+      device: "",
+      location: "",
+      lastActive: "",
       current: true,
-      ipAddress: "192.168.1.1"
+      ipAddress: ""
     },
     {
       id: "2", 
-      device: "Safari on iPhone",
-      location: "San Francisco, CA",
-      lastActive: "2 hours ago",
+      device: "",
+      location: "",
+      lastActive: "",
       current: false,
-      ipAddress: "192.168.1.2"
+      ipAddress: ""
     },
     {
       id: "3",
-      device: "Firefox on MacOS",
-      location: "New York, NY", 
-      lastActive: "1 day ago",
+      device: "",
+      location: "", 
+      lastActive: "",
       current: false,
-      ipAddress: "10.0.0.1"
+      ipAddress: ""
     }
   ])
 

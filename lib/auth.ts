@@ -35,7 +35,7 @@ async function createDefaultTeam(session: Session): Promise<UserTeam> {
     id: `static_team_for_${session.user.id.replace(/-/g, "").substring(0, 16)}`, // Provide a static ID
     name: teamName,
     tier: "free", // Default tier
-    email: session.user.email || "user@example.com",
+    email: session.user.email || "unknown@user.com",
   };
   console.log("[createDefaultTeam] Returning static default team:", staticDefaultTeam);
   return staticDefaultTeam;
@@ -75,7 +75,7 @@ export function useAuth(setAuthDialog: (value: boolean) => void, setAuthView: (v
           id: `fallback_${session.user.id.substring(0, 8)}`,
           name: "Default Team",
           tier: "free",
-          email: session.user.email || "user@example.com",
+          email: session.user.email || "unknown@user.com",
         }
 
         setUserTeam(fallbackTeam)
@@ -145,7 +145,7 @@ export function useAuth(setAuthDialog: (value: boolean) => void, setAuthView: (v
                   id: `timeout_fallback_${initialSession.user.id.replace(/-/g, "").substring(0, 16)}`,
                   name: "Default Team (Timeout)",
                   tier: "free",
-                  email: initialSession.user.email || "user@example.com",
+                  email: initialSession.user.email || "unknown@user.com",
                 };
               });
             } else {
