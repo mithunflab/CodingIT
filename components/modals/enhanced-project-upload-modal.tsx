@@ -519,7 +519,7 @@ export function EnhancedProjectUploadModal({ onUpload, isLoading = false }: Enha
             {!analysis && !analysisError && (
               <div className="text-center py-8 text-muted-foreground">
                 <Zap className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Upload files and click: Analyze Project - to see detailed analysis</p>
+                <p>Upload files and click Analyze Project to see detailed analysis</p>
               </div>
             )}
           </TabsContent>

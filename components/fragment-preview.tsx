@@ -15,6 +15,27 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { FragmentInterpreter } from './fragment-interpreter'
+import { FragmentWeb } from './fragment-web' // Corrected import for FragmentWeb
+import { ExecutionResult, ExecutionResultWeb } from '@/lib/types'
+
+export function FragmentPreview({ result }: { result: ExecutionResult }) {
+  if (result.template === 'code-interpreter-v1') {
+    // TypeScript knows result is ExecutionResultInterpreter here
+    return <FragmentInterpreter result={result} />;
+  } else {
+    // TypeScript should infer result as ExecutionResultWeb here
+    // as ExecutionResult is a discriminated union.
+    // The FragmentWeb component expects a prop 'result' of type ExecutionResultWeb.
+    return <FragmentWeb result={result} />;
+  }
+  // The previous fallback "Unsupported result type" is implicitly handled
+  // because ExecutionResult is a union of only two types.
+  // If more types were added to ExecutionResult, more explicit handling or a default case might be needed.
+}
+
+// Remove incorrect export, FragmentWeb is imported from its own file
+// export { FragmentWeb } 
 
 interface FileItem {
   name: string
@@ -39,7 +60,6 @@ export function FileTreeCodeViewer({ files, onDownload }: FileTreeCodeViewerProp
   const [selectedFile, setSelectedFile] = useState<string>(files[0]?.path || '')
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['/']))
 
-  // Build tree structure from files
   const fileTree = useMemo(() => {
     const root: TreeNode = { name: 'root', type: 'folder', path: '/', children: [] }
     
@@ -47,7 +67,6 @@ export function FileTreeCodeViewer({ files, onDownload }: FileTreeCodeViewerProp
       const pathParts = file.path.split('/').filter(Boolean)
       let currentNode = root
       
-      // Create folder structure
       for (let i = 0; i < pathParts.length - 1; i++) {
         const folderName = pathParts[i]
         const folderPath = '/' + pathParts.slice(0, i + 1).join('/')
@@ -70,7 +89,6 @@ export function FileTreeCodeViewer({ files, onDownload }: FileTreeCodeViewerProp
         currentNode = folderNode
       }
       
-      // Add file
       const fileName = pathParts[pathParts.length - 1] || file.name
       currentNode.children = currentNode.children || []
       currentNode.children.push({
@@ -81,7 +99,6 @@ export function FileTreeCodeViewer({ files, onDownload }: FileTreeCodeViewerProp
       })
     })
     
-    // Sort children: folders first, then files
     const sortChildren = (node: TreeNode) => {
       if (node.children) {
         node.children.sort((a, b) => {

@@ -33,7 +33,7 @@ export function Chat({
     >
       {messages.map((message: Message, index: number) => (
         <div
-          className={`flex flex-col px-4 shadow-sm whitespace-pre-wrap ${message.role !== 'user' ? 'bg-accent border border-border text-accent-foreground py-4 rounded-2xl gap-4 w-full' : 'bg-primary/10 dark:bg-primary/20 text-primary-foreground py-2 rounded-xl gap-2 w-fit'} font-serif`}
+          className={`flex flex-col px-4 shadow-sm whitespace-pre-wrap ${message.role !== 'user' ? 'bg-accent border border-border text-accent-foreground py-4 rounded-2xl gap-4 w-full' : 'bg-primary/10 dark:bg-primary/20 text-foreground py-2 rounded-xl gap-2 w-fit'} font-serif`}
           key={index}
         >
           {message.content.map((content, id) => {

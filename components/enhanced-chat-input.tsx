@@ -1,17 +1,56 @@
+// components/enhanced-chat-input.tsx
 "use client"
 
 import type React from "react"
 import Image from "next/image"
 
 import { RepoBanner } from "./repo-banner"
+import { EnhancedProjectUploadModal } from "./modals/enhanced-project-upload-modal"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Badge } from "@/components/ui/badge"
 import { isFileInArray } from "@/lib/utils"
-import { ArrowUp, Paperclip, Square, X, AlertTriangle, RefreshCw } from "lucide-react"
+import { 
+  ArrowUp, 
+  Paperclip, 
+  Square, 
+  X, 
+  AlertTriangle, 
+  RefreshCw, 
+  FileCode, 
+  Zap,
+  CheckCircle,
+  Upload,
+  Wand2 // New icon for feature buttons
+} from "lucide-react"
 import { type SetStateAction, useEffect, useMemo, useState, useCallback } from "react"
 import TextareaAutosize from "react-textarea-autosize"
 
-export function ChatInput({
+interface ProjectAnalysis {
+  structure: {
+    files: Array<{
+      name: string
+      path: string
+      language: string
+      size: number
+      type: string
+    }>
+    dependencies: Set<string>
+    frameworks: Set<string>
+    patterns: Set<string>
+    components: Set<string>
+    types: Set<string>
+    utilities: Set<string>
+    architecture: {
+      type: string
+      description: string
+    }
+  }
+  analysis: string
+  recommendations: string[]
+}
+
+export function EnhancedChatInput({
   retry,
   isErrored,
   errorMessage,
@@ -34,12 +73,16 @@ export function ChatInput({
   stop: () => void
   input: string
   handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
-  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void
+  handleSubmit: (e: React.FormEvent<HTMLFormElement>, projectFiles?: File[], projectAnalysis?: ProjectAnalysis) => void
   isMultiModal: boolean
   files: File[]
   handleFileChange: (change: SetStateAction<File[]>) => void
   children: React.ReactNode
 }) {
+  const [projectFiles, setProjectFiles] = useState<File[]>([])
+  const [projectAnalysis, setProjectAnalysis] = useState<ProjectAnalysis | null>(null)
+  const [projectInstructions, setProjectInstructions] = useState("")
+
   function handleFileInput(e: React.ChangeEvent<HTMLInputElement>) {
     handleFileChange((prev) => {
       const newFiles = Array.from(e.target.files || [])
@@ -99,6 +142,27 @@ export function ChatInput({
     }
   }
 
+  // Handle project upload
+  const handleProjectUpload = useCallback((uploadedFiles: File[], analysis?: ProjectAnalysis, instructions?: string) => {
+    setProjectFiles(uploadedFiles)
+    setProjectAnalysis(analysis || null)
+    setProjectInstructions(instructions || "")
+    
+    // Update the input with project context
+    if (instructions) {
+      handleInputChange({
+        target: { value: instructions }
+      } as React.ChangeEvent<HTMLTextAreaElement>)
+    }
+  }, [handleInputChange])
+
+  // Clear project data
+  const clearProjectData = useCallback(() => {
+    setProjectFiles([])
+    setProjectAnalysis(null)
+    setProjectInstructions("")
+  }, [])
+
   const filePreview = useMemo(() => {
     if (files.length === 0) return null
     return Array.from(files).map((file) => {
@@ -106,9 +170,9 @@ export function ChatInput({
         <div className="relative" key={file.name}>
           <span
             onClick={() => handleFileRemove(file)}
-            className="absolute top-[-8] right-[-8] bg-muted rounded-full p-1"
+            className="absolute top-[-8] right-[-8] bg-muted rounded-full p-1 cursor-pointer hover:bg-muted/80 transition-colors"
           >
-            <X className="h-3 w-3 cursor-pointer" />
+            <X className="h-3 w-3" />
           </span>
           <Image
             src={URL.createObjectURL(file) || "/placeholder.svg"}
@@ -126,7 +190,7 @@ export function ChatInput({
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
       if (e.currentTarget.checkValidity()) {
-        handleSubmit(e)
+        handleSubmit(e, projectFiles.length > 0 ? projectFiles : undefined, projectAnalysis || undefined)
       } else {
         e.currentTarget.reportValidity()
       }
@@ -211,7 +275,7 @@ export function ChatInput({
 
   return (
     <form
-      onSubmit={handleSubmit}
+      onSubmit={(e) => handleSubmit(e, projectFiles.length > 0 ? projectFiles : undefined, projectAnalysis || undefined)}
       onKeyDown={onEnter}
       className="mb-2 mt-auto flex flex-col bg-background"
       onDragEnter={isMultiModal ? handleDrag : undefined}
@@ -228,6 +292,59 @@ export function ChatInput({
           <div className="ml-2">{getErrorAction()}</div>
         </div>
       )}
+
+      {/* Project Context Display */}
+      {projectFiles.length > 0 && (
+        <div className="mx-4 mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <FileCode className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                Project Context ({projectFiles.length} files)
+              </span>
+              {projectAnalysis && (
+                <Badge variant="secondary" className="text-xs">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Analyzed
+                </Badge>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearProjectData}
+              className="h-6 w-6 p-0 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+            >
+              <X className="w-3 h-3" />
+            </Button>
+          </div>
+          
+          {projectAnalysis && (
+            <div className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+              <div>Architecture: {projectAnalysis.structure.architecture.type}</div>
+              <div className="flex gap-4">
+                <span>Dependencies: {projectAnalysis.structure.dependencies.size}</span>
+                <span>Components: {projectAnalysis.structure.components.size}</span>
+                <span>Frameworks: {Array.from(projectAnalysis.structure.frameworks).join(', ') || 'None'}</span>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex flex-wrap gap-1 mt-2">
+            {projectFiles.slice(0, 5).map((file, index) => (
+              <Badge key={index} variant="outline" className="text-xs">
+                {file.name}
+              </Badge>
+            ))}
+            {projectFiles.length > 5 && (
+              <Badge variant="outline" className="text-xs">
+                +{projectFiles.length - 5} more
+              </Badge>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="relative">
         <RepoBanner className="absolute bottom-full inset-x-2 translate-y-1 z-0 pb-2" />
         <div
@@ -242,14 +359,59 @@ export function ChatInput({
             autoFocus={true}
             minRows={1}
             maxRows={5}
-            className="text-normal px-3 resize-none ring-0 bg-inherit w-full m-0 outline-none"
+            className="text-normal px-3 resize-none ring-0 bg-inherit w-full m-0 outline-none placeholder:text-muted-foreground"
             required={true}
-            placeholder="Describe your app..."
+            placeholder={projectFiles.length > 0 ? "Describe what you want to build or modify..." : "Describe your app..."}
             disabled={isErrored}
             value={input}
             onChange={handleInputChange}
             onPaste={isMultiModal ? handlePaste : undefined}
           />
+
+          {/* Feature Buttons Section */}
+          <div className="px-3 pt-2 pb-1 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => handleInputChange({ target: { value: "Explain the selected code..." } } as React.ChangeEvent<HTMLTextAreaElement>)}
+            >
+              <Wand2 className="w-3 h-3 mr-1.5" />
+              Explain Code
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => handleInputChange({ target: { value: "Write unit tests for the following code..." } } as React.ChangeEvent<HTMLTextAreaElement>)}
+            >
+              <Wand2 className="w-3 h-3 mr-1.5" />
+              Write Tests
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => handleInputChange({ target: { value: "Refactor this code to improve readability and performance..." } } as React.ChangeEvent<HTMLTextAreaElement>)}
+            >
+              <Wand2 className="w-3 h-3 mr-1.5" />
+              Refactor
+            </Button>
+             <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => handleInputChange({ target: { value: "Generate documentation for this code..." } } as React.ChangeEvent<HTMLTextAreaElement>)}
+            >
+              <Wand2 className="w-3 h-3 mr-1.5" />
+              Document
+            </Button>
+          </div>
+
           <div className="flex p-3 gap-2 items-center">
             <input
               type="file"
@@ -278,9 +440,15 @@ export function ChatInput({
                       <Paperclip className="h-5 w-5" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Add attachments</TooltipContent>
+                  <TooltipContent>Add images</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+
+              <EnhancedProjectUploadModal
+                onUpload={handleProjectUpload}
+                isLoading={isLoading}
+              />
+
               {files.length > 0 && filePreview}
             </div>
             <div>
@@ -326,7 +494,7 @@ export function ChatInput({
         </div>
       </div>
       <p className="text-xs text-muted-foreground mt-2 text-center">
-        CodinIT Powered By{" "}
+        Powered By{" "}
         <a href="https://e2b.dev" target="_blank" className="text-[#ff8800]" rel="noreferrer">
           ✶ E2B
         </a>

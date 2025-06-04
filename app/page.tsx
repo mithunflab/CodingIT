@@ -5,7 +5,9 @@ import type React from "react"
 import type { ViewType } from "@/components/auth"
 import { AuthDialog } from "@/components/auth-dialog"
 import { Chat } from "@/components/chat"
-import { VercelV0Chat } from "@/components/ui/v0-ai-chat"
+import { EnhancedChatInput } from "@/components/enhanced-chat-input"
+import { ChatPicker } from "@/components/chat-picker"
+import { ChatSettings } from "@/components/chat-settings"
 import { NavBar } from "@/components/navbar"
 import { Preview } from "@/components/preview"
 import { useAuth } from "@/lib/auth"
@@ -22,11 +24,36 @@ import { usePostHog } from "posthog-js/react"
 import { type SetStateAction, useCallback, useEffect, useState } from "react"
 import { useLocalStorage } from "usehooks-ts"
 
+interface ProjectAnalysis {
+  structure: {
+    files: Array<{
+      name: string
+      path: string
+      language: string
+      size: number
+      type: string
+    }>
+    dependencies: Set<string>
+    frameworks: Set<string>
+    patterns: Set<string>
+    components: Set<string>
+    types: Set<string>
+    utilities: Set<string>
+    architecture: {
+      type: string
+      description: string
+    }
+  }
+  analysis: string
+  recommendations: string[]
+}
+
 export default function Home() {
   const [chatInput, setChatInput] = useLocalStorage("chat", "")
   const [files, setFiles] = useState<File[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<"auto" | TemplateId>("auto")
   const [languageModel, setLanguageModel] = useLocalStorage<LLMModelConfig>("languageModel", {
+    model: "claude-sonnet-4-20250514" // Default to Claude Sonnet 4
   })
 
   const posthog = usePostHog()
@@ -34,13 +61,18 @@ export default function Home() {
   const [result, setResult] = useState<ExecutionResult>()
   const [messages, setMessages] = useState<Message[]>([])
   const [fragment, setFragment] = useState<DeepPartial<FragmentSchema>>()
-  const [currentTab, setCurrentTab] = useState<"code" | "fragment">("code")
+  const [currentTab, setCurrentTab] = useState<"code" | "preview">("code") // Changed 'fragment' to 'preview'
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
   const [isAuthDialogOpen, setAuthDialog] = useState(false)
   const [authView, setAuthView] = useState<ViewType>("sign_in")
   const [isRateLimited, setIsRateLimited] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const [currentRequestId, setCurrentRequestId] = useState<string | null>(null)
+  const [projectContext, setProjectContext] = useState<{
+    files: File[]
+    analysis: ProjectAnalysis | null
+  }>({ files: [], analysis: null })
+
   const { session, userTeam, isLoading, authError } = useAuth(setAuthDialog, setAuthView)
 
   const setMessage = useCallback(
@@ -62,7 +94,7 @@ export default function Home() {
 
   // Debug logging for auth state
   useEffect(() => {
-    console.log("[Chat] Auth state:", {
+    console.log("[Enhanced Chat] Auth state:", {
       sessionId: session?.user?.id?.substring(0, 8) + "...",
       teamId: userTeam?.id?.substring(0, 8) + "...",
       isLoading,
@@ -266,7 +298,12 @@ export default function Home() {
 
         setResult(responseData)
         setMessage({ result: responseData })
-        setCurrentTab("fragment")
+        // If a URL is available, switch to preview tab, otherwise stay on code
+        if (responseData.url && responseData.template !== 'code-interpreter-v1') {
+          setCurrentTab("preview") // Changed 'fragment' to 'preview'
+        } else {
+          setCurrentTab("code")
+        }
       } catch (sandboxError: any) {
         console.error("[useObject] Sandbox creation failed:", sandboxError)
         setErrorMessage(`Failed to create sandbox: ${sandboxError.message}`)
@@ -324,7 +361,11 @@ export default function Home() {
     }
   }, [error, stop])
 
-  async function handleSubmitAuth(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmitAuth(
+    e: React.FormEvent<HTMLFormElement>, 
+    projectFiles?: File[], 
+    projectAnalysis?: ProjectAnalysis
+  ) {
     e.preventDefault()
 
     // Check if still loading auth state
@@ -395,6 +436,9 @@ export default function Home() {
       template: currentTemplate,
       model: currentModel,
       config: languageModel,
+      // Enhanced: Include project context
+      uploadedFiles: projectFiles,
+      projectAnalysis: projectAnalysis,
     }
 
     console.log("[handleSubmitAuth] Submitting request:", {
@@ -405,6 +449,8 @@ export default function Home() {
       model: submitData.model.id,
       provider: submitData.model.providerId,
       template: selectedTemplate,
+      hasProjectFiles: !!(projectFiles && projectFiles.length > 0),
+      hasProjectAnalysis: !!projectAnalysis,
     })
 
     try {
@@ -416,10 +462,19 @@ export default function Home() {
       setErrorMessage("")
       setIsRateLimited(false)
 
+      // Store project context for future reference
+      if (projectFiles || projectAnalysis) {
+        setProjectContext({
+          files: projectFiles || [],
+          analysis: projectAnalysis || null
+        })
+      }
+
       posthog.capture("chat_submit", {
         template: selectedTemplate,
         model: languageModel.model,
         requestId,
+        hasProjectContext: !!(projectFiles && projectFiles.length > 0),
       })
     } catch (error: any) {
       console.error("[handleSubmitAuth] Submit error:", error)
@@ -455,12 +510,16 @@ export default function Home() {
       template: currentTemplate,
       model: currentModel,
       config: languageModel,
+      // Include project context in retry
+      uploadedFiles: projectContext.files.length > 0 ? projectContext.files : undefined,
+      projectAnalysis: projectContext.analysis,
     }
 
     console.log("[retry] Retrying request:", {
       requestId,
       messagesCount: submitData.messages.length,
       model: submitData.model.id,
+      hasProjectContext: !!(projectContext.files.length > 0),
     })
 
     submit(submitData)
@@ -484,11 +543,11 @@ export default function Home() {
 
   function handleSocialClick(target: "github" | "x" | "discord") {
     if (target === "github") {
-      window.open("https://github.com/your-username/your-repo-name", "_blank")
+      window.open("https://github.com/Gerome-Elassaad/CodinIT", "_blank")
     } else if (target === "x") {
-      window.open("https://x.com/your-twitter-handle", "_blank")
+      window.open("https://x.com/codinit_dev", "_blank")
     } else if (target === "discord") {
-      window.open("https://discord.gg/your-discord-invite", "_blank")
+      window.open("https://discord.gg/codinit", "_blank")
     }
 
     posthog.capture(`${target}_click`)
@@ -506,6 +565,7 @@ export default function Home() {
     setErrorMessage("")
     setIsRateLimited(false)
     setCurrentRequestId(null)
+    setProjectContext({ files: [], analysis: null })
   }
 
   function setCurrentPreview(preview: {
@@ -547,7 +607,7 @@ export default function Home() {
 
   return (
     <div className="flex h-screen max-h-screen">
-      {/* Main content area - removed sidebar */}
+      {/* Main content area */}
       <div className="flex flex-1 min-h-0">
         {/* Main chat area */}
         <div className={`flex-1 grid w-full min-h-0 ${fragment ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
@@ -572,7 +632,7 @@ export default function Home() {
             />
             <Chat messages={messages} isLoading={isSubmitting} setCurrentPreview={setCurrentPreview} />
             <div className="mt-auto">
-              <VercelV0Chat
+              <EnhancedChatInput
                 input={chatInput}
                 handleInputChange={handleSaveInputChange}
                 handleSubmit={handleSubmitAuth}
@@ -585,17 +645,22 @@ export default function Home() {
                 isMultiModal={currentModel?.multiModal || false}
                 files={files}
                 handleFileChange={handleFileChange}
-                // ChatPicker props
-                templates={templates}
-                selectedTemplate={selectedTemplate}
-                onSelectedTemplateChange={setSelectedTemplate}
-                models={filteredModels}
-                languageModel={languageModel}
-                onLanguageModelChange={handleLanguageModelChange}
-                // ChatSettings props
-                apiKeyConfigurable={!process.env.NEXT_PUBLIC_NO_API_KEY_INPUT}
-                baseURLConfigurable={!process.env.NEXT_PUBLIC_NO_BASE_URL_INPUT}
-              />
+              >
+                <ChatPicker
+                  templates={templates}
+                  selectedTemplate={selectedTemplate}
+                  onSelectedTemplateChange={setSelectedTemplate}
+                  models={filteredModels}
+                  languageModel={languageModel}
+                  onLanguageModelChange={handleLanguageModelChange}
+                />
+                <ChatSettings
+                  apiKeyConfigurable={!process.env.NEXT_PUBLIC_NO_API_KEY_INPUT}
+                  baseURLConfigurable={!process.env.NEXT_PUBLIC_NO_BASE_URL_INPUT}
+                  languageModel={languageModel}
+                  onLanguageModelChange={handleLanguageModelChange}
+                />
+              </EnhancedChatInput>
             </div>
           </div>
 

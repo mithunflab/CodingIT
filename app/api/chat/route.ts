@@ -1,11 +1,14 @@
+// app/api/chat/route.ts - Enhanced with better error handling and project analysis
 import type { Duration } from "@/lib/duration"
 import type { LLMModel, LLMModelConfig } from "@/lib/models"
 import { getModelClient } from "@/lib/models"
-import { toPrompt } from "@/lib/prompt"
+import { toEnhancedPrompt } from "@/lib/enhanced-prompt"
 import ratelimit from "@/lib/ratelimit"
 import { fragmentSchema as schema } from "@/lib/schema"
 import type { TemplatesDataObject } from "@/lib/templates"
+import { ProjectAnalyzer, type ProjectStructure } from "@/lib/project-analyzer"
 import { streamObject, type LanguageModel, type CoreMessage } from "ai"
+import { logError, generateRequestId, validateRequestData } from "@/lib/debug"
 
 export const maxDuration = 60
 
@@ -15,18 +18,18 @@ const rateLimitMaxRequests = process.env.RATE_LIMIT_MAX_REQUESTS
 const ratelimitWindow = process.env.RATE_LIMIT_WINDOW ? (process.env.RATE_LIMIT_WINDOW as Duration) : "1d"
 
 export async function POST(req: Request) {
-  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const requestId = generateRequestId()
 
   try {
-    console.log(`[Chat API ${requestId}] Processing request`)
+    console.log(`[Enhanced Chat API ${requestId}] Processing request`)
 
-    // Parse request body with error handling
+    // Parse request body with enhanced error handling
     let body: any
     try {
       body = await req.json()
-      console.log(`[Chat API ${requestId}] Request body parsed, keys:`, Object.keys(body))
+      console.log(`[Enhanced Chat API ${requestId}] Request body parsed, keys:`, Object.keys(body))
     } catch (error) {
-      console.error(`[Chat API ${requestId}] Request body parsing failed:`, error)
+      logError("Request body parsing", error, { requestId })
       return new Response(
         JSON.stringify({
           error: "Invalid JSON in request body",
@@ -47,6 +50,8 @@ export async function POST(req: Request) {
       template,
       model,
       config,
+      uploadedFiles, // New: support for uploaded files
+      analysisInstructions, // New: specific instructions for analysis
     }: {
       messages: CoreMessage[]
       userID: string
@@ -54,45 +59,19 @@ export async function POST(req: Request) {
       template: TemplatesDataObject
       model: LLMModel
       config: LLMModelConfig
+      uploadedFiles?: File[]
+      analysisInstructions?: string
     } = body
 
-    // Enhanced validation with specific error messages
-    if (!userID || !teamID) {
-      console.error(`[Chat API ${requestId}] Missing authentication:`, {
-        hasUserID: !!userID,
-        hasTeamID: !!teamID,
-        userID: userID?.substring(0, 8) + "...",
-        teamID: teamID?.substring(0, 8) + "...",
-      })
-
+    // Enhanced validation with better error messages
+    const validation = validateRequestData(body)
+    if (!validation.valid) {
+      logError("Request validation failed", new Error(validation.errors.join(", ")), { requestId, errors: validation.errors })
       return new Response(
         JSON.stringify({
-          error: "Authentication required. Please ensure you're signed in and have a valid team.",
-          code: "MISSING_AUTH",
-          details: {
-            missingUserID: !userID,
-            missingTeamID: !teamID,
-          },
-          requestId,
-        }),
-        {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        },
-      )
-    }
-
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      console.error(`[Chat API ${requestId}] Invalid messages:`, {
-        hasMessages: !!messages,
-        isArray: Array.isArray(messages),
-        length: messages?.length,
-      })
-
-      return new Response(
-        JSON.stringify({
-          error: "Messages are required and must be a non-empty array",
-          code: "INVALID_MESSAGES",
+          error: "Request validation failed",
+          code: "VALIDATION_ERROR",
+          details: validation.errors,
           requestId,
         }),
         {
@@ -102,45 +81,35 @@ export async function POST(req: Request) {
       )
     }
 
-    if (!model || !model.id || !model.providerId) {
-      console.error(`[Chat API ${requestId}] Invalid model:`, model)
-
-      return new Response(
-        JSON.stringify({
-          error: "Valid model configuration is required",
-          code: "INVALID_MODEL",
-          requestId,
-        }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        },
-      )
-    }
-
-    if (!template) {
-      console.error(`[Chat API ${requestId}] Invalid template:`, template)
-
-      return new Response(
-        JSON.stringify({
-          error: "Template configuration is required",
-          code: "INVALID_TEMPLATE",
-          requestId,
-        }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        },
-      )
-    }
-
-    console.log(`[Chat API ${requestId}] Validation passed:`, {
+    console.log(`[Enhanced Chat API ${requestId}] Validation passed:`, {
       userID: userID.substring(0, 8) + "...",
       teamID: teamID.substring(0, 8) + "...",
       modelId: model.id,
       provider: model.providerId,
       messagesCount: messages.length,
+      hasUploadedFiles: !!(uploadedFiles && uploadedFiles.length > 0),
     })
+
+    // Analyze uploaded files if present
+    let projectStructure: ProjectStructure | undefined
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      try {
+        console.log(`[Enhanced Chat API ${requestId}] Analyzing ${uploadedFiles.length} uploaded files`)
+        const analyzer = new ProjectAnalyzer()
+        const analysis = await analyzer.analyzeProject(uploadedFiles)
+        projectStructure = analysis.structure
+        
+        console.log(`[Enhanced Chat API ${requestId}] Project analysis completed:`, {
+          filesAnalyzed: uploadedFiles.length,
+          dependenciesFound: projectStructure.dependencies.size,
+          componentsFound: projectStructure.components.size,
+          architectureType: projectStructure.architecture.type,
+        })
+      } catch (analysisError) {
+        logError("Project analysis failed", analysisError, { requestId, filesCount: uploadedFiles.length })
+        console.warn(`[Enhanced Chat API ${requestId}] Project analysis failed, continuing without analysis:`, analysisError)
+      }
+    }
 
     // Rate limiting check
     try {
@@ -149,7 +118,7 @@ export async function POST(req: Request) {
         : false
 
       if (limit) {
-        console.log(`[Chat API ${requestId}] Rate limit hit:`, limit)
+        console.log(`[Enhanced Chat API ${requestId}] Rate limit hit:`, limit)
         return new Response(
           JSON.stringify({
             error: "You have reached your request limit for the day.",
@@ -168,24 +137,24 @@ export async function POST(req: Request) {
           },
         )
       }
-      console.log(`[Chat API ${requestId}] Rate limit check passed`)
+      console.log(`[Enhanced Chat API ${requestId}] Rate limit check passed`)
     } catch (error) {
-      console.warn(`[Chat API ${requestId}] Rate limiting check failed:`, error)
+      logError("Rate limiting check failed", error, { requestId })
       // Continue without rate limiting if it fails
     }
 
     // Create model client with enhanced error handling
     let modelClient: LanguageModel
     try {
-      console.log(`[Chat API ${requestId}] Creating model client for:`, model.providerId, model.id)
+      console.log(`[Enhanced Chat API ${requestId}] Creating model client for:`, model.providerId, model.id)
       modelClient = getModelClient(model, config) as LanguageModel
-      console.log(`[Chat API ${requestId}] Model client created successfully`)
+      console.log(`[Enhanced Chat API ${requestId}] Model client created successfully`)
     } catch (error: any) {
-      console.error(`[Chat API ${requestId}] Model client creation failed:`, error)
+      logError("Model client creation failed", error, { requestId, provider: model.providerId, modelId: model.id })
 
       return new Response(
         JSON.stringify({
-          error: `Failed to initialize ${model.providerId} model: ${error.message}`, // Use model.providerId for consistency
+          error: `Failed to initialize ${model.providerId} model. Please check your API key configuration.`,
           code: "MODEL_INIT_ERROR",
           provider: model.providerId,
           details: error.message,
@@ -198,21 +167,30 @@ export async function POST(req: Request) {
       )
     }
 
-    // Prepare model parameters from config, excluding model and apiKey used for client instantiation
-    const { model: _modelFromConfig, apiKey: _apiKeyFromConfig, ...providerSpecificConfig } = config
-
-    // Clean up undefined values from provider-specific config
-    const cleanProviderSpecificConfig = Object.fromEntries(
-      Object.entries(providerSpecificConfig).filter(([_, value]) => value !== undefined),
-    )
+    // Extract user prompt from the last message
+    const lastMessage = messages[messages.length - 1]
+    let userPrompt = ''
+    if (Array.isArray(lastMessage?.content)) {
+      userPrompt = lastMessage.content
+        .filter((content: any) => content.type === 'text')
+        .map((content: any) => content.text)
+        .join(' ')
+    }
 
     let systemPrompt: string
     try {
-      systemPrompt = toPrompt(template)
-      // The check for empty systemPrompt with template content was removed due to type mismatch.
-      // toPrompt is responsible for handling the TemplatesDataObject.
+      if (projectStructure && userPrompt) {
+        console.log(`[Enhanced Chat API ${requestId}] Generating enhanced prompt with project context`)
+        systemPrompt = toEnhancedPrompt(template, userPrompt, projectStructure)
+      } else {
+        console.log(`[Enhanced Chat API ${requestId}] Using standard prompt generation`)
+        // Fallback to existing prompt system
+        systemPrompt = generateFallbackPrompt(template)
+      }
+      
+      console.log(`[Enhanced Chat API ${requestId}] System prompt generated, length:`, systemPrompt.length)
     } catch (error: any) {
-      console.error(`[Chat API ${requestId}] System prompt generation failed:`, error)
+      logError("System prompt generation failed", error, { requestId })
       return new Response(
         JSON.stringify({
           error: "Failed to generate system prompt from template.",
@@ -227,32 +205,41 @@ export async function POST(req: Request) {
       )
     }
 
-    console.log(`[Chat API ${requestId}] Creating stream with params:`, {
+    // Prepare model parameters from config
+    const { model: _modelFromConfig, apiKey: _apiKeyFromConfig, ...providerSpecificConfig } = config
+
+    // Clean up undefined values from provider-specific config
+    const cleanProviderSpecificConfig = Object.fromEntries(
+      Object.entries(providerSpecificConfig).filter(([_, value]) => value !== undefined),
+    )
+
+    console.log(`[Enhanced Chat API ${requestId}] Creating stream with params:`, {
       providerSpecificConfigKeys: Object.keys(cleanProviderSpecificConfig),
       systemPromptLength: systemPrompt.length,
+      hasProjectContext: !!projectStructure,
     })
 
     try {
       const streamConfig = {
         model: modelClient,
         schema,
-        system: systemPrompt, // Use the validated system prompt
+        system: systemPrompt,
         messages,
-        maxRetries: 1, // Reduce retries to avoid timeout issues
-        ...cleanProviderSpecificConfig, // Pass cleaned provider-specific parameters
+        maxRetries: 2, // Increase retries for better reliability
+        ...cleanProviderSpecificConfig,
       }
 
-      console.log(`[Chat API ${requestId}] Starting stream object creation`)
+      console.log(`[Enhanced Chat API ${requestId}] Starting stream object creation`)
       const stream = await streamObject(streamConfig)
 
-      console.log(`[Chat API ${requestId}] Stream created successfully`)
+      console.log(`[Enhanced Chat API ${requestId}] Stream created successfully`)
       return stream.toTextStreamResponse()
     } catch (error: any) {
-      console.error(`[Chat API ${requestId}] Stream creation failed:`, {
-        error: error.message,
-        stack: error.stack,
-        status: error.status,
-        code: error.code,
+      logError("Stream creation failed", error, { 
+        requestId, 
+        provider: model.providerId, 
+        modelId: model.id,
+        hasProjectContext: !!projectStructure 
       })
 
       // Enhanced error categorization
@@ -326,7 +313,7 @@ export async function POST(req: Request) {
       if (errorMessage.includes("model") && errorMessage.includes("not found")) {
         return new Response(
           JSON.stringify({
-            error: `Model ${model.id} is not available for ${model.providerId}.`, // Use model.providerId
+            error: `Model ${model.id} is not available for ${model.providerId}.`,
             code: "MODEL_NOT_FOUND",
             provider: model.providerId,
             modelId: model.id,
@@ -363,7 +350,7 @@ export async function POST(req: Request) {
       )
     }
   } catch (error: any) {
-    console.error(`[Chat API ${requestId}] Request processing failed:`, error)
+    logError("Request processing failed", error, { requestId })
 
     return new Response(
       JSON.stringify({
@@ -378,4 +365,27 @@ export async function POST(req: Request) {
       },
     )
   }
+}
+
+// Fallback prompt generation function
+function generateFallbackPrompt(template: TemplatesDataObject): string {
+  return `You are an expert software engineer with deep knowledge of modern web development, programming languages, frameworks, and best practices.
+
+Generate production-ready code based on the user's requirements using the following templates:
+
+${Object.entries(template).map(([id, t], index) => 
+  `${index + 1}. ${id}: "${t.instructions}". File: ${t.file || 'none'}. Dependencies: ${t.lib.join(', ')}. Port: ${t.port || 'none'}.`
+).join('\n')}
+
+IMPORTANT GUIDELINES:
+- Write clean, maintainable, and well-documented code
+- Follow modern best practices and patterns
+- Include proper error handling and validation
+- Ensure code is production-ready
+- Use TypeScript when applicable for type safety
+- Implement responsive design for web applications
+- Follow accessibility guidelines (WCAG 2.1)
+- Include proper security measures
+
+Generate complete, functional code that fulfills the user's request.`
 }

@@ -3,7 +3,7 @@ import { Separator } from './ui/separator'
 import { cn } from '@/lib/utils'
 import { StarFilledIcon } from '@radix-ui/react-icons'
 
-const REPO_URL = 'https://github.com/Gerome-Elassaad/ai-artifacts'
+const REPO_URL = 'https://github.com/Gerome-Elassaad/CodinIT'
 
 export function RepoBanner({ className }: { className?: string }) {
   return (

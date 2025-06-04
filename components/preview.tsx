@@ -2,7 +2,7 @@
 
 import { DeployDialog } from './deploy-dialog'
 import { FragmentCode } from './fragment-code'
-import { FileTreeCodeViewer } from './fragment-preview'
+import { FragmentWeb } from './fragment-web' // Corrected import path for FragmentWeb
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -11,11 +11,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { AppSidebar } from './app-sidebar'
+// SidebarProvider and AppSidebar are not used, can be removed if not needed elsewhere, but keeping for now.
+// import { SidebarProvider } from '@/components/ui/sidebar'
+// import { AppSidebar } from './app-sidebar'
 import { FragmentSchema } from '@/lib/schema'
-import { ExecutionResult } from '@/lib/types'
+import { ExecutionResult, ExecutionResultWeb } from '@/lib/types' // Added ExecutionResultWeb
 import { DeepPartial } from 'ai'
-import { ChevronsRight, LoaderCircle } from 'lucide-react'
+import { ChevronsRight, LoaderCircle, Files, Code, Globe } from 'lucide-react' // Added Globe
 import { Dispatch, SetStateAction } from 'react'
 
 export function Preview({
@@ -31,8 +33,8 @@ export function Preview({
 }: {
   teamID: string | undefined
   accessToken: string | undefined
-  selectedTab: 'code' | 'fragment'
-  onSelectedTabChange: Dispatch<SetStateAction<'code' | 'fragment'>>
+  selectedTab: 'code' | 'preview' // Changed 'fragment' to 'preview'
+  onSelectedTabChange: Dispatch<SetStateAction<'code' | 'preview'>> // Changed 'fragment' to 'preview'
   isChatLoading: boolean
   isPreviewLoading: boolean
   fragment?: DeepPartial<FragmentSchema>
@@ -59,7 +61,7 @@ export function Preview({
       <Tabs
         value={selectedTab}
         onValueChange={(value) =>
-          onSelectedTabChange(value as 'code' | 'fragment')
+          onSelectedTabChange(value as 'code' | 'preview') // Changed 'fragment' to 'preview'
         }
         className="h-full flex flex-col items-start justify-start"
       >
@@ -91,15 +93,17 @@ export function Preview({
                     className="h-3 w-3 animate-spin"
                   />
                 )}
+                <Code className="h-3 w-3" />
                 Code
               </TabsTrigger>
               <TabsTrigger
-                disabled={!result}
+                disabled={!isLinkAvailable} // Disabled if no URL preview is available
                 className="font-normal text-xs py-1 px-2 gap-1 flex items-center"
-                value="fragment"
+                value="preview" // Changed 'fragment' to 'preview'
               >
-                Preview
-                {isPreviewLoading && (
+                <Globe className="h-3 w-3" /> {/* Changed Files to Globe */}
+                Preview {/* Changed Files to Preview */}
+                {isPreviewLoading && isLinkAvailable && ( // Show loader only if preview is possible and loading
                   <LoaderCircle
                     strokeWidth={3}
                     className="h-3 w-3 animate-spin"
@@ -121,20 +125,37 @@ export function Preview({
             </div>
           )}
         </div>
-        <AppSidebar />
+        
         {fragment && (
           <div className="overflow-y-auto w-full h-full">
             <TabsContent value="code" className="h-full">
               {fragmentFiles.length > 0 ? (
-                <FragmentCode files={fragmentFiles} />
+                <div className="flex h-full">
+                  {/* AppSidebar removed from here */}
+                  <div className="flex-1">
+                    <FragmentCode files={fragmentFiles} />
+                  </div>
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
-                  No code files available
+                  <div className="text-center space-y-2">
+                    <Code className="h-8 w-8 mx-auto opacity-50" />
+                    <p>No code files available</p>
+                  </div>
                 </div>
               )}
             </TabsContent>
-            <TabsContent value="fragment" className="h-full">
- {result && <FileTreeCodeViewer files={fragmentFiles} />}
+            <TabsContent value="preview" className="h-full"> {/* Changed 'fragment' to 'preview' */}
+              {result && isLinkAvailable ? (
+                <FragmentWeb result={result as ExecutionResultWeb} />
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <div className="text-center space-y-2">
+                    <Globe className="h-8 w-8 mx-auto opacity-50" /> {/* Changed Files to Globe */}
+                    <p>Live preview not available for this execution type.</p>
+                  </div>
+                </div>
+              )}
             </TabsContent>
           </div>
         )}
