@@ -12,7 +12,7 @@ import type { LLMModel, LLMModelConfig } from "@/lib/models"
 import type { TemplateId, TemplatesDataObject } from "@/lib/templates"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { FigmaImportModal } from "@/components/modals/figma-import-modal"
-import { ProjectUploadModal } from "@/components/modals/project-upload-modal"
+import { EnhancedProjectUploadModal } from "@/components/modals/project-upload-modal"
 import { ScreenshotCloneModal } from "@/components/modals/screenshot-clone-modal"
 import { countWords, isWithinWordLimit, getWordLimitMessage } from "@/lib/prompt-utils"
 import { TypingAnimation } from "@/components/typing-animation"
@@ -181,7 +181,8 @@ export function VercelV0Chat({
     setProgrammaticSubmitCounter(prev => prev + 1)
   }
 
-  const handleProjectUpload = (uploadedFiles: File[], instructions?: string) => {
+  const handleProjectUpload = (uploadedFiles: File[], analysis?: any, instructions?: string) => {
+    // TODO: Utilize the 'analysis' object if needed for prompt generation or other logic
     const prompt = `📁 **Project Analysis & Enhancement**\n\nAnalyze these ${uploadedFiles.length} uploaded files and provide comprehensive improvements. ${instructions ? `\n\nFocus areas: ${instructions}` : ""}`
     handleFileChange(uploadedFiles)
     handleInputChange({ target: { value: prompt } } as any)
@@ -417,7 +418,7 @@ export function VercelV0Chat({
           </div>
           <div className="rainbow-button-border">
             <div className="rainbow-button-content">
-              <ProjectUploadModal onUpload={handleProjectUpload} isLoading={isLoading} />
+              <EnhancedProjectUploadModal onUpload={handleProjectUpload} isLoading={isLoading} />
             </div>
           </div>
           <div className="rainbow-button-border">
