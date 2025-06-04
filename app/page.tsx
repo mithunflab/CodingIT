@@ -24,6 +24,143 @@ import { usePostHog } from "posthog-js/react"
 import { type SetStateAction, useCallback, useEffect, useState } from "react"
 import { useLocalStorage } from "usehooks-ts"
 
+// +++ ADDED CONSTANTS AND HELPER FUNCTIONS START +++
+const TEMPLATE_IDS = {
+  CODE_INTERPRETER_V1: "code-interpreter-v1",
+  NEXTJS_DEVELOPER: "nextjs-developer",
+  VUE_DEVELOPER: "vue-developer",
+  STREAMLIT_DEVELOPER: "streamlit-developer",
+  GRADIO_DEVELOPER: "gradio-developer",
+  CODINIT_ENGINEER: "codinit-engineer",
+} as const;
+
+type ParsedApiError = { code: string; message: string; rawData: any };
+
+const parseApiError = (error: Error | any): ParsedApiError => {
+  let errorData: any = {};
+  let errorCode = "UNKNOWN_ERROR"; // Default error code
+  let errorMessage = error.message || "An unexpected error occurred";
+
+  try {
+    const errorText = error.message || "";
+    // Attempt to parse a JSON string if present in the error message
+    const jsonMatch = errorText.match(/\{[\s\S]*\}/); // Replaced 's' flag with [\s\S] for broader compatibility
+    if (jsonMatch && jsonMatch[0]) {
+      errorData = JSON.parse(jsonMatch[0]);
+      errorCode = errorData.code || errorCode;
+      errorMessage = errorData.error || errorData.message || errorMessage; // Prefer specific error fields
+    } else if (errorText.includes("Internal Server Error")) {
+      errorCode = "INTERNAL_SERVER_ERROR";
+      errorMessage = "Internal server error occurred. Please try again.";
+    } else if (errorText.includes("fetch") || errorText.toLowerCase().includes("networkerror")) {
+      errorCode = "NETWORK_ERROR";
+      errorMessage = "Network error. Please check your connection and try again.";
+    } else if (error.name === 'AbortError') {
+      errorCode = "REQUEST_ABORTED";
+      errorMessage = "The request was cancelled.";
+    }
+    // Add more specific error text checks if needed
+  } catch (parseError) {
+    console.warn("[parseApiError] Failed to parse error response:", parseError, "Original error message:", error.message);
+    // Fallback to original error message if parsing fails, ensure errorCode is set
+    errorCode = errorCode === "UNKNOWN_ERROR" && error.message?.includes("rate limit") ? "RATE_LIMITED" : errorCode;
+    errorMessage = error.message || "An unexpected error occurred after failing to parse error details.";
+  }
+  return { code: errorCode, message: errorMessage, rawData: errorData };
+};
+
+const API_ERROR_DISPLAY_MESSAGES: Record<string, string> = {
+  MISSING_AUTH: "Authentication error: Please sign out and sign in again to refresh your session.",
+  AUTH_ERROR: "Authentication error: Please sign out and sign in again to refresh your session.",
+  RATE_LIMITED: "Rate limit exceeded. Please try again later or use your own API key.",
+  PROVIDER_RATE_LIMITED: "Rate limit exceeded. Please try again later or use your own API key.",
+  ACCESS_DENIED: "Access denied. Please check your API key configuration.",
+  NETWORK_ERROR: "Network error. Please check your connection and try again.",
+  TIMEOUT_ERROR: "Network error or timeout. Please check your connection and try again.",
+  SERVICE_UNAVAILABLE: "AI service is temporarily unavailable. Please try again in a few moments.",
+  PROVIDER_OVERLOADED: "AI service is temporarily unavailable. Please try again in a few moments.",
+  MODEL_NOT_FOUND: "The selected model is not available. Please choose a different model.",
+  MODEL_INIT_ERROR: "Failed to initialize the AI model. Please try a different model or check your API key.",
+  VALIDATION_ERROR: "Invalid request data. Please refresh the page and try again.",
+  INTERNAL_SERVER_ERROR: "A server error occurred. Please try again or contact support if the issue persists.",
+  INTERNAL_ERROR: "An internal error occurred. Please try again or contact support if the issue persists.",
+  REQUEST_ABORTED: "The operation was cancelled.",
+  UNKNOWN_ERROR: "An unexpected error occurred. Please try again.",
+};
+
+const getDisplayErrorMessageForCode = (errorCode: string, specificMessage?: string): string => {
+  const defaultMessage = API_ERROR_DISPLAY_MESSAGES[errorCode] || API_ERROR_DISPLAY_MESSAGES.UNKNOWN_ERROR;
+
+  if (
+    ["INTERNAL_SERVER_ERROR", "INTERNAL_ERROR", "UNKNOWN_ERROR"].includes(errorCode) &&
+    specificMessage &&
+    typeof specificMessage === "string" &&
+    specificMessage.trim().length > 10 &&
+    !/internal server error/i.test(specificMessage) &&
+    !/an unexpected error occurred/i.test(specificMessage) &&
+    !/status code [45]\d\d/i.test(specificMessage)
+  ) {
+    return specificMessage;
+  }
+
+  return defaultMessage;
+};
+
+async function handleSandboxCreation(
+  completedFragment: DeepPartial<FragmentSchema>,
+  sessionData: { userId?: string; teamId?: string; accessToken?: string } | undefined,
+  posthogInstance: ReturnType<typeof usePostHog>,
+  currentRequestIdValue: string | null
+): Promise<ExecutionResult> {
+  const sandboxPayload = {
+    fragment: completedFragment,
+    userID: sessionData?.userId,
+    teamID: sessionData?.teamId,
+    accessToken: sessionData?.accessToken,
+    TEMPLATE_IDS: TEMPLATE_IDS,
+  };
+
+  console.log("[handleSandboxCreation] Creating sandbox with payload:", {
+    template: sandboxPayload.fragment.template,
+    userID: sandboxPayload.userID ? sandboxPayload.userID.substring(0, 8) + "..." : "N/A",
+    teamID: sandboxPayload.teamID ? sandboxPayload.teamID.substring(0, 8) + "..." : "N/A",
+    hasFiles: !!(sandboxPayload.fragment.files && sandboxPayload.fragment.files.length > 0),
+    filesCount: sandboxPayload.fragment.files?.length || 0,
+  });
+
+  const response = await fetch("/api/sandbox", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(sandboxPayload),
+  });
+
+  const responseData = await response.json();
+
+  if (!response.ok) {
+    console.error("[handleSandboxCreation] Sandbox creation failed:", {
+      status: response.status,
+      statusText: response.statusText,
+      data: responseData,
+    });
+    // Ensure the error thrown has a meaningful message for the user
+    const apiErrorMessage = responseData.error || responseData.message || `Sandbox API error: ${response.status}`;
+    throw new Error(apiErrorMessage);
+  }
+
+  console.log("[handleSandboxCreation] Sandbox created successfully:", {
+    sbxId: responseData.sbxId,
+    template: responseData.template,
+    url: responseData.url,
+  });
+
+  posthogInstance.capture("sandbox_created", {
+    url: responseData.url,
+    template: responseData.template,
+    requestId: currentRequestIdValue,
+  });
+  return responseData as ExecutionResult;
+}
+
 interface ProjectAnalysis {
   structure: {
     files: Array<{
@@ -53,7 +190,7 @@ export default function Home() {
   const [files, setFiles] = useState<File[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<"auto" | TemplateId>("auto")
   const [languageModel, setLanguageModel] = useLocalStorage<LLMModelConfig>("languageModel", {
-    model: "claude-sonnet-4-20250514" // Default to Claude Sonnet 4
+    model: "gemini-2.5-flash-preview-05-20"
   })
 
   const posthog = usePostHog()
@@ -111,7 +248,7 @@ export default function Home() {
 
   const currentModel = filteredModels.find((model) => model.id === languageModel.model)
   const currentTemplate = selectedTemplate === "auto" ? templates : { [selectedTemplate]: templates[selectedTemplate] }
-  const lastMessage = messages[messages.length - 1]
+  // const lastMessage = messages[messages.length - 1]; // Removed unused variable
 
   const {
     object,
@@ -123,199 +260,131 @@ export default function Home() {
     api: "/api/chat",
     schema,
     onError: (error) => {
-      console.error("[useObject] Error:", error)
+      console.error("[useObject] Error in onError:", error); // Added more specific log
+      const parsedError = parseApiError(error);
+      const displayMessage = getDisplayErrorMessageForCode(parsedError.code, parsedError.message);
 
-      // Enhanced error parsing
-      let errorData: any = {}
-      let errorCode = "UNKNOWN_ERROR"
-      let errorMsg = error.message || "An unexpected error occurred"
+      console.log("[useObject] Processed error in onError:", { 
+        errorCode: parsedError.code, 
+        errorMessage: parsedError.message, 
+        displayMessage,
+        requestId: currentRequestId 
+      });
 
-      try {
-        // Try to parse JSON error response
-        const errorText = error.message || ""
-        const jsonMatch = errorText.match(/\{.*\}/)
-        if (jsonMatch) {
-          errorData = JSON.parse(jsonMatch[0])
-          errorCode = errorData.code || "UNKNOWN_ERROR"
-          errorMsg = errorData.error || errorText
-        } else if (errorText.includes("Internal Server Error")) {
-          errorCode = "INTERNAL_SERVER_ERROR"
-          errorMsg = "Internal server error occurred. Please try again."
-        } else if (errorText.includes("fetch")) {
-          errorCode = "NETWORK_ERROR"
-          errorMsg = "Network error. Please check your connection and try again."
-        }
-      } catch (parseError) {
-        console.warn("[useObject] Failed to parse error response:", parseError)
+      setErrorMessage(displayMessage);
+
+      if (parsedError.code === "RATE_LIMITED" || parsedError.code === "PROVIDER_RATE_LIMITED") {
+        setIsRateLimited(true);
       }
 
-      console.log("[useObject] Processed error:", { errorCode, errorMsg, requestId: currentRequestId })
+      setIsPreviewLoading(false);
+      setCurrentTab("code");
 
-      // Handle specific error types
-      switch (errorCode) {
-        case "MISSING_AUTH":
-        case "AUTH_ERROR":
-          setErrorMessage("Authentication error: Please sign out and sign in again to refresh your session.")
-          break
-
-        case "RATE_LIMITED":
-        case "PROVIDER_RATE_LIMITED":
-          setIsRateLimited(true)
-          setErrorMessage("Rate limit exceeded. Please try again later or use your own API key.")
-          break
-
-        case "ACCESS_DENIED":
-          setErrorMessage("Access denied. Please check your API key configuration.")
-          break
-
-        case "NETWORK_ERROR":
-        case "TIMEOUT_ERROR":
-          setErrorMessage("Network error. Please check your connection and try again.")
-          break
-
-        case "SERVICE_UNAVAILABLE":
-        case "PROVIDER_OVERLOADED":
-          setErrorMessage("AI service is temporarily unavailable. Please try again in a few moments.")
-          break
-
-        case "MODEL_NOT_FOUND":
-          setErrorMessage("The selected model is not available. Please choose a different model.")
-          break
-
-        case "MODEL_INIT_ERROR":
-          setErrorMessage("Failed to initialize the AI model. Please try a different model or check your API key.")
-          break
-
-        case "VALIDATION_ERROR":
-          setErrorMessage("Invalid request data. Please refresh the page and try again.")
-          break
-
-        case "INTERNAL_SERVER_ERROR":
-        case "INTERNAL_ERROR":
-        default:
-          setErrorMessage(
-            errorMsg.includes("Internal")
-              ? "Server error occurred. Please try again or contact support if the issue persists."
-              : errorMsg,
-          )
-          break
-      }
-
-      // Clear loading states on error
-      setIsPreviewLoading(false)
-      setCurrentTab("code")
-
-      // Log error for analytics
       posthog.capture("chat_error", {
-        errorCode,
-        errorMessage: errorMsg,
+        errorCode: parsedError.code,
+        errorMessage: parsedError.message,
         provider: currentModel?.providerId,
         model: currentModel?.id,
         requestId: currentRequestId,
-      })
+      });
     },
     onFinish: async ({ object: completedFragment, error }) => {
       if (error) {
-        console.error("[useObject] Finished with error:", error)
-        setIsPreviewLoading(false)
-        return
+        console.error("[useObject] Finished with error (also see onError for details):", error);
+        const parsedError = parseApiError(error);
+        const displayMessage = getDisplayErrorMessageForCode(parsedError.code, parsedError.message);
+        setErrorMessage(displayMessage);
+        setIsPreviewLoading(false);
+        setCurrentTab("code");
+        return;
       }
 
       if (!completedFragment) {
-        console.warn("[useObject] No fragment returned")
-        setIsPreviewLoading(false)
-        return
+        console.warn("[useObject] No fragment returned onFinish");
+        setErrorMessage("Failed to generate content. The AI model did not return a valid response.");
+        setIsPreviewLoading(false);
+        setCurrentTab("code");
+        return;
+      }
+
+      // Normalize template ID if it's the known incorrect variant from the AI
+      if (completedFragment.template === "codinit template") {
+        console.warn(
+          `[useObject] Normalizing template ID from "codinit template" to "${TEMPLATE_IDS.CODINIT_ENGINEER}"`,
+        );
+        completedFragment.template = TEMPLATE_IDS.CODINIT_ENGINEER;
       }
 
       console.log("[useObject] Fragment generation completed:", {
         template: completedFragment.template,
         hasFiles: !!(completedFragment.files && completedFragment.files.length > 0),
         requestId: currentRequestId,
-      })
+      });
 
       posthog.capture("fragment_generated", {
         template: completedFragment.template,
         requestId: currentRequestId,
-      })
+      });
 
-      // Check if this is a code-only template (no sandbox needed)
-      if (completedFragment.template === "codinit-engineer") {
-        console.log("[useObject] CodinIT Engineer template - no sandbox needed")
-        setResult(undefined)
-        setCurrentTab("code")
-        setIsPreviewLoading(false)
-        return
+      if (completedFragment.template === TEMPLATE_IDS.CODINIT_ENGINEER) {
+        console.log("[useObject] CodinIT Engineer template - no sandbox needed");
+        setResult(undefined);
+        setCurrentTab("code");
+        setIsPreviewLoading(false);
+        return;
       }
 
-      // Create sandbox for other templates
-      setIsPreviewLoading(true)
+      setIsPreviewLoading(true);
       try {
-        console.log("[useObject] Creating sandbox for template:", completedFragment.template)
-        
-        const sandboxPayload = {
-          fragment: completedFragment,
-          userID: session?.user?.id,
-          teamID: userTeam?.id,
+        const sessionData = {
+          userId: session?.user?.id,
+          teamId: userTeam?.id,
           accessToken: session?.access_token,
-        }
+        };
+        const sandboxResult = await handleSandboxCreation(
+          completedFragment, 
+          sessionData, 
+          posthog, 
+          currentRequestId
+        );
+        
+        setResult(sandboxResult);
+        setMessage({ result: sandboxResult });
 
-        console.log("[useObject] Sandbox payload:", {
-          template: sandboxPayload.fragment.template,
-          userID: sandboxPayload.userID?.substring(0, 8) + "...",
-          teamID: sandboxPayload.teamID?.substring(0, 8) + "...",
-          hasFiles: !!(sandboxPayload.fragment.files && sandboxPayload.fragment.files.length > 0),
-          filesCount: sandboxPayload.fragment.files?.length || 0,
-        })
-
-        const response = await fetch("/api/sandbox", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(sandboxPayload),
-        })
-
-        const responseData = await response.json()
-
-        if (!response.ok) {
-          console.error("[useObject] Sandbox creation failed:", {
-            status: response.status,
-            statusText: response.statusText,
-            data: responseData,
-          })
-          throw new Error(responseData.error || `Sandbox API error: ${response.status}`)
-        }
-
-        console.log("[useObject] Sandbox created successfully:", {
-          sbxId: responseData.sbxId,
-          template: responseData.template,
-          url: responseData.url,
-        })
-
-        posthog.capture("sandbox_created", {
-          url: responseData.url,
-          template: responseData.template,
-          requestId: currentRequestId,
-        })
-
-        setResult(responseData)
-        setMessage({ result: responseData })
-        // If a URL is available, switch to preview tab, otherwise stay on code
-        if (responseData.url && responseData.template !== 'code-interpreter-v1') {
-          setCurrentTab("preview") // Changed 'fragment' to 'preview'
+        if (sandboxResult.template !== TEMPLATE_IDS.CODE_INTERPRETER_V1) {
+          // This is not a code-interpreter template, so we might expect a URL for preview.
+          // Explicitly check for 'url' property and its type.
+          if ('url' in sandboxResult && typeof (sandboxResult as any).url === 'string' && (sandboxResult as any).url) {
+            setCurrentTab("preview");
+          } else {
+            // Non-interpreter template but no valid URL found.
+            console.warn("[onFinish] Non-interpreter template but no valid URL on sandboxResult, defaulting to code tab. Template:", sandboxResult.template);
+            setCurrentTab("code");
+          }
         } else {
-          setCurrentTab("code")
+          // This is TEMPLATE_IDS.CODE_INTERPRETER_V1, which defaults to the code tab.
+          setCurrentTab("code");
+
         }
       } catch (sandboxError: any) {
-        console.error("[useObject] Sandbox creation failed:", sandboxError)
-        setErrorMessage(`Failed to create sandbox: ${sandboxError.message}`)
-        setResult(undefined)
-        setCurrentTab("code")
+        console.error("[useObject] Sandbox creation failed in onFinish:", sandboxError);
+        let parsedSandboxError: ParsedApiError | null = null;
+        if (sandboxError && typeof sandboxError === "object" && sandboxError.message) {
+          parsedSandboxError = parseApiError(sandboxError);
+        }
+        const displayError = getDisplayErrorMessageForCode(
+          parsedSandboxError?.code || "INTERNAL_ERROR",
+          parsedSandboxError?.message || sandboxError.message || "Failed to create dev environment."
+        );
+        setErrorMessage(displayError);
+        setResult(undefined);
+        setCurrentTab("code");
       } finally {
-        setIsPreviewLoading(false)
+        setIsPreviewLoading(false);
       }
     },
   })
 
-  // Update fragment and messages when object changes
   useEffect(() => {
     if (!object) return
 
@@ -333,9 +402,8 @@ export default function Home() {
         { type: "text", text: object.commentary || "Generating code..." }
       ]
 
-      // Add code block if there's file content
       if (object.files?.[0]?.file_content) {
-        newAssistantContent.push({ type: "code", text: object.files[0].file_content })
+        newAssistantContent.push({ type: "code", text: `\`\`\`\n${object.files[0].file_content}\n\`\`\`` })
       }
 
       const currentLastMessage = prevMessages.length > 0 ? prevMessages[prevMessages.length - 1] : null
@@ -368,7 +436,6 @@ export default function Home() {
   ) {
     e.preventDefault()
 
-    // Check if still loading auth state
     if (isLoading) {
       console.log("[handleSubmitAuth] Still loading auth state")
       return
@@ -379,7 +446,6 @@ export default function Home() {
       return setAuthDialog(true)
     }
 
-    // Enhanced validation with better error messages
     if (!session?.user?.id) {
       console.error("[handleSubmitAuth] Missing user ID")
       setErrorMessage("Authentication error: Missing user information. Please sign out and sign in again.")
@@ -422,11 +488,9 @@ export default function Home() {
       content,
     }
 
-    // Capture current messages snapshot before queuing the state update
-    const currentMessagesSnapshot = messages
-    setMessages((prevMessages) => [...prevMessages, newUserMessage])
+    const currentMessagesSnapshot = [...messages];
+    setMessages((prevMessages) => [...prevMessages, newUserMessage]);
 
-    // Use snapshot + new message for the API call
     const messagesForApi = [...currentMessagesSnapshot, newUserMessage]
 
     const submitData = {
@@ -436,7 +500,6 @@ export default function Home() {
       template: currentTemplate,
       model: currentModel,
       config: languageModel,
-      // Enhanced: Include project context
       uploadedFiles: projectFiles,
       projectAnalysis: projectAnalysis,
     }

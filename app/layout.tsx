@@ -8,16 +8,37 @@ import { Inter } from 'next/font/google'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'CodinIT - #1 Open Source AI App Builder',
+  metadataBase: new URL('https://codingit.vercel.app'),
+  title: '#1 Open Source AI Software Engineer',
+  keywords: [
+    'AI software engineer',
+    'open source',
+    'live code execution',
+    'file uploads',
+    'real-time chat',
+    'codinit',
+    'codingit',
+    'lovable.dev alternative',
+    'bolt.new alternative',
+    'v0.dev alternative'
+  ],
   description: 'Open-source alternative to lovable.dev, bolt.new & v0.dev. AI software engineer — live code execution, file uploads, & real-time chat blazing-fast.',
   icons: [
     { rel: "apple-touch-icon", sizes: "180x180", url: "/apple-touch-icon.png" },
+    { rel: "icon", type: "image/x-icon", url: "/favicon.ico" },
     { rel: "icon", type: "image/png", sizes: "32x32", url: "/icons/favicon-32x32.png" },
     { rel: "icon", type: "image/png", sizes: "16x16", url: "/icons/favicon-16x16.png" },
     { rel: "icon", type: "image/png", sizes: "192x192", url: "/android-chrome-192x192.png" },
     { rel: "icon", type: "image/png", sizes: "512x512", url: "/android-chrome-512x512.png" }
   ],
-  manifest: "/site.webmanifest"
+  manifest: "/site.webmanifest",
+  openGraph: {
+    title: "CodinIT - #1 Open Source AI App Builder",
+    description: "Open-source alternative to lovable.dev, bolt.new & v0.dev. AI software engineer — live code execution, file uploads, & real-time chat blazing-fast.",
+    images: ["/opengraph.png"],
+    url: "https://codinit.dev",
+    type: "website"
+  }
 }
 
 export default function RootLayout({

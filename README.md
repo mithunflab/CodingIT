@@ -1,6 +1,4 @@
-# CodinIT
-
-![interface-codinit)](https://github.com/user-attachments/assets/8cb324ff-a924-46bc-a22b-32f89c6aed55)
+![opengraph](https://github.com/user-attachments/assets/de684e88-a65c-42ea-b067-d1a3bc85a420)
 
 
 ## Powered by the [E2B SDK](https://github.com/e2b-dev/code-interpreter).

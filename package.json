@@ -8,6 +8,18 @@
     "start": "next start",
     "lint": "next lint"
   },
+  "keywords": [
+    "AI software engineer",
+    "open source",
+    "live code execution",
+    "file uploads",
+    "real-time chat",
+    "codinit",
+    "codingit",
+    "lovable.dev alternative",
+    "bolt.new alternative",
+    "v0.dev alternative"
+  ],
   "dependencies": {
     "@ai-sdk/anthropic": "^1.1.6",
     "@ai-sdk/fireworks": "^0.2.6",
@@ -47,6 +59,7 @@
     "@radix-ui/react-visually-hidden": "latest",
     "@remix-run/react": "latest",
     "@rrweb/types": "latest",
+    "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.45.1",
     "@upstash/ratelimit": "^2.0.1",
     "@vercel/analytics": "^1.5.0",

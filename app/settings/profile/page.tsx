@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import SettingsLayout from "@/components/settings-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,50 +18,117 @@ import {
   User, 
   Mail, 
   Building, 
-  Calendar,
+  // Calendar, // Not used directly in form fields, can be removed if not needed elsewhere
   MapPin,
   Globe,
   Save,
   AlertCircle,
   CheckCircle2
 } from "lucide-react"
+import { getProfile, updateProfile, type ProfileData as ServerProfileData } from "@/app/actions/profile"
+import { createBrowserClient } from "@supabase/ssr"
 
 interface ProfileFormData {
-  firstName: string
-  lastName: string
+  first_name: string
+  last_name: string
   email: string
   company: string
-  jobTitle: string
+  job_title: string
   location: string
   timezone: string
   bio: string
-  workDescription: string
+  work_description: string
   preferences: string
-  personalizedResponses: boolean
-  activityStatus: boolean
-  profileVisibility: "public" | "private" | "contacts"
+  personalized_responses: boolean
+  activity_status: boolean
+  profile_visibility: "public" | "private" | "contacts"
+  avatar_url?: string | null
 }
 
 export default function ProfilePage() {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
+  const [isFetching, setIsFetching] = useState(true)
   const [profileData, setProfileData] = useState<ProfileFormData>({
-    firstName: "John",
-    lastName: "Doe", 
-    email: "john.doe@example.com",
-    company: "Tech Corp",
-    jobTitle: "Software Engineer",
-    location: "San Francisco, CA",
-    timezone: "America/Los_Angeles",
+    first_name: "",
+    last_name: "",
+    email: "", // Will be set from auth user
+    company: "",
+    job_title: "",
+    location: "",
+    timezone: "America/Los_Angeles", // Default, will be fetched
     bio: "",
-    workDescription: "Engineering",
+    work_description: "engineering", // Default value
     preferences: "",
-    personalizedResponses: true,
-    activityStatus: true,
-    profileVisibility: "private"
+    personalized_responses: true,
+    activity_status: true,
+    profile_visibility: "private",
+    avatar_url: null,
   })
 
-  const handleInputChange = (field: keyof ProfileFormData, value: string | boolean) => {
+  // Client-side Supabase client
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  useEffect(() => {
+    const fetchProfileAndUserData = async () => {
+      setIsFetching(true)
+      try {
+        // Fetch profile from our server action
+        const serverProfile = await getProfile()
+        
+        // Fetch user from client-side Supabase for email and potentially other auth details
+        const { data: { user } } = await supabase.auth.getUser()
+
+        let email = ""
+        if (user) {
+          email = user.email || ""
+        }
+
+        if (serverProfile) {
+          setProfileData({
+            first_name: serverProfile.first_name || "",
+            last_name: serverProfile.last_name || "",
+            email: email, // Use email from auth
+            company: serverProfile.company || "",
+            job_title: serverProfile.job_title || "",
+            location: serverProfile.location || "",
+            timezone: serverProfile.timezone || "America/Los_Angeles",
+            bio: serverProfile.bio || "",
+            work_description: serverProfile.work_description || "engineering",
+            preferences: serverProfile.preferences || "",
+            personalized_responses: serverProfile.personalized_responses !== undefined ? serverProfile.personalized_responses : true,
+            activity_status: serverProfile.activity_status !== undefined ? serverProfile.activity_status : true,
+            profile_visibility: serverProfile.profile_visibility || "private",
+            avatar_url: serverProfile.avatar_url || null,
+          })
+        } else if (user) { // If no profile in DB, but user is logged in, set email
+            setProfileData(prev => ({...prev, email: email}));
+        }
+
+      } catch (error) {
+        console.error("Failed to fetch profile data", error)
+        toast({
+          title: "Error",
+          description: "Could not load your profile data. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsFetching(false)
+      }
+    }
+    fetchProfileAndUserData()
+  }, [toast, supabase.auth]) // Added supabase.auth to dependency array
+
+  const handleInputChange = (field: keyof ProfileFormData, value: string | boolean | null) => {
+    // Ensure boolean fields are not accidentally set to null if the input type expects boolean
+    if (typeof profileData[field] === 'boolean' && typeof value !== 'boolean') {
+        // This case should ideally not happen with Switch components, but as a safeguard:
+        console.warn(`Type mismatch for field ${field}. Expected boolean, got ${typeof value}`);
+        return; 
+    }
     setProfileData(prev => ({
       ...prev,
       [field]: value
@@ -71,18 +138,24 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setIsLoading(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Prepare data for the server action, excluding email as it's not updated here
+      const { email, ...dataToUpdate } = profileData
       
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been successfully updated.",
-        variant: "default",
-      })
-    } catch (error) {
+      const result = await updateProfile(dataToUpdate as Partial<ServerProfileData>)
+      
+      if (result.success) {
+        toast({
+          title: "Profile updated",
+          description: "Your profile has been successfully updated.",
+          variant: "default",
+        })
+      } else {
+        throw new Error(result.error?.message || "Failed to update profile")
+      }
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to update profile. Please try again.",
+        description: error.message || "Failed to update profile. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -91,7 +164,29 @@ export default function ProfilePage() {
   }
 
   const getUserInitials = () => {
-    return `${profileData.firstName.charAt(0)}${profileData.lastName.charAt(0)}`.toUpperCase()
+    if (isFetching) return "";
+    return `${profileData.first_name.charAt(0)}${profileData.last_name.charAt(0)}`.toUpperCase()
+  }
+
+  if (isFetching) {
+    return (
+      <SettingsLayout>
+        <div className="space-y-8">
+          <div>
+            <h1 className="text-3xl font-semibold text-foreground">Profile</h1>
+            <p className="text-muted-foreground mt-2">Loading your profile...</p>
+          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Loading...</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-20 w-full animate-pulse bg-muted rounded-md"></div>
+            </CardContent>
+          </Card>
+        </div>
+      </SettingsLayout>
+    )
   }
 
   return (
@@ -121,7 +216,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-6">
               <div className="relative">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src="" alt="Profile" />
+                  <AvatarImage src={profileData.avatar_url || ""} alt="Profile" />
                   <AvatarFallback className="text-lg font-semibold">
                     {getUserInitials()}
                   </AvatarFallback>
@@ -130,14 +225,15 @@ export default function ProfilePage() {
                   size="sm"
                   variant="outline"
                   className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+                  // onClick={() => { /* TODO: Implement avatar upload */ }}
                 >
                   <Camera className="h-3 w-3" />
                 </Button>
               </div>
               <div className="space-y-1">
-                <h3 className="font-medium text-foreground">{profileData.firstName} {profileData.lastName}</h3>
+                <h3 className="font-medium text-foreground">{profileData.first_name} {profileData.last_name}</h3>
                 <p className="text-sm text-muted-foreground">{profileData.email}</p>
-                <Badge variant="secondary" className="w-fit">Pro Plan</Badge>
+                <Badge variant="secondary" className="w-fit">Pro Plan</Badge> {/* TODO: Make dynamic if plan info is available */}
               </div>
             </div>
 
@@ -146,21 +242,21 @@ export default function ProfilePage() {
             {/* Basic Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="firstName">First name</Label>
+                <Label htmlFor="first_name">First name</Label>
                 <Input
-                  id="firstName"
-                  value={profileData.firstName}
-                  onChange={(e) => handleInputChange("firstName", e.target.value)}
+                  id="first_name"
+                  value={profileData.first_name}
+                  onChange={(e) => handleInputChange("first_name", e.target.value)}
                   placeholder="Enter your first name"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="lastName">Last name</Label>
+                <Label htmlFor="last_name">Last name</Label>
                 <Input
-                  id="lastName"
-                  value={profileData.lastName}
-                  onChange={(e) => handleInputChange("lastName", e.target.value)}
+                  id="last_name"
+                  value={profileData.last_name}
+                  onChange={(e) => handleInputChange("last_name", e.target.value)}
                   placeholder="Enter your last name"
                 />
               </div>
@@ -174,20 +270,21 @@ export default function ProfilePage() {
                   id="email"
                   type="email"
                   value={profileData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
+                  readOnly 
+                  className="bg-muted/50 cursor-not-allowed"
                   placeholder="Enter your email"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="jobTitle" className="flex items-center gap-2">
+                <Label htmlFor="job_title" className="flex items-center gap-2">
                   <Building className="h-4 w-4" />
                   Job title
                 </Label>
                 <Input
-                  id="jobTitle"
-                  value={profileData.jobTitle}
-                  onChange={(e) => handleInputChange("jobTitle", e.target.value)}
+                  id="job_title"
+                  value={profileData.job_title}
+                  onChange={(e) => handleInputChange("job_title", e.target.value)}
                   placeholder="Enter your job title"
                 />
               </div>
@@ -215,10 +312,27 @@ export default function ProfilePage() {
                 />
               </div>
             </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="timezone">Timezone</Label>
+              <Select value={profileData.timezone} onValueChange={(value) => handleInputChange("timezone", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your timezone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* TODO: Populate with a list of timezones. For now, a few examples. */}
+                  <SelectItem value="America/Los_Angeles">Pacific Time (US & Canada)</SelectItem>
+                  <SelectItem value="America/New_York">Eastern Time (US & Canada)</SelectItem>
+                  <SelectItem value="Europe/London">London (GMT/BST)</SelectItem>
+                  <SelectItem value="Australia/Sydney">Sydney (AEST/AEDT)</SelectItem>
+                  <SelectItem value="Asia/Tokyo">Tokyo (JST)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             <div className="space-y-2">
-              <Label htmlFor="workDescription">What best describes your work?</Label>
-              <Select value={profileData.workDescription} onValueChange={(value) => handleInputChange("workDescription", value)}>
+              <Label htmlFor="work_description">What best describes your work?</Label>
+              <Select value={profileData.work_description} onValueChange={(value) => handleInputChange("work_description", value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select your work area" />
                 </SelectTrigger>
@@ -300,8 +414,8 @@ export default function ProfilePage() {
                   </p>
                 </div>
                 <Switch
-                  checked={profileData.personalizedResponses}
-                  onCheckedChange={(checked) => handleInputChange("personalizedResponses", checked)}
+                  checked={profileData.personalized_responses}
+                  onCheckedChange={(checked) => handleInputChange("personalized_responses", checked)}
                 />
               </div>
 
@@ -313,8 +427,8 @@ export default function ProfilePage() {
                   </p>
                 </div>
                 <Switch
-                  checked={profileData.activityStatus}
-                  onCheckedChange={(checked) => handleInputChange("activityStatus", checked)}
+                  checked={profileData.activity_status}
+                  onCheckedChange={(checked) => handleInputChange("activity_status", checked)}
                 />
               </div>
             </div>
@@ -334,8 +448,8 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <Label htmlFor="profileVisibility">Profile visibility</Label>
-              <Select value={profileData.profileVisibility} onValueChange={(value: "public" | "private" | "contacts") => handleInputChange("profileVisibility", value)}>
+              <Label htmlFor="profile_visibility">Profile visibility</Label>
+              <Select value={profileData.profile_visibility} onValueChange={(value: "public" | "private" | "contacts") => handleInputChange("profile_visibility", value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -351,7 +465,7 @@ export default function ProfilePage() {
 
         {/* Save Button */}
         <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={isLoading} size="lg" className="gap-2">
+          <Button onClick={handleSave} disabled={isLoading || isFetching} size="lg" className="gap-2">
             {isLoading ? (
               <>
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" />

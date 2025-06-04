@@ -1,31 +1,28 @@
 ---
 Date: 2025-06-04
-TaskRef: "Fix preview to use E2B template servers"
+TaskRef: "Resolve ERR_BLOCKED_BY_CSP for sandbox preview"
 
 Learnings:
-- Modified `components/preview.tsx` to correctly display live previews from E2B template servers.
-  - Renamed the "Fragment" tab to "Preview".
-  - Changed the `selectedTab` state and prop types from `'code' | 'fragment'` to `'code' | 'preview'` in `components/preview.tsx` and `app/page.tsx`.
-  - The "Preview" tab now uses the `FragmentWeb` component (imported from `./fragment-web.tsx`) to render the E2B URL when `result.template` is not `'code-interpreter-v1'`.
-  - Used the `Globe` icon for the "Preview" tab.
-  - Updated `app/page.tsx` to set `currentTab` to `"preview"` when a sandbox with a URL is successfully created, otherwise to `"code"`.
-- Corrected import paths:
-  - Ensured `FragmentWeb` is imported from `./fragment-web.tsx` in `components/preview.tsx`.
-- Refined type handling for discriminated unions:
-  - Simplified the conditional logic in `components/fragment-preview.tsx` for `ExecutionResult` to use a direct `if/else` based on `result.template === 'code-interpreter-v1'`, which helped TypeScript correctly infer types for `FragmentInterpreter` and `FragmentWeb` props. This resolved a persistent TypeScript error about type overlap.
+- `ERR_BLOCKED_BY_CSP` indicates a Content Security Policy issue is preventing content from loading.
+- In Next.js applications, CSP can be configured in `next.config.mjs` (via the `headers` async function) and also in `middleware.ts`.
+- Middleware (`middleware.ts`) can define or override CSP headers, potentially taking precedence over `next.config.mjs` settings for matched paths.
+- The `frame-src` directive within a CSP specifically controls which origins are permitted to be embedded as frames (e.g., iframes).
+- When debugging `frame-src` issues, ensure the exact domain and subdomain patterns match the resource being framed. In this case, the sandbox URL was `https://[subdomain_part].e2b.app`, and `https://*.e2b.app` was needed in `frame-src`.
+- The console logs provided the specific URL being blocked (`3000-iw56o1ebixbtc868ftvsl-9510f9f6.e2b.app`), which was crucial for identifying the missing part in the CSP.
 
 Difficulties:
-- Encountered several TypeScript errors related to type mismatches (`'fragment'` vs `'preview'`) and incorrect module exports/imports (`FragmentWeb`).
-- A persistent TypeScript error in `components/fragment-preview.tsx` regarding type overlap in a conditional statement required careful refactoring of the discriminated union handling.
+- The initial check of `next.config.mjs` showed a seemingly correct `frame-src` for `*.e2b.app`. This highlighted the importance of checking other potential sources of CSP headers, like middleware, as they can override or add to the policies.
 
 Successes:
-- Successfully refactored the preview logic to integrate E2B template server previews.
-- Resolved all TypeScript errors through iterative changes and careful attention to import paths and type definitions.
-- The `replace_in_file` tool was used effectively for targeted modifications across multiple files.
+- Correctly hypothesized that middleware was another likely place for CSP definition after `next.config.mjs` didn't reveal the root cause.
+- Successfully identified the discrepancy in `middleware.ts` where `frame-src` was missing `https://*.e2b.app` (it only had `https://*.e2b.dev`).
+- The modification to `middleware.ts` to add `https://*.e2b.app` to the `frame-src` directive was successful.
 
 Improvements_Identified_For_Consolidation:
-- Pattern: Handling discriminated unions in TypeScript. A simple `if/else` structure is often best for type narrowing.
-- Pattern: Updating UI components and their corresponding state management when renaming features or changing underlying data types (e.g., tab names and associated state values).
-- Debugging: When a component is not exported/imported correctly, TypeScript errors will often point to the consuming file first (`Module X declares Y locally, but it is not exported`). Always check the source file of Y for the actual export.
-- Project Specifics: `components/preview.tsx` handles the main preview tabs. `app/page.tsx` manages the state for which tab is active. `components/fragment-preview.tsx` contains `FragmentPreview` (which decides between interpreter/web view) and `FileTreeCodeViewer`. `components/fragment-web.tsx` contains the iframe logic for E2B.
+- General pattern: When debugging `ERR_BLOCKED_BY_CSP` in a Next.js project, systematically check:
+    1. `next.config.mjs` for `headers` configuration.
+    2. `middleware.ts` for any CSP header modifications.
+    3. Pay close attention to `frame-src` for issues related to iframes or embedded content.
+    4. Verify that all necessary domain variations (e.g., `example.com`, `*.example.com`, `sub.example.net`) are correctly listed in the relevant CSP directives.
+- Note: The `matcher` in `middleware.ts` config determines which paths the middleware CSP applies to.
 ---

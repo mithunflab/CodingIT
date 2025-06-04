@@ -91,7 +91,7 @@ export function middleware(request: NextRequest) {
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
     "connect-src 'self' https: wss:",
-    "frame-src 'self' https://e2b.dev https://*.e2b.dev",
+    "frame-src 'self' https://e2b.dev https://*.e2b.dev https://*.e2b.app",
     "worker-src 'self' blob:",
   ].join('; ')
   
