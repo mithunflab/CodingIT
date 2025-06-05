@@ -1,4 +1,3 @@
-// middleware.ts - Enhanced middleware for request handling and error prevention
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 

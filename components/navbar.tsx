@@ -72,8 +72,8 @@ export function NavBar({
     <nav className="w-full flex bg-background py-4">
       <div className="flex flex-1 items-center">
         <Link href="/" className="flex items-center gap-2" target="_blank">
-          <Logo width={24} height={24} />
-          <h1 className="whitespace-pre">Fragments by </h1>
+          <Logo />
+          <span className="whitespace-pre"></span>
         </Link>
         <Link
           href="https://codinit.dev"
@@ -185,16 +185,6 @@ export function NavBar({
 
 
               <DropdownMenuSeparator />
-
-              <DropdownMenuItem
-                onClick={() => {
-                  window.open("https://codinIT.dev", "_blank")
-                }}
-                className="cursor-pointer"
-              >
-                <Logo className="mr-2 h-4 w-4 text-muted-foreground" />
-                About CodinIT
-              </DropdownMenuItem>
 
               <Link href="https://github.com/Gerome-Elassaad/CodingIT">
               <DropdownMenuItem onClick={() => onSocialClick("github")} className="cursor-pointer">

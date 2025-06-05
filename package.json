@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/package.json",
   "name": "codinit-e2b",
   "version": "0.1.0",
   "private": false,
