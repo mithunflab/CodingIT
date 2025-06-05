@@ -11,9 +11,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-// SidebarProvider and AppSidebar are not used, can be removed if not needed elsewhere, but keeping for now.
-// import { SidebarProvider } from '@/components/ui/sidebar'
-// import { AppSidebar } from './app-sidebar'
 import { FragmentSchema } from '@/lib/schema'
 import { ExecutionResult, ExecutionResultWeb } from '@/lib/types' // Added ExecutionResultWeb
 import { DeepPartial } from 'ai'

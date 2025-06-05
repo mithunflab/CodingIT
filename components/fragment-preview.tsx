@@ -34,8 +34,6 @@ export function FragmentPreview({ result }: { result: ExecutionResult }) {
   // If more types were added to ExecutionResult, more explicit handling or a default case might be needed.
 }
 
-// Remove incorrect export, FragmentWeb is imported from its own file
-// export { FragmentWeb } 
 
 interface FileItem {
   name: string
