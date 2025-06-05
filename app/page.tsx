@@ -1,4 +1,3 @@
-// File: app/page.tsx
 "use client"
 
 import type React from "react"
@@ -34,7 +33,32 @@ const TEMPLATE_IDS = {
   CODINIT_ENGINEER: "codinit-engineer",
 } as const;
 
-// Error types and handling
+interface ProjectAnalysis {
+ structure: {
+    files: Array<{
+ name: string
+ path: string
+ language: string
+ size: number
+ type: string
+ content?: string // Added content for easier File creation
+    }>
+ dependencies: Set<string>
+ frameworks: Set<string>
+ patterns: Set<string>
+ components: Set<string>
+ types: Set<string>
+ utilities: Set<string>
+ architecture: {
+ type: string
+ description: string
+    }
+ configFiles?: string[] // Added configFiles based on EnhancedChatInput logic
+  }
+ analysis: string
+ recommendations: string[]
+}
+
 type ParsedApiError = { code: string; message: string; rawData: any };
 
 const parseApiError = (error: Error | any): ParsedApiError => {
@@ -173,30 +197,6 @@ async function handleSandboxCreation(
     requestId: currentRequestIdValue,
   });
   return responseData as ExecutionResult;
-}
-
-interface ProjectAnalysis {
-  structure: {
-    files: Array<{
-      name: string
-      path: string
-      language: string
-      size: number
-      type: string
-    }>
-    dependencies: Set<string>
-    frameworks: Set<string>
-    patterns: Set<string>
-    components: Set<string>
-    types: Set<string>
-    utilities: Set<string>
-    architecture: {
-      type: string
-      description: string
-    }
-  }
-  analysis: string
-  recommendations: string[]
 }
 
 export default function Home() {
@@ -518,6 +518,7 @@ export default function Home() {
       template: selectedTemplate,
       hasProjectFiles: !!(projectFiles && projectFiles.length > 0),
       hasProjectAnalysis: !!projectAnalysis,
+      isGitHubImport: !!(projectAnalysis && projectAnalysis.structure),
     })
 
     try {
@@ -541,6 +542,10 @@ export default function Home() {
         model: languageModel.model,
         requestId,
         hasProjectContext: !!(projectFiles && projectFiles.length > 0),
+        importSource: projectAnalysis ? "github" : projectFiles ? "upload" : "none",
+        gitHubRepository: projectAnalysis?.structure?.configFiles?.some(f => 
+          f.includes('package.json') || f.includes('.git')
+        ) ? "detected" : "none",
       })
     } catch (error: any) {
       console.error("[handleSubmitAuth] Submit error:", error)
@@ -584,6 +589,7 @@ export default function Home() {
       messagesCount: submitData.messages.length,
       model: submitData.model.id,
       hasProjectContext: !!(projectContext.files.length > 0),
+      hasGitHubAnalysis: !!projectContext.analysis,
     })
 
     submit(submitData)

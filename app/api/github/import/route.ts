@@ -77,33 +77,59 @@ export async function POST(request: NextRequest) {
     // Convert to File objects for analysis
     const fileObjects = files.map(file => {
       const blob = new Blob([file.content], { type: 'text/plain' })
-      return new File([blob], file.name, { type: 'text/plain' })
+      return new File([blob], file.name)
     })
 
     // Analyze the project
     const analyzer = new ProjectAnalyzer()
-    const analysis = await analyzer.analyzeProject(fileObjects)
+    const result = await analyzer.analyzeProject(fileObjects)
+
+    // Enhance the analysis structure with file contents for easier access
+    const enhancedStructure = {
+      ...result.structure,
+      files: result.structure.files.map(file => {
+        const originalFile = files.find(f => f.name === file.name)
+        return {
+          ...file,
+          content: originalFile?.content || ''
+        }
+      })
+    }
 
     console.log(`[GitHub Import API ${requestId}] Import completed: ${files.length} files analyzed`)
 
     return NextResponse.json({
       success: true,
       repository: { owner, repo },
-      files: files.map(f => ({
-        name: f.name,
-        path: f.path,
-        size: f.content.length,
-        type: 'file'
-      })),
-      analysis,
+      analysis: {
+        ...result,
+        structure: enhancedStructure
+      },
       requestId
     })
 
   } catch (error) {
     console.error(`[GitHub Import API ${requestId}] Error:`, error)
+    
+    let errorMessage = "Failed to import repository"
+    let statusCode = 500
+    
+    if (error instanceof Error) {
+      if (error.message.includes("404")) {
+        errorMessage = "Repository not found or access denied"
+        statusCode = 404
+      } else if (error.message.includes("403")) {
+        errorMessage = "Access denied to repository"
+        statusCode = 403
+      } else if (error.message.includes("rate limit")) {
+        errorMessage = "GitHub API rate limit exceeded"
+        statusCode = 429
+      }
+    }
+    
     return NextResponse.json(
-      { error: "Failed to import repository" },
-      { status: 500 }
+      { error: errorMessage },
+      { status: statusCode }
     )
   }
 }
