@@ -1,22 +1,9 @@
 ![opengraph](https://github.com/user-attachments/assets/de684e88-a65c-42ea-b067-d1a3bc85a420)
 
 
-## Powered by the [E2B SDK](https://github.com/e2b-dev/code-interpreter).
-<p align="center">
-  <a href="https://github.com/e2b-dev/code-interpreter">
-    <strong><h2>Powered by the E2B SDK</h2></strong>
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://e2b.dev/startups">
-    <img src="https://img.shields.io/badge/SPONSORED%20BY-E2B%20FOR%20STARTUPS-ff8800?style=for-the-badge" alt="SPONSORED BY E2B FOR STARTUPS" />
-  </a>
-</p>
-
 <p align="center">
   <a href="https://e2b.dev/research">
-    <img src="https://img.shields.io/badge/SPONSORED%20BY-E2B%20FOR%20STARTUPS-ff8800?style=for-the-badge" alt="SPONSORED BY E2B FOR RESEARCH" />
+    <img src="https://img.shields.io/badge/SPONSORED%20BY-E2B%20FOR%20STARTUPS-32CD32?style=for-the-badge" alt="SPONSORED BY E2B FOR RESEARCH" />
   </a>
 </p>
 
