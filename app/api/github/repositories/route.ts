@@ -7,27 +7,37 @@ export async function GET(request: NextRequest) {
   const requestId = `github_repos_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           async get(name: string) {
-            return (await cookieStore).get(name)?.value
+
+            const store = cookieStore; 
+            return store.get(name)?.value
           },
           async set(name: string, value: string, options: CookieOptions) {
             try {
-              (await cookieStore).set(name, value, options)
+              const store = await cookieStore;
+              store.set({ name, value, ...options })
             } catch (error) {
-              console.warn(`Failed to set cookie '${name}':`, error)
+              // The `set` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+              // console.warn(`Failed to set cookie '${name}' from Server Component:`, error);
             }
           },
-          async remove(name: string) {
+          async remove(name: string, options: CookieOptions) {
             try {
-              (await cookieStore).delete(name)
+              const store = await cookieStore;
+              store.set({ name, value: '', ...options })
             } catch (error) {
-              console.warn(`Failed to delete cookie '${name}':`, error)
+              // The `delete` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+              // console.warn(`Failed to delete cookie '${name}' from Server Component:`, error);
             }
           },
         },

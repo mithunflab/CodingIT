@@ -18,6 +18,58 @@
   background: rgb(23, 23, 23);
 }
 
+/* Rainbow Chat Input Hover Effect */
+.rainbow-chat-input {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.rainbow-chat-input:hover::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 18px;
+  background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3, #ff0000);
+  background-size: 400% 400%;
+  animation: rainbow-border 2s ease-in-out infinite;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.rainbow-chat-input:hover::before {
+  opacity: 0.8;
+}
+
+.rainbow-chat-input:hover::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 22px;
+  background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3, #ff0000);
+  background-size: 400% 400%;
+  animation: rainbow-border 2s ease-in-out infinite;
+  z-index: -2;
+  opacity: 0;
+  filter: blur(8px);
+  transition: opacity 0.3s ease;
+}
+
+.rainbow-chat-input:hover::after {
+  opacity: 0.4;
+}
+
+/* Enhanced glow effect for focus */
+.rainbow-chat-input:focus-within::before {
+  opacity: 1;
+  animation: rainbow-border 1.5s ease-in-out infinite;
+}
+
+.rainbow-chat-input:focus-within::after {
+  opacity: 0.6;
+  animation: rainbow-border 1.5s ease-in-out infinite;
+}
+
 /* Rainbow Button Border Only */
 .rainbow-button-border {
   position: relative;
@@ -115,18 +167,21 @@
 @keyframes rainbow-border {
   0% {
     border-color: #ff0000;
+    background-position: 0% 50%;
   }
   14% {
     border-color: #ff8000;
   }
   28% {
     border-color: #ffff00;
+    background-position: 100% 50%;
   }
   42% {
     border-color: #00ff00;
   }
   56% {
     border-color: #00ffff;
+    background-position: 0% 50%;
   }
   70% {
     border-color: #0000ff;
@@ -136,6 +191,7 @@
   }
   100% {
     border-color: #ff0000;
+    background-position: 100% 50%;
   }
 }
 
@@ -161,8 +217,14 @@
   .rainbow-chat-container,
   .rainbow-button-border,
   .rainbow-submit-border,
-  .rainbow-signin-border {
+  .rainbow-signin-border,
+  .rainbow-chat-input {
     padding: 1.5px;
+  }
+  
+  .rainbow-chat-input:hover::after {
+    inset: -4px;
+    filter: blur(6px);
   }
 }
 
@@ -172,7 +234,9 @@
   .rainbow-button-border,
   .rainbow-submit-border,
   .rainbow-signin-border,
-  .rainbow-chat-container::before {
+  .rainbow-chat-container::before,
+  .rainbow-chat-input::before,
+  .rainbow-chat-input::after {
     animation: none;
     background: linear-gradient(45deg, #6366f1, #8b5cf6);
     box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);

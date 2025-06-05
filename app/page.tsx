@@ -41,7 +41,7 @@ interface ProjectAnalysis {
  language: string
  size: number
  type: string
- content?: string // Added content for easier File creation
+ content?: string
     }>
  dependencies: Set<string>
  frameworks: Set<string>
@@ -212,7 +212,7 @@ export default function Home() {
   const [result, setResult] = useState<ExecutionResult>()
   const [messages, setMessages] = useState<Message[]>([])
   const [fragment, setFragment] = useState<DeepPartial<FragmentSchema>>()
-  const [currentTab, setCurrentTab] = useState<"code" | "preview">("code")
+  const [currentTab, setCurrentTab] = useState<"code" | "preview" | "editor">("code")
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
   const [isAuthDialogOpen, setAuthDialog] = useState(false)
   const [authView, setAuthView] = useState<ViewType>("sign_in")

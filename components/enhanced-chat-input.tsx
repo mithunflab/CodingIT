@@ -125,13 +125,10 @@ export function EnhancedChatInput({
   }
 
   const handleGitHubImport = useCallback((files: File[], analysis: ProjectAnalysis, repositoryInfo: { owner: string; repo: string }) => {
-    // Set the imported files
     handleFileChange(() => files)
     
-    // Set chat input with repository context
     const contextMessage = `I've imported the repository ${repositoryInfo.owner}/${repositoryInfo.repo}. Please analyze and help me work with this codebase.`
     
-    // Trigger the form submission with project context
     const syntheticEvent = {
       preventDefault: () => {},
       currentTarget: {
@@ -140,7 +137,6 @@ export function EnhancedChatInput({
       }
     } as React.FormEvent<HTMLFormElement>
     
-    // Update input and submit
     if (input.trim() === '') {
       const textarea = document.querySelector('textarea')
       if (textarea) {
@@ -195,7 +191,6 @@ export function EnhancedChatInput({
     }
   }, [isMultiModal, handleFileChange])
 
-  // Enhanced error type detection
   const isAuthError =
     errorMessage.includes("Authentication error") ||
     errorMessage.includes("Missing user") ||
@@ -210,7 +205,6 @@ export function EnhancedChatInput({
 
   const isModelError = errorMessage.includes("model") || errorMessage.includes("API key")
 
-  // Determine error styling and actions
   const getErrorStyling = () => {
     if (isAuthError) return "bg-red-400/10 text-red-400 border border-red-400/20"
     if (isServerError) return "bg-orange-400/10 text-orange-400 border border-orange-400/20"
@@ -287,7 +281,7 @@ export function EnhancedChatInput({
       <div className="relative">
         <RepoBanner className="absolute bottom-full inset-x-2 translate-y-1 z-0 pb-2" />
         <div
-          className={`shadow-md rounded-2xl relative z-10 bg-background border focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-background transition-shadow duration-200 ${
+          className={`rainbow-chat-input shadow-md rounded-2xl relative z-10 bg-background border focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-background transition-shadow duration-200 ${
             dragActive
               ? "before:absolute before:inset-0 before:rounded-2xl before:border-2 before:border-dashed before:border-primary"
               : ""

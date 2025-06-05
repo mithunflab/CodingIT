@@ -2,7 +2,8 @@
 
 import { DeployDialog } from './deploy-dialog'
 import { FragmentCode } from './fragment-code'
-import { FragmentWeb } from './fragment-web' // Corrected import path for FragmentWeb
+import { FragmentWeb } from './fragment-web'
+import { LiveCodeEditor } from './live-code-editor'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -12,10 +13,10 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { FragmentSchema } from '@/lib/schema'
-import { ExecutionResult, ExecutionResultWeb } from '@/lib/types' // Added ExecutionResultWeb
+import { ExecutionResult, ExecutionResultWeb } from '@/lib/types'
 import { DeepPartial } from 'ai'
-import { ChevronsRight, LoaderCircle, Files, Code, Globe } from 'lucide-react' // Added Globe
-import { Dispatch, SetStateAction } from 'react'
+import { ChevronsRight, LoaderCircle, Code, Globe, Edit3 } from 'lucide-react'
+import { Dispatch, SetStateAction, useState, useCallback } from 'react'
 
 export function Preview({
   teamID,
@@ -30,14 +31,26 @@ export function Preview({
 }: {
   teamID: string | undefined
   accessToken: string | undefined
-  selectedTab: 'code' | 'preview' // Changed 'fragment' to 'preview'
-  onSelectedTabChange: Dispatch<SetStateAction<'code' | 'preview'>> // Changed 'fragment' to 'preview'
+  selectedTab: 'code' | 'preview' | 'editor'
+  onSelectedTabChange: Dispatch<SetStateAction<'code' | 'preview' | 'editor'>>
   isChatLoading: boolean
   isPreviewLoading: boolean
   fragment?: DeepPartial<FragmentSchema>
   result?: ExecutionResult
   onClose: () => void
 }) {
+  const [isLiveEditorEnabled, setIsLiveEditorEnabled] = useState(false)
+
+  const handleFileUpdate = useCallback((filePath: string, content: string) => {
+    console.log(`File updated: ${filePath}`)
+    if (result && 'url' in result) {
+      const iframe = document.querySelector('iframe[src*="' + new URL(result.url).hostname + '"]') as HTMLIFrameElement
+      if (iframe) {
+        iframe.src = iframe.src.split('?')[0] + '?_t=' + Date.now()
+      }
+    }
+  }, [result])
+
   if (!fragment) {
     return null
   }
@@ -58,7 +71,7 @@ export function Preview({
       <Tabs
         value={selectedTab}
         onValueChange={(value) =>
-          onSelectedTabChange(value as 'code' | 'preview') // Changed 'fragment' to 'preview'
+          onSelectedTabChange(value as 'code' | 'preview' | 'editor')
         }
         className="h-full flex flex-col items-start justify-start"
       >
@@ -78,6 +91,7 @@ export function Preview({
               <TooltipContent>Close sidebar</TooltipContent>
             </Tooltip>
           </TooltipProvider>
+          
           <div className="flex justify-center">
             <TabsList className="px-1 py-0 border h-8">
               <TabsTrigger
@@ -93,14 +107,24 @@ export function Preview({
                 <Code className="h-3 w-3" />
                 Code
               </TabsTrigger>
+              
               <TabsTrigger
-                disabled={!isLinkAvailable} // Disabled if no URL preview is available
                 className="font-normal text-xs py-1 px-2 gap-1 flex items-center"
-                value="preview" // Changed 'fragment' to 'preview'
+                value="editor"
+                disabled={fragmentFiles.length === 0}
               >
-                <Globe className="h-3 w-3" /> {/* Changed Files to Globe */}
-                Preview {/* Changed Files to Preview */}
-                {isPreviewLoading && isLinkAvailable && ( // Show loader only if preview is possible and loading
+                <Edit3 className="h-3 w-3" />
+                Editor
+              </TabsTrigger>
+              
+              <TabsTrigger
+                disabled={!isLinkAvailable}
+                className="font-normal text-xs py-1 px-2 gap-1 flex items-center"
+                value="preview"
+              >
+                <Globe className="h-3 w-3" />
+                Preview
+                {isPreviewLoading && isLinkAvailable && (
                   <LoaderCircle
                     strokeWidth={3}
                     className="h-3 w-3 animate-spin"
@@ -109,18 +133,17 @@ export function Preview({
               </TabsTrigger>
             </TabsList>
           </div>
-          {result && (
-            <div className="flex items-center justify-end gap-2">
-              {isLinkAvailable && (
-                <DeployDialog
-                  url={result.url!}
-                  sbxId={result.sbxId!}
-                  teamID={teamID}
-                  accessToken={accessToken}
-                />
-              )}
-            </div>
-          )}
+          
+          <div className="flex items-center justify-end gap-2">
+            {result && isLinkAvailable && (
+              <DeployDialog
+                url={result.url!}
+                sbxId={result.sbxId!}
+                teamID={teamID}
+                accessToken={accessToken}
+              />
+            )}
+          </div>
         </div>
         
         {fragment && (
@@ -128,7 +151,6 @@ export function Preview({
             <TabsContent value="code" className="h-full">
               {fragmentFiles.length > 0 ? (
                 <div className="flex h-full">
-                  {/* AppSidebar removed from here */}
                   <div className="flex-1">
                     <FragmentCode files={fragmentFiles} />
                   </div>
@@ -142,13 +164,32 @@ export function Preview({
                 </div>
               )}
             </TabsContent>
-            <TabsContent value="preview" className="h-full"> {/* Changed 'fragment' to 'preview' */}
+
+            <TabsContent value="editor" className="h-full">
+              {fragmentFiles.length > 0 ? (
+                <LiveCodeEditor
+                  files={fragmentFiles}
+                  sandboxId={result?.sbxId}
+                  onFileUpdate={handleFileUpdate}
+                  className="h-full"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <div className="text-center space-y-2">
+                    <Edit3 className="h-8 w-8 mx-auto opacity-50" />
+                    <p>No files available for editing</p>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="preview" className="h-full">
               {result && isLinkAvailable ? (
                 <FragmentWeb result={result as ExecutionResultWeb} />
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                   <div className="text-center space-y-2">
-                    <Globe className="h-8 w-8 mx-auto opacity-50" /> {/* Changed Files to Globe */}
+                    <Globe className="h-8 w-8 mx-auto opacity-50" />
                     <p>Live preview not available for this execution type.</p>
                   </div>
                 </div>
