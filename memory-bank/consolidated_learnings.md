@@ -47,3 +47,23 @@
 - **Context:** If `replace_in_file` fails multiple times, especially due to unexpected changes in the target file's content (e.g., file reversion or significant unrelated edits).
 - **Strategy:** Use `write_to_file` as a fallback. This ensures the file is set to the exact desired state, bypassing potential issues with matching SEARCH blocks in a changed file.
 - **Caution:** `write_to_file` overwrites the entire file. Ensure the provided content is complete and correct for the entire file.
+
+## Supabase & Database Design
+
+**Pattern: Identifying Backend Table Needs from Client-Side Stores**
+- **Context:** When determining database table requirements for an application.
+- **Strategy:** Always investigate client-side state management solutions (e.g., Zustand, Redux, Context API with `localStorage` persistence via middleware like `zustand/persist`). Data managed here, especially if persisted, often represents entities that are strong candidates for backend database tables if server-side persistence, multi-device sync, or sharing is required.
+- **Example:** Discovering `chatSessions` and `projects` were managed in a Zustand store persisted to `localStorage` indicated these were prime candidates for new Supabase tables, rather than assuming they already had backend counterparts.
+
+**Pattern: Handling Mocked or Placeholder Features**
+- **Context:** When codebase analysis reveals types or variables suggesting a feature (e.g., `UserTeam` type for team functionality).
+- **Strategy:** Verify the implementation. If the feature is currently mocked (e.g., client-side object generation without DB interaction, as seen with `UserTeam` in `lib/auth.ts`), avoid creating backend tables for it prematurely. Note it as a potential future extension. This prevents over-engineering for features not yet fully implemented on the backend.
+
+**Pattern: Standard Supabase Table Practices**
+- **New User Profile Trigger:** For tables like `profiles` linked to `auth.users`, implement a trigger on `auth.users` (e.g., `AFTER INSERT`) to automatically create a corresponding row in the `profiles` table. This ensures user profile data consistency from signup.
+    - *Example:* `CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();`
+- **Idempotent Schema Changes:** Use `CREATE TABLE IF NOT EXISTS` (and similar for other DDL commands like `CREATE INDEX IF NOT EXISTS`) to make migration scripts runnable multiple times without error if objects already exist.
+- **`updated_at` Timestamps:** For tables with mutable data, create a generic trigger function (e.g., `public.handle_updated_at()`) that sets `NEW.updated_at = now()` and apply it via a `BEFORE UPDATE` trigger on each relevant table.
+- **Row Level Security (RLS):** For any table containing user-specific or sensitive data in Supabase, always `ENABLE ROW LEVEL SECURITY` and define appropriate policies (e.g., `USING (auth.uid() = user_id)`) to restrict data access.
+- **JSONB for Flexible/Rich Data:** When a field needs to store complex, nested, or evolving structured data (e.g., chat message content with multiple types like text, code, images; or storing AI model responses), use the `JSONB` data type. This provides flexibility and efficient querying capabilities for JSON data.
+    - *Example:* `chat_messages.content JSONB NOT NULL` to store an array of message parts.
