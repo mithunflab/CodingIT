@@ -67,3 +67,40 @@
 - **Row Level Security (RLS):** For any table containing user-specific or sensitive data in Supabase, always `ENABLE ROW LEVEL SECURITY` and define appropriate policies (e.g., `USING (auth.uid() = user_id)`) to restrict data access.
 - **JSONB for Flexible/Rich Data:** When a field needs to store complex, nested, or evolving structured data (e.g., chat message content with multiple types like text, code, images; or storing AI model responses), use the `JSONB` data type. This provides flexibility and efficient querying capabilities for JSON data.
     - *Example:* `chat_messages.content JSONB NOT NULL` to store an array of message parts.
+
+## AI Persona Prompt Engineering
+
+**Pattern: Structuring Complex AI Persona Prompts**
+- **Context:** When designing or refining extensive instructional prompts for AI personas, especially those with specific operational environments and capabilities (like CodinIT).
+- **Method:**
+    1.  **Thematic Sections:** Organize the prompt into clear, logical sections using descriptive headings (e.g., `<master_operating_principles>`, `<e2b_environment_and_system_constraints>`, `<tool_use_and_artifact_instructions_e2b>`). XML-like tags can be effective for this.
+    2.  **Explicit Constraints & Directives:** Clearly state non-negotiable rules, limitations, and mandatory requirements (e.g., "CRITICAL: WebContainer CANNOT execute diff/patch editing. Always write full files."). Use emphasis (bolding, capitalization) for key directives.
+    3.  **Critical Reminders:** Include a summary section of the most crucial points that the AI must always adhere to.
+    4.  **Illustrative Examples:** Provide concrete examples of inputs and expected outputs, especially for tool usage or complex interactions. This helps the AI understand the desired format and behavior.
+    5.  **Layered Specificity:** Start with general principles, then drill down into environment-specific details, tool usage, language patterns, etc.
+- **Rationale:** A well-structured prompt enhances the AI's ability to understand and adhere to complex instructions, leading to more consistent, accurate, and reliable performance. It also makes the prompt easier to maintain and update.
+
+**Process: Merging, Refining, and Elaborating Instructional Text for AI**
+- **Context:** When combining multiple source prompts or improving an existing one.
+- **Steps:**
+    1.  **Identify Core Themes & Overlaps:** Analyze source prompts to find common themes, unique contributions, and areas of redundancy.
+    2.  **Establish a Primary Structure:** Define a logical flow for the combined prompt (see "Structuring Complex AI Persona Prompts" pattern).
+    3.  **Merge Content:** Integrate information from source prompts into the new structure, prioritizing clarity and eliminating contradictions.
+    4.  **Elaborate for Clarity:** Expand on key instructions, provide more context, and add details where ambiguity might exist. Define specific terms or operational constraints (e.g., "E2B WebContainer," "fragment execution timeout").
+    5.  **Ensure Consistency:** Maintain consistent terminology, formatting, and level of detail throughout the prompt.
+    6.  **Add Examples:** Where complex interactions or specific output formats are required, add illustrative examples.
+    7.  **Review and Iterate:** Read through the combined prompt from the AI's perspective. Are there any ambiguities? Is anything missing? Is it too verbose in places? Refine as needed.
+- **Rationale:** This systematic approach ensures that the final prompt is comprehensive, coherent, and effectively communicates the desired operational parameters and knowledge to the AI. It focuses on maximizing clarity and minimizing potential misunderstandings.
+
+## CodinIT/E2B Specifics
+
+**Key Operational Directives & Constraints (CodinIT Persona in E2B Environment)**
+- **Full File Writes:** Due to E2B WebContainer limitations, `diff/patch` style edits are not possible. All file modifications MUST be done by writing the complete file content. This is a critical constraint for any tool that modifies files (e.g., `artifacts` tool).
+- **Fragment Execution Timeout:** E2B fragments have a strict execution timeout (e.g., 10 minutes). Design fragments for efficiency and to complete well within this limit. Aim for sub-10 second latency for typical operations.
+- **Preferred Tooling (Examples):**
+    - **Package Management (JS/TS):** `bun` is the preferred package manager.
+    - **Cloud Database:** Supabase is the primary recommendation.
+    - **Local/Sandbox Database:** SQLite is preferred for E2B fragments or local development.
+- **`CodinITArtifact` System:** This is the primary mechanism for code generation and file operations. Understand the structure of `<CodinITArtifact>` and its `<CodinITAction>` types (e.g., `file`, `shell`, `fragment`, `start`, `supabase`).
+- **Technology Stack Detection:** Accurate and automatic detection of the project's technology stack is a foundational step before any code generation or modification.
+- **E2B Environment Nuances:** Be aware of limitations like no direct Git access, Python standard library focus (pip not global), and Node.js preference for scripting.
