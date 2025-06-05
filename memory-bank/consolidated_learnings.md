@@ -3,10 +3,14 @@
 ## TypeScript Best Practices
 
 **Pattern: Handling Potentially Heterogeneous Data Structures (e.g., from JSON)**
-- **Context:** When working with data structures where TypeScript might infer a union type for values (e.g., `number | {prop: string}`), such as when using `Object.entries()` on data loaded from JSON that isn't strictly uniform.
-- **Problem:** Directly accessing object properties (e.g., `value.prop`) on such a union type will result in TypeScript compiler errors because the property might not exist on all types in the union (e.g., `number` doesn't have `prop`).
-- **Solution:** Always implement a type guard (e.g., `if (typeof value === 'object' && value !== null)`) before attempting to access properties. This narrows down the type within the guard's scope, ensuring type safety and satisfying the compiler.
-- **Rationale:** Prevents runtime errors and ensures code robustness when dealing with data of uncertain or mixed structure, which is common when interfacing with external data sources like JSON files.
+- **Context:** When working with data structures where TypeScript might infer a union type for values (e.g., `number | {prop: string}`), such as when using `Object.entries()` on data loaded from JSON that isn't strictly uniform. This is common when types are derived from flexible data sources like `templates.json`.
+- **Problem:** Directly accessing object properties (e.g., `value.prop`) on such a union type will result in TypeScript compiler errors (e.g., `Type error: Property 'X' does not exist on type 'Y'`) because the property might not exist on all types in the union (e.g., `number` doesn't have `prop`).
+- **Solution:**
+    1.  **Implement Type Guards:** Before accessing potentially missing properties, use type guards to narrow down the type. Common guards include `typeof value === 'object' && value !== null` combined with `&& 'propertyName' in value`.
+    2.  **Filter Non-Conforming Data:** For collections (arrays/objects being iterated), filter out entries that don't match the expected structure *before* mapping or processing them. This ensures subsequent operations only deal with valid data.
+        - *Example:* `Object.entries(data).filter(([_, t]) => typeof t === 'object' && t !== null && 'expectedProp' in t).map(...)`
+    3.  **Explicit Casting (Post-Guard):** After a type guard has confirmed the structure, consider explicitly casting the variable to a more specific type (e.g., `const item = value as ExpectedType;`). This can improve code clarity, enable better autocompletion, and further leverage TypeScript's type system.
+- **Rationale:** Prevents runtime errors and ensures code robustness when dealing with data of uncertain or mixed structure. Filtering simplifies subsequent logic, and explicit casting (used judiciously) can enhance type safety within specific scopes.
 
 **Best Practice: Proactive Code Review for Recurring Patterns**
 - **Context:** After identifying and fixing a specific bug or error pattern (e.g., a type-related issue).

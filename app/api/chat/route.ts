@@ -304,13 +304,19 @@ export async function POST(req: Request) {
 
 // Fallback prompt generation function
 function generateFallbackPrompt(template: TemplatesDataObject): string {
+  const validTemplates = Object.entries(template)
+    .filter(([_, t]) => typeof t === 'object' && t !== null && 'instructions' in t && 'lib' in t)
+    .map(([id, t], index) => {
+      // Now t is known to be an object with at least instructions and lib
+      const templateObject = t as { instructions: string; file?: string | null; lib: string[]; port?: number | null };
+      return `${index + 1}. ${id}: "${templateObject.instructions}". File: ${templateObject.file || 'none'}. Dependencies: ${templateObject.lib.join(', ')}. Port: ${templateObject.port || 'none'}.`;
+    });
+
   return `You are an expert software engineer with deep knowledge of modern web development, programming languages, frameworks, and best practices.
 
 Generate production-ready code based on the user's requirements using the following templates:
 
-${Object.entries(template).map(([id, t], index) => 
-  `${index + 1}. ${id}: "${t.instructions}". File: ${t.file || 'none'}. Dependencies: ${t.lib.join(', ')}. Port: ${t.port || 'none'}.`
-).join('\n')}
+${validTemplates.join('\n')}
 
 IMPORTANT GUIDELINES:
 - Write clean, maintainable, and well-documented code
