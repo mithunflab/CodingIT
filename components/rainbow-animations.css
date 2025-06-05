@@ -1,168 +1,3 @@
-/* Rainbow Chat Container */
-.rainbow-chat-container {
-  position: relative;
-  padding: 2px;
-  border-radius: 12px;
-  background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3, #ff0000);
-  background-size: 400% 400%;
-  animation: rainbow-border 4s ease-in-out infinite;
-}
-
-.rainbow-chat-inner {
-  background: white;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.dark .rainbow-chat-inner {
-  background: rgb(23, 23, 23);
-}
-
-/* Rainbow Chat Input Hover Effect */
-.rainbow-chat-input {
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.rainbow-chat-input:hover::before {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  border-radius: 18px;
-  background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3, #ff0000);
-  background-size: 400% 400%;
-  animation: rainbow-border 2s ease-in-out infinite;
-  z-index: -1;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.rainbow-chat-input:hover::before {
-  opacity: 0.8;
-}
-
-.rainbow-chat-input:hover::after {
-  content: "";
-  position: absolute;
-  inset: -6px;
-  border-radius: 22px;
-  background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3, #ff0000);
-  background-size: 400% 400%;
-  animation: rainbow-border 2s ease-in-out infinite;
-  z-index: -2;
-  opacity: 0;
-  filter: blur(8px);
-  transition: opacity 0.3s ease;
-}
-
-.rainbow-chat-input:hover::after {
-  opacity: 0.4;
-}
-
-/* Enhanced glow effect for focus */
-.rainbow-chat-input:focus-within::before {
-  opacity: 1;
-  animation: rainbow-border 1.5s ease-in-out infinite;
-}
-
-.rainbow-chat-input:focus-within::after {
-  opacity: 0.6;
-  animation: rainbow-border 1.5s ease-in-out infinite;
-}
-
-/* Rainbow Button Border Only */
-.rainbow-button-border {
-  position: relative;
-  border: 2px solid transparent;
-  border-radius: 0.5rem;
-  animation: rainbow-border 3s linear infinite;
-  overflow: hidden;
-}
-
-.rainbow-button-content {
-  border-radius: 0.375rem;
-  background: var(--background);
-  color: var(--foreground);
-  border: none !important;
-  color: #374151;
-  transition: all 0.3s ease;
-}
-
-.dark .rainbow-button-content {
-  background: rgb(23, 23, 23);
-  color: white;
-}
-
-.rainbow-button-content:hover {
-  background: rgba(0, 0, 0, 0.05) !important;
-  color: #374151 !important;
-}
-
-.dark .rainbow-button-content:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  color: white !important;
-}
-
-/* Submit Button Rainbow Border */
-.rainbow-submit-border {
-  position: relative;
-  padding: 2px;
-  border-radius: 8px;
-  background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3, #ff0000);
-  background-size: 400% 400%;
-  animation: rainbow-border 3s ease-in-out infinite;
-}
-
-.rainbow-submit-content {
-  background: #374151;
-  border-radius: 6px;
-  border: none !important;
-  color: white;
-  transition: all 0.3s ease;
-}
-
-.rainbow-submit-content:hover {
-  background: #4b5563 !important;
-}
-
-.rainbow-submit-content:disabled {
-  background: #9ca3af !important;
-  color: #6b7280 !important;
-}
-
-/* Sign In Button Rainbow Border */
-.rainbow-signin-border {
-  position: relative;
-  padding: 2px;
-  border-radius: 8px;
-  background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3, #ff0000);
-  background-size: 400% 400%;
-  animation: rainbow-border 3s ease-in-out infinite;
-}
-
-.rainbow-signin-content {
-  background: white;
-  border-radius: 6px;
-  border: none !important;
-  color: #374151;
-  transition: all 0.3s ease;
-}
-
-.dark .rainbow-signin-content {
-  background: rgb(23, 23, 23);
-  color: white;
-}
-
-.rainbow-signin-content:hover {
-  background: rgba(0, 0, 0, 0.05) !important;
-  color: #374151 !important;
-}
-
-.dark .rainbow-signin-content:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  color: white !important;
-}
-
 /* Rainbow Border Animation */
 @keyframes rainbow-border {
   0% {
@@ -195,7 +30,7 @@
   }
 }
 
-/* Pulse Animation for Enhanced Effect */
+/* Pulse Animation for Enhanced Effect (Used by rainbow-chat-container) */
 .rainbow-chat-container::before {
   content: "";
   position: absolute;
@@ -217,12 +52,10 @@
   .rainbow-chat-container,
   .rainbow-button-border,
   .rainbow-submit-border,
-  .rainbow-signin-border,
-  .rainbow-chat-input {
+  .rainbow-signin-border {
     padding: 1.5px;
   }
-  
-  .rainbow-chat-input:hover::after {
+  .rainbow-chat-input::after {
     inset: -4px;
     filter: blur(6px);
   }
@@ -241,6 +74,11 @@
     background: linear-gradient(45deg, #6366f1, #8b5cf6);
     box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
   }
+  
+  .rainbow-border {
+    animation: none;
+    border-color: #7c3aed;
+  }
 }
 
 .rainbow-border {
@@ -249,13 +87,4 @@
   border-radius: 0.5rem;
   animation: rainbow-border 4s linear infinite;
   overflow: hidden;
-}
-
-/* For reduced motion preferences */
-@media (prefers-reduced-motion) {
-  .rainbow-border,
-  .rainbow-button-border {
-    animation: none;
-    border-color: #7c3aed;
-  }
 }

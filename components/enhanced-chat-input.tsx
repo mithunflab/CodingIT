@@ -11,6 +11,7 @@ import { ArrowUp, Paperclip, Square, X, AlertTriangle, RefreshCw, Github } from 
 import { type SetStateAction, useEffect, useMemo, useState, useCallback } from "react"
 import TextareaAutosize from "react-textarea-autosize"
 import { GitHubImportModal } from "./modals/github-import-modal"
+import "./rainbow-animations.css"
 
 interface ProjectAnalysis {
   structure: {
@@ -281,7 +282,7 @@ export function EnhancedChatInput({
       <div className="relative">
         <RepoBanner className="absolute bottom-full inset-x-2 translate-y-1 z-0 pb-2" />
         <div
-          className={`rainbow-chat-input shadow-md rounded-2xl relative z-10 bg-background border focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-background transition-shadow duration-200 ${
+          className={`rainbow-chat-input rainbow-border shadow-md rounded-2xl relative z-10 bg-background focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-background transition-shadow duration-200 ${
             dragActive
               ? "before:absolute before:inset-0 before:rounded-2xl before:border-2 before:border-dashed before:border-primary"
               : ""

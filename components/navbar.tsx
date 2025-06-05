@@ -175,11 +175,14 @@ export function NavBar({
                   <span>Profile</span>
                 </Link>
                 </DropdownMenuItem>
-
+                
+              <Link href="/settings">
               <DropdownMenuItem className="cursor-pointer">
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
               </DropdownMenuItem>
+              </Link>
+
 
               <DropdownMenuSeparator />
 
@@ -193,10 +196,13 @@ export function NavBar({
                 About CodinIT
               </DropdownMenuItem>
 
+              <Link href="https://github.com/Gerome-Elassaad/CodingIT">
               <DropdownMenuItem onClick={() => onSocialClick("github")} className="cursor-pointer">
                 <GitHubLogoIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                 Star on GitHub
               </DropdownMenuItem>
+              </Link>
+
 
               <DropdownMenuItem onClick={() => onSocialClick("discord")} className="cursor-pointer">
                 <DiscordLogoIcon className="mr-2 h-4 w-4 text-muted-foreground" />
