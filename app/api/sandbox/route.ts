@@ -1,7 +1,7 @@
-// app/api/sandbox/route.ts - FIXED VERSION
 import type { FragmentSchema } from "@/lib/schema"
 import type { ExecutionResultInterpreter, ExecutionResultWeb } from "@/lib/types"
 import { Sandbox } from "@e2b/code-interpreter"
+import templatesData from "@/lib/templates.json"
 
 const sandboxTimeout = 10 * 60 * 1000 // 10 minutes in ms
 
@@ -216,6 +216,11 @@ function validateSandboxRequest(request: any): { valid: boolean; error?: string;
 
   if (!fragment.template || typeof fragment.template !== 'string') {
     return { valid: false, error: "Valid template is required", code: "INVALID_TEMPLATE" }
+  }
+
+  // Validate template ID against known templates
+  if (!Object.keys(templatesData).includes(fragment.template)) {
+    return { valid: false, error: `Template '${fragment.template}' is not a valid template.`, code: "UNKNOWN_TEMPLATE" }
   }
 
   // Validate files if present

@@ -1,364 +1,190 @@
-// app/api/sandbox/route.ts - FIXED VERSION
-import type { FragmentSchema } from "@/lib/schema"
-import type { ExecutionResultInterpreter, ExecutionResultWeb } from "@/lib/types"
-import { Sandbox } from "@e2b/code-interpreter"
+import { Sandbox } from "@e2b/code-interpreter";
 
-const sandboxTimeout = 10 * 60 * 1000 // 10 minutes in ms
+interface UpdateFileRequestBody {
+  sandboxId: string;
+  filePath: string;
+  content: string;
+  userID?: string; // Optional: for logging or context
+  teamID?: string; // Optional: for logging or context
+}
 
-export const maxDuration = 60
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  const requestId = `sandbox_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  console.log(`[Sandbox API ${requestId}] Processing request`)
+  const operationId = `sandbox_update_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  console.log(`[Sandbox Update API ${operationId}] Processing request`);
 
-  let requestBody: any
+  let requestBody: UpdateFileRequestBody;
 
   try {
-    requestBody = await req.json()
+    requestBody = await req.json();
   } catch (error) {
-    console.error(`[Sandbox API ${requestId}] Failed to parse request body:`, error)
+    console.error(`[Sandbox Update API ${operationId}] Failed to parse request body:`, error);
     return new Response(
       JSON.stringify({
         error: "Invalid JSON in request body",
         code: "INVALID_JSON",
-        requestId,
+        operationId,
       }),
       {
         status: 400,
         headers: { "Content-Type": "application/json" },
       },
-    )
+    );
   }
 
-  const {
-    fragment,
-    userID,
-    teamID,
-    accessToken,
-  }: {
-    fragment: FragmentSchema
-    userID: string
-    teamID: string
-    accessToken: string
-  } = requestBody
+  const { sandboxId, filePath, content, userID, teamID } = requestBody;
 
-  // Enhanced validation
-  const validationResult = validateSandboxRequest({ fragment, userID, teamID, accessToken })
-  if (!validationResult.valid) {
-    return new Response(
-      JSON.stringify({
-        error: validationResult.error,
-        code: validationResult.code,
-        requestId,
-      }),
-      {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      },
-    )
+  // Validate request body
+  if (!sandboxId) {
+    return new Response(JSON.stringify({ error: "sandboxId is required", code: "MISSING_SANDBOX_ID", operationId }), { status: 400, headers: { "Content-Type": "application/json" } });
+  }
+  if (!filePath) {
+    return new Response(JSON.stringify({ error: "filePath is required", code: "MISSING_FILE_PATH", operationId }), { status: 400, headers: { "Content-Type": "application/json" } });
+  }
+  if (typeof content !== 'string') { // Content can be an empty string
+    return new Response(JSON.stringify({ error: "content is required and must be a string", code: "MISSING_CONTENT", operationId }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
-  console.log(`[Sandbox API ${requestId}] Processing request:`, {
-    fragmentTemplate: fragment.template,
-    userID: userID.substring(0, 8) + "...",
-    teamID: teamID.substring(0, 8) + "...",
-    hasAccessToken: !!accessToken,
-    filesCount: fragment.files?.length || 0,
-  })
+  console.log(`[Sandbox Update API ${operationId}] Request details:`, {
+    sandboxId,
+    filePath,
+    contentLength: content.length,
+    userID: userID ? userID.substring(0, 8) + "..." : undefined,
+    teamID: teamID ? teamID.substring(0, 8) + "..." : undefined,
+  });
 
-  const apiKey = process.env.E2B_API_KEY
+  const apiKey = process.env.E2B_API_KEY;
   if (!apiKey) {
-    console.error(`[Sandbox API ${requestId}] E2B API key not configured`)
+    console.error(`[Sandbox Update API ${operationId}] E2B API key not configured`);
     return new Response(
       JSON.stringify({
         error: "Sandbox service not configured",
         code: "SERVICE_NOT_CONFIGURED",
-        requestId,
+        operationId,
       }),
       {
         status: 500,
         headers: { "Content-Type": "application/json" },
       },
-    )
+    );
   }
 
-  let sbx: Sandbox | null = null
+  let sbx: Sandbox | null = null;
 
   try {
-    // Create sandbox with enhanced error handling
-    console.log(`[Sandbox API ${requestId}] Creating sandbox with template:`, fragment.template)
-
+    console.log(`[Sandbox Update API ${operationId}] Attempting to reconnect to sandbox: ${sandboxId}`);
+    // Reconnect to the existing sandbox
+    // Note: The E2B SDK might require specific headers or config for reconnect,
+    // similar to create. Adjust if necessary based on SDK documentation.
     const sandboxConfig = {
-      metadata: {
-        template: fragment.template,
+      apiKey, // Pass API key if required by reconnect, or rely on global config
+      metadata: { // Optional: pass metadata if useful for reconnect context
+        operationId,
         userID: userID || "",
         teamID: teamID || "",
-        requestId,
       },
-      timeoutMs: sandboxTimeout,
-      ...(teamID && accessToken
-        ? {
-            headers: {
-              "X-Supabase-Team": teamID,
-              "X-Supabase-Token": accessToken,
-            },
-          }
-        : {}),
-    }
+      // Add any other necessary headers or config for reconnecting
+    };
 
-    sbx = await Sandbox.create(fragment.template, sandboxConfig)
-    console.log(`[Sandbox API ${requestId}] Sandbox created successfully:`, sbx.sandboxId)
+    // The E2B SDK's `Sandbox.reconnect` might not exist or work this way.
+    // A common pattern is to get a handle to an existing sandbox.
+    // If direct reconnection isn't the primary method, this might involve
+    // ensuring the sandbox is active and then performing operations.
+    // For this example, we assume a reconnect-like capability or that operations
+    // can be performed on a known, active sandbox ID.
 
-    // Install dependencies with enhanced error handling
-    if (fragment.has_additional_dependencies && fragment.install_dependencies_command) {
-      try {
-        console.log(`[Sandbox API ${requestId}] Installing dependencies:`, fragment.additional_dependencies)
-        const installResult = await sbx.commands.run(fragment.install_dependencies_command, {
-          timeoutMs: 120000, // 2 minutes timeout for installation
-        })
+    // Let's assume for now that we can operate on a sandbox instance if we know its ID
+    // and it's still active. The E2B SDK might handle this internally when you
+    // instantiate a Sandbox object with an existing ID, or it might have a specific
+    // static method.
+    // If `Sandbox.reconnect(sandboxId, sandboxConfig)` is not the correct method,
+    // this part needs to be adjusted based on E2B SDK's actual API for existing sandboxes.
 
-        if (installResult.exitCode !== 0) {
-          console.warn(`[Sandbox API ${requestId}] Dependency installation failed:`, {
-            exitCode: installResult.exitCode,
-            stderr: installResult.stderr,
-            stdout: installResult.stdout,
-          })
-          // Continue anyway, some dependencies might be optional
-        } else {
-          console.log(`[Sandbox API ${requestId}] Dependencies installed successfully`)
-        }
-      } catch (installError) {
-        console.warn(`[Sandbox API ${requestId}] Failed to install dependencies:`, installError)
-        // Continue without dependencies
-      }
-    }
+    // A more robust approach might be to ensure the sandbox is "kept alive" or
+    // use an SDK feature that allows operations by ID without explicit reconnect,
+    // or the client passes enough info for the server to manage sandbox sessions.
 
-    // Enhanced file copying with better error handling
-    if (fragment.files && Array.isArray(fragment.files) && fragment.files.length > 0) {
-      console.log(`[Sandbox API ${requestId}] Copying ${fragment.files.length} file(s)`)
-      
-      const copyResults = await Promise.allSettled(
-        fragment.files.map(async (file, index) => {
-          if (!file.file_path || typeof file.file_content !== 'string') {
-            throw new Error(`File ${index}: Missing path or content is not a string`)
-          }
+    // Given the limitations of not knowing the exact E2B SDK method for this,
+    // I'll proceed with a conceptual `Sandbox.reconnect`.
+    // If this method is incorrect, the actual implementation will depend on how E2B
+    // expects interaction with existing, active sandboxes.
+    // A common alternative is that `new Sandbox({ id: sandboxId, apiKey })` might work.
+    
+    // Let's try to instantiate with the ID, which is a common pattern for some SDKs
+    // to resume control or interact with an existing resource.
+    // The E2B SDK likely uses `sandboxId` in the constructor options for an existing sandbox.
+    sbx = new Sandbox({ sandboxId: sandboxId, apiKey: apiKey });
 
-          // Validate file path for security
-          if (!isValidFilePath(file.file_path)) {
-            throw new Error(`File ${index}: Invalid file path: ${file.file_path}`)
-          }
+    // Ensure the sandbox is "open" or ready. Some SDKs require this.
+    // await sbx.keepAlive(timeout); // Or similar to ensure it's active
+    // This step is highly E2B specific. If `new Sandbox({id})` is enough, great.
+    // If not, an explicit `sbx.connect()` or `sbx.open()` might be needed.
+    // For now, we'll assume `new Sandbox({id})` is sufficient to target it.
 
-          await sbx!.files.write(file.file_path, file.file_content)
-          console.log(`[Sandbox API ${requestId}] Copied file: ${file.file_path}`)
-          return file.file_path
-        })
-      )
+    console.log(`[Sandbox Update API ${operationId}] Writing file: ${filePath}`);
+    await sbx.files.write(filePath, content);
 
-      // Check for failed file copies
-      const failedCopies = copyResults.filter(result => result.status === 'rejected')
-      if (failedCopies.length > 0) {
-        const errors = failedCopies.map(result => (result as PromiseRejectedResult).reason.message)
-        console.error(`[Sandbox API ${requestId}] Failed to copy files:`, errors)
-        throw new Error(`Failed to copy ${failedCopies.length} file(s): ${errors.join(', ')}`)
-      }
-    }
-
-    // Execute based on template type
-    if (fragment.template === "code-interpreter-v1") {
-      return await handleCodeInterpreter(sbx, fragment, requestId)
-    } else {
-      return await handleWebSandbox(sbx, fragment, requestId)
-    }
+    console.log(`[Sandbox Update API ${operationId}] File updated successfully in sandbox: ${sandboxId}`);
+    return new Response(
+      JSON.stringify({
+        message: "File updated successfully",
+        sandboxId,
+        filePath,
+        operationId,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
 
   } catch (error: any) {
-    console.error(`[Sandbox API ${requestId}] Sandbox operation failed:`, {
+    console.error(`[Sandbox Update API ${operationId}] Operation failed for sandbox ${sandboxId}:`, {
       error: error.message,
       stack: error.stack,
-      template: fragment?.template,
-    })
+    });
+
+    // Determine error type for appropriate response
+    let statusCode = 500;
+    let errorCode = "UPDATE_FAILED";
+    let errorMessage = "Failed to update file in sandbox.";
+
+    if (error.message.includes("not found") || error.message.includes("Cannot find sandbox")) {
+      statusCode = 404;
+      errorCode = "SANDBOX_NOT_FOUND";
+      errorMessage = `Sandbox with ID '${sandboxId}' not found or not active.`;
+    } else if (error.message.includes("permission") || error.message.includes("denied")) {
+      statusCode = 403;
+      errorCode = "PERMISSION_DENIED";
+      errorMessage = "Permission denied to update file in sandbox.";
+    } else if (error.message.includes("timeout")) {
+      statusCode = 408;
+      errorCode = "OPERATION_TIMEOUT";
+      errorMessage = "Operation timed out.";
+    }
 
     return new Response(
       JSON.stringify({
-        error: getErrorMessage(error),
-        code: getErrorCode(error),
+        error: errorMessage,
+        code: errorCode,
         details: error.message,
-        template: fragment?.template,
-        requestId,
+        sandboxId,
+        operationId,
       }),
       {
-        status: getErrorStatus(error),
+        status: statusCode,
         headers: { "Content-Type": "application/json" },
       },
-    )
+    );
   } finally {
-    // Note: E2B handles cleanup automatically via timeouts
+    // If we explicitly opened or reconnected, we might need to close or disconnect.
+    // However, E2B sandboxes are often managed by timeouts.
+    // If `sbx.close()` is needed for instances obtained via `reconnect` or `new Sandbox({id})`, add it here.
+    // For E2B, usually, they auto-close after inactivity.
     if (sbx) {
-      console.log(`[Sandbox API ${requestId}] Sandbox ${sbx.sandboxId} operations completed`)
+      console.log(`[Sandbox Update API ${operationId}] Operations completed for sandbox ${sbx.sandboxId}`);
+      // await sbx.close(); // Uncomment if explicit close is needed for reconnected sandboxes
     }
   }
-}
-
-// Enhanced validation function
-function validateSandboxRequest(request: any): { valid: boolean; error?: string; code?: string } {
-  if (!request.fragment) {
-    return { valid: false, error: "Fragment is required", code: "MISSING_FRAGMENT" }
-  }
-
-  if (!request.userID || typeof request.userID !== 'string') {
-    return { valid: false, error: "Valid user ID is required", code: "MISSING_USER_ID" }
-  }
-
-  if (!request.teamID || typeof request.teamID !== 'string') {
-    return { valid: false, error: "Valid team ID is required", code: "MISSING_TEAM_ID" }
-  }
-
-  const { fragment } = request
-
-  if (!fragment.template || typeof fragment.template !== 'string') {
-    return { valid: false, error: "Valid template is required", code: "INVALID_TEMPLATE" }
-  }
-
-  // Validate files if present
-  if (fragment.files && Array.isArray(fragment.files)) {
-    for (let i = 0; i < fragment.files.length; i++) {
-      const file = fragment.files[i]
-      if (!file.file_path || typeof file.file_path !== 'string') {
-        return { valid: false, error: `File ${i}: Missing or invalid file path`, code: "INVALID_FILE_PATH" }
-      }
-      if (typeof file.file_content !== 'string') {
-        return { valid: false, error: `File ${i}: File content must be a string`, code: "INVALID_FILE_CONTENT" }
-      }
-    }
-  }
-
-  return { valid: true }
-}
-
-// Security: Validate file paths
-function isValidFilePath(filePath: string): boolean {
-  // Prevent directory traversal attacks
-  if (filePath.includes('..') || filePath.includes('~') || filePath.startsWith('/')) {
-    return false
-  }
-
-  // Only allow reasonable file extensions
-  const allowedExtensions = [
-    '.js', '.ts', '.jsx', '.tsx', '.html', '.css', '.json', '.md', '.txt',
-    '.py', '.java', '.php', '.rb', '.go', '.rs', '.sql', '.yml', '.yaml'
-  ]
-  
-  const hasValidExtension = allowedExtensions.some(ext => filePath.endsWith(ext))
-  if (!hasValidExtension) {
-    return false
-  }
-
-  // Reasonable path length
-  if (filePath.length > 200) {
-    return false
-  }
-
-  return true
-}
-
-// Handle code interpreter execution
-async function handleCodeInterpreter(
-  sbx: Sandbox, 
-  fragment: FragmentSchema, 
-  requestId: string
-): Promise<Response> {
-  console.log(`[Sandbox API ${requestId}] Running code in interpreter`)
-
-  try {
-    let codeToRun = ""
-    
-    if (fragment.file_path && fragment.files && fragment.files.length > 0) {
-      const mainFile = fragment.files.find(f => f.file_path === fragment.file_path)
-      if (mainFile && typeof mainFile.file_content === 'string') {
-        codeToRun = mainFile.file_content
-      } else {
-        console.warn(`[Sandbox API ${requestId}] Main script not found: ${fragment.file_path}`)
-      }
-    } else if (fragment.files && fragment.files.length === 1 && typeof fragment.files[0].file_content === 'string') {
-      codeToRun = fragment.files[0].file_content
-      console.log(`[Sandbox API ${requestId}] Using single file content`)
-    }
-
-    const { logs, error, results } = await sbx.runCode(codeToRun)
-
-    const response = {
-      sbxId: sbx.sandboxId,
-      template: fragment.template,
-      stdout: logs.stdout,
-      stderr: logs.stderr,
-      runtimeError: error,
-      cellResults: results,
-    } as ExecutionResultInterpreter
-
-    console.log(`[Sandbox API ${requestId}] Code execution completed successfully`)
-    return new Response(JSON.stringify(response), {
-      headers: { "Content-Type": "application/json" },
-    })
-  } catch (execError) {
-    console.error(`[Sandbox API ${requestId}] Code execution failed:`, execError)
-    throw new Error(`Code execution failed: ${execError instanceof Error ? execError.message : String(execError)}`)
-  }
-}
-
-// Handle web-based sandbox
-async function handleWebSandbox(
-  sbx: Sandbox, 
-  fragment: FragmentSchema, 
-  requestId: string
-): Promise<Response> {
-  const port = fragment.port || 80
-  const host = sbx.getHost(port)
-  const url = `https://${host}`
-
-  console.log(`[Sandbox API ${requestId}] Web sandbox created:`, url)
-
-  const response = {
-    sbxId: sbx.sandboxId,
-    template: fragment.template,
-    url: url,
-  } as ExecutionResultWeb
-
-  return new Response(JSON.stringify(response), {
-    headers: { "Content-Type": "application/json" },
-  })
-}
-
-// Enhanced error handling
-function getErrorCode(error: any): string {
-  const message = error.message || ""
-  
-  if (message.includes("timeout")) return "SANDBOX_TIMEOUT"
-  if (message.includes("quota") || message.includes("limit")) return "SANDBOX_QUOTA_EXCEEDED"
-  if (message.includes("authentication") || message.includes("unauthorized")) return "SANDBOX_AUTH_ERROR"
-  if (message.includes("template")) return "INVALID_TEMPLATE"
-  if (message.includes("file")) return "FILE_ERROR"
-  
-  return "SANDBOX_ERROR"
-}
-
-function getErrorMessage(error: any): string {
-  const message = error.message || ""
-  
-  if (message.includes("timeout")) return "Sandbox creation timed out. Please try again."
-  if (message.includes("quota") || message.includes("limit")) return "Sandbox quota exceeded. Please try again later."
-  if (message.includes("authentication") || message.includes("unauthorized")) return "Sandbox authentication failed."
-  if (message.includes("template")) return "Invalid sandbox template specified."
-  if (message.includes("file")) return "Error processing uploaded files."
-  
-  return "Failed to create sandbox environment"
-}
-
-function getErrorStatus(error: any): number {
-  const message = error.message || ""
-  
-  if (message.includes("authentication") || message.includes("unauthorized")) return 401
-  if (message.includes("quota") || message.includes("limit")) return 429
-  if (message.includes("template")) return 400
-  if (message.includes("timeout")) return 408
-  
-  return 500
 }

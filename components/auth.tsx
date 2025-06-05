@@ -283,8 +283,10 @@ function SignUpForm({
   loading,
   redirectTo,
   onSignUpValidate,
-  metadata,
+  metadata, // Keep existing metadata prop
 }: SignUpFormProps) {
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -311,7 +313,11 @@ function SignUpForm({
         password,
         options: {
           emailRedirectTo: redirectTo,
-          data: metadata,
+          data: {
+            ...metadata, // Preserve existing metadata
+            first_name: firstName,
+            last_name: lastName,
+          },
         },
       })
       if (error) throw error
@@ -327,6 +333,30 @@ function SignUpForm({
 
   return (
     <form id="auth-sign-up" onSubmit={handleSignUp} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="first-name">First Name</Label>
+        <Input
+          id="first-name"
+          type="text"
+          placeholder="Your first name"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          required
+          autoComplete="given-name"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="last-name">Last Name</Label>
+        <Input
+          id="last-name"
+          type="text"
+          placeholder="Your last name"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          required
+          autoComplete="family-name"
+        />
+      </div>
       <div className="space-y-2">
         <Label htmlFor="email">Email address</Label>
         <div className="relative">

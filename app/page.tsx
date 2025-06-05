@@ -23,7 +23,6 @@ import { experimental_useObject as useObject } from "ai/react"
 import { usePostHog } from "posthog-js/react"
 import { type SetStateAction, useCallback, useEffect, useState } from "react"
 import { useLocalStorage } from "usehooks-ts"
-
 const TEMPLATE_IDS = {
   CODE_INTERPRETER_V1: "code-interpreter-v1",
   NEXTJS_DEVELOPER: "nextjs-developer",
@@ -53,7 +52,7 @@ interface ProjectAnalysis {
  type: string
  description: string
     }
- configFiles?: string[] // Added configFiles based on EnhancedChatInput logic
+ configFiles?: string[]
   }
  analysis: string
  recommendations: string[]

@@ -154,7 +154,6 @@ export function ChatInput({
 
   const isModelError = errorMessage.includes("model") || errorMessage.includes("API key")
 
-  // Determine error styling and actions
   const getErrorStyling = () => {
     if (isAuthError) return "bg-red-400/10 text-red-400 border border-red-400/20"
     if (isServerError) return "bg-orange-400/10 text-orange-400 border border-orange-400/20"
