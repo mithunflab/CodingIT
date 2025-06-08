@@ -3,7 +3,7 @@ import type { ExecutionResultInterpreter, ExecutionResultWeb } from "@/lib/types
 import { Sandbox } from "@e2b/code-interpreter"
 import templatesData from "@/lib/templates.json"
 
-const sandboxTimeout = 10 * 60 * 1000 // 10 minutes in ms
+const sandboxTimeout = 10 * 60 * 1000
 
 export const maxDuration = 60
 
