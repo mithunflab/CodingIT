@@ -349,6 +349,8 @@ export default function Home() {
     setHasMounted(true)
   }, [])
 
+
+
   // Main form submission handler
   const handleSubmitAuth = useCallback(async (
     e: React.FormEvent<HTMLFormElement>, 

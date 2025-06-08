@@ -2,9 +2,16 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+if (!supabaseUrl) {
+  throw new Error("CRITICAL: NEXT_PUBLIC_SUPABASE_URL environment variable is not defined.");
+}
+
+if (!supabaseServiceRoleKey) {
+  throw new Error("CRITICAL: SUPABASE_SERVICE_ROLE_KEY environment variable is not defined.");
+}
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
 const createProjectSchema = z.object({
@@ -14,12 +21,6 @@ const createProjectSchema = z.object({
   template: z.string().optional(),
 })
 
-const updateProjectSchema = z.object({
-  name: z.string().min(1).max(50).optional(),
-  description: z.string().max(200).optional(),
-  visibility: z.enum(['private', 'public']).optional(),
-  template: z.string().optional(),
-})
 
 async function getUserFromAuth(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
