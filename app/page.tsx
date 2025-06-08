@@ -11,6 +11,8 @@ import { ChatSettings } from "@/components/chat-settings"
 import { NavBar } from "@/components/navbar"
 import { Preview } from "@/components/preview"
 import CommandPalette from "@/components/ui/command-palette"
+import { ProjectDialog } from "@/components/ui/project-dialog"
+import { useProjectDialog } from "@/hooks/use-project-dialog"
 import { useAuth } from "@/lib/auth"
 import { type Message, toAISDKMessages, toMessageImage } from "@/lib/messages"
 import type { LLMModelConfig } from "@/lib/models"
@@ -21,9 +23,12 @@ import templates, { type TemplateId } from "@/lib/templates"
 import type { ExecutionResult } from "@/lib/types"
 import type { DeepPartial } from "ai"
 import { experimental_useObject as useObject } from "ai/react"
+import { FolderPlus } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 import { usePostHog } from "posthog-js/react"
 import { useCallback, useEffect, useState } from "react"
 import { useLocalStorage } from "usehooks-ts"
+import { useProjectStore } from "@/lib/stores/projects"
 
 interface ProjectAnalysis {
   structure: {
@@ -94,6 +99,16 @@ export default function Home() {
   const [authView, setAuthView] = useState<ViewType>("sign_in")
   const [authError, setAuthError] = useState<string | null>(null)
   const { session, isLoading, userTeam } = useAuth(setAuthDialog, setAuthView)
+
+  const {
+    isOpen: isProjectDialogOpen,
+    mode: projectDialogMode,
+    editingProject,
+    openCreateDialog,
+    openEditDialog,
+    closeDialog: closeProjectDialog,
+    handleSave: handleProjectSave,
+  } = useProjectDialog()
 
   // Chat and UI state
   const [messages, setMessages] = useState<Message[]>([])
@@ -591,6 +606,30 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Floating Action Button for New Project */}
+      <AnimatePresence>
+        {session && hasMounted && (
+          <motion.button
+            onClick={openCreateDialog}
+            className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0, y: 20 }}
+            transition={{
+              type: "spring",
+              damping: 25,
+              stiffness: 300,
+              duration: 0.3,
+            }}
+            title="Create New Project"
+          >
+            <FolderPlus className="h-6 w-6" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
       {/* Command Palette Integration */}
       <CommandPalette 
         onCreateFragment={() => {
@@ -607,6 +646,39 @@ export default function Home() {
         onClearChat={handleClearChat}
         onOpenSettings={() => {
         }}
+      />
+
+      {/* Floating Action Button for New Project */}
+      <AnimatePresence>
+        {session && hasMounted && (
+          <motion.button
+            onClick={openCreateDialog}
+            className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0, y: 20 }}
+            transition={{
+              type: "spring",
+              damping: 25,
+              stiffness: 300,
+              duration: 0.3,
+            }}
+            title="Create New Project"
+          >
+            <FolderPlus className="h-6 w-6" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Project Dialog */}
+      <ProjectDialog
+        open={isProjectDialogOpen}
+        onOpenChange={closeProjectDialog}
+        mode={projectDialogMode}
+        project={editingProject}
+        onSave={handleProjectSave}
       />
     </div>
   )
