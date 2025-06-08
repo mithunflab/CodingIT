@@ -1,7 +1,6 @@
 import './globals.css'
 import { PostHogProvider, ThemeProvider } from './providers'
 import { Toaster } from '@/components/ui/toaster'
-import { Analytics } from '@vercel/analytics/next'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 
@@ -9,7 +8,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://codingit.vercel.app'),
-  title: '#1 Open Source AI Software Engineer',
+  title: 'CodinIT #1 Open Source AI Software Engineer',
   keywords: [
     'AI software engineer',
     'open source',
@@ -60,7 +59,6 @@ export default function RootLayout({
             {children}
           </ThemeProvider>
           <Toaster />
-          <Analytics />
         </body>
       </PostHogProvider>
     </html>

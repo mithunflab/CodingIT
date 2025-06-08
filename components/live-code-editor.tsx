@@ -357,6 +357,8 @@ export function LiveCodeEditor({ files, sandboxId, onFileUpdate, className }: Li
             <ScrollArea className="h-[calc(100%-3rem)]">
               <textarea
                 ref={textareaRef}
+                id={`live-editor-textarea-${currentFileData.name.replace(/[^a-zA-Z0-9]/g, '-')}`}
+                name="code-editor-content"
                 value={currentFileData.content}
                 onChange={(e) => handleContentChange(e.target.value)}
                 className="w-full h-full min-h-[400px] p-4 bg-transparent border-none outline-none resize-none font-mono text-sm leading-relaxed"

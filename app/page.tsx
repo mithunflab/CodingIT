@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 
 import type { ViewType } from "@/components/auth"
 import { AuthDialog } from "@/components/auth-dialog"
@@ -22,7 +22,9 @@ import type { DeepPartial } from "ai"
 import { experimental_useObject as useObject } from "ai/react"
 import { usePostHog } from "posthog-js/react"
 import { type SetStateAction, useCallback, useEffect, useState } from "react"
-import { useLocalStorage } from "usehooks-ts"
+import { useLocalStorage } from "usehooks-ts";
+import posthog from "posthog-js"
+
 const TEMPLATE_IDS = {
   CODE_INTERPRETER_V1: "code-interpreter-v1",
   NEXTJS_DEVELOPER: "nextjs-developer",
@@ -259,7 +261,10 @@ export default function Home() {
   })
 
   const currentModel = filteredModels.find((model) => model.id === languageModel.model)
-  const currentTemplate = selectedTemplate === "auto" ? templates : { [selectedTemplate]: templates[selectedTemplate] }
+  const currentTemplate = React.useMemo(
+    () => selectedTemplate === "auto" ? templates : { [selectedTemplate]: templates[selectedTemplate] },
+    [selectedTemplate]
+  )
 
   const {
     object,
@@ -433,11 +438,11 @@ export default function Home() {
     }
   }, [error, stop])
 
-  async function handleSubmitAuth(
+  const handleSubmitAuth = useCallback(async (
     e: React.FormEvent<HTMLFormElement>, 
     projectFiles?: File[], 
     projectAnalysis?: ProjectAnalysis
-  ) {
+  ) => {
     e.preventDefault()
 
     if (isLoading) {
@@ -550,9 +555,9 @@ export default function Home() {
       console.error("[handleSubmitAuth] Submit error:", error)
       setErrorMessage("Failed to submit request. Please try again.")
     }
-  }
+  }, [isLoading, session, userTeam, currentModel, isSubmitting, stop, chatInput, files, messages, currentTemplate, languageModel, setAuthDialog, setErrorMessage, setCurrentRequestId, setChatInput, setFiles, setCurrentTab, setIsRateLimited, setProjectContext, posthog, submit, selectedTemplate])
 
-  function retry() {
+  const retry = useCallback(() => {
     if (!session?.user?.id || !userTeam?.id) {
       console.error("[retry] Missing authentication data")
       setErrorMessage("Authentication error. Please sign out and sign in again.")
@@ -592,25 +597,25 @@ export default function Home() {
     })
 
     submit(submitData)
-  }
+  }, [session, userTeam, currentModel, messages, currentTemplate, languageModel, projectContext, setErrorMessage, setIsRateLimited, setIsPreviewLoading, setCurrentRequestId, submit])
 
-  function handleSaveInputChange(e: React.ChangeEvent<HTMLTextAreaElement> | React.ChangeEvent<HTMLInputElement>) {
+  const handleSaveInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement> | React.ChangeEvent<HTMLInputElement>) => {
     setChatInput(e.target.value)
-  }
+  }, [setChatInput]);
 
-  function handleFileChange(change: SetStateAction<File[]>) {
+  const handleFileChange = useCallback((change: SetStateAction<File[]>) => {
     setFiles(change)
-  }
+  }, [setFiles]);
 
-  function logout() {
+  const logout = useCallback(() => {
     supabase ? supabase.auth.signOut() : console.warn("Supabase is not initialized")
-  }
+  }, []); // supabase is stable
 
-  function handleLanguageModelChange(e: LLMModelConfig) {
+  const handleLanguageModelChange = useCallback((e: LLMModelConfig) => {
     setLanguageModel({ ...languageModel, ...e })
-  }
+  }, [languageModel, setLanguageModel]);
 
-  function handleSocialClick(target: "github" | "x" | "discord") {
+  const handleSocialClick = useCallback((target: "github" | "x" | "discord") => {
     if (target === "github") {
       window.open("https://github.com/Gerome-Elassaad/CodinIT", "_blank")
     } else if (target === "x") {
@@ -618,11 +623,10 @@ export default function Home() {
     } else if (target === "discord") {
       window.open("https://discord.gg/codinit", "_blank")
     }
-
     posthog.capture(`${target}_click`)
-  }
+  }, [posthog]);
 
-  function handleClearChat() {
+  const handleClearChat = useCallback(() => {
     stop()
     setChatInput("")
     setFiles([])
@@ -635,32 +639,38 @@ export default function Home() {
     setIsRateLimited(false)
     setCurrentRequestId(null)
     setProjectContext({ files: [], analysis: null })
-  }
+  }, [stop, setChatInput, setFiles, setMessages, setFragment, setResult, setCurrentTab, setIsPreviewLoading, setErrorMessage, setIsRateLimited, setCurrentRequestId, setProjectContext]);
 
-  function setCurrentPreview(preview: {
+  const setCurrentPreview = useCallback((preview: {
     fragment: DeepPartial<FragmentSchema> | undefined
     result: ExecutionResult | undefined
-  }) {
+  }) => {
     setFragment(preview.fragment)
     setResult(preview.result)
-  }
+  }, [setFragment, setResult]);
 
-  function handleUndo() {
+  const handleUndo = useCallback(() => {
     if (messages.length > 1) {
       setMessages((previousMessages) => [...previousMessages.slice(0, -2)])
       setCurrentPreview({ fragment: undefined, result: undefined })
       setErrorMessage("")
       setIsPreviewLoading(false)
     }
-  }
+  }, [messages.length, setMessages, setCurrentPreview, setErrorMessage, setIsPreviewLoading]);
 
-  function handleRetryAuth() {
+  const handleRetryAuth = useCallback(() => {
     if (supabase) {
       supabase.auth.signOut().then(() => {
         setTimeout(() => setAuthDialog(true), 500)
       })
     }
-  }
+  }, [setAuthDialog]); // supabase is a stable import, setAuthDialog is a stable state setter
+
+  const handlePreviewClose = useCallback(() => {
+    setFragment(undefined);
+    setResult(undefined);
+    setCurrentTab("code");
+  }, [setFragment, setResult, setCurrentTab]);
 
   if (isLoading) {
     return (
@@ -739,11 +749,7 @@ export default function Home() {
                 isPreviewLoading={isPreviewLoading}
                 fragment={fragment}
                 result={result as ExecutionResult}
-                onClose={() => {
-                  setFragment(undefined)
-                  setResult(undefined)
-                  setCurrentTab("code")
-                }}
+                onClose={handlePreviewClose}
               />
             </div>
           )}

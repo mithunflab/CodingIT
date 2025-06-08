@@ -71,13 +71,15 @@ export function NavBar({
   return (
     <nav className="w-full flex bg-background py-4">
       <div className="flex flex-1 items-center">
-        <Link href="/" className="flex items-center gap-2" target="_blank">
-          <Logo />
+        <Link href="/" className="flex items-center gap-3 group" target="_blank">
+          <div className="transition-transform duration-200 group-hover:scale-110">
+            <Logo />
+          </div>
           <span className="whitespace-pre"></span>
         </Link>
         <Link
           href="https://codinit.dev"
-          className="underline decoration-primary/30 decoration-2 text-primary"
+          className="font-bold text-xl bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent hover:from-primary/80 hover:to-primary transition-all duration-200 font-mono tracking-tight"
           target="_blank"
         >
           CodinIT

@@ -115,16 +115,38 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
   }, [connectionChecked])
 
   const connectGitHub = useCallback(() => {
+    // Check if GitHub Client ID is configured
+    if (!process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID) {
+      toast({
+        title: "Configuration Error",
+        description: "GitHub integration is not properly configured. Please contact support.",
+        variant: "destructive"
+      })
+      return
+    }
+
     const clientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID
     const redirectUri = `${window.location.origin}/api/github/callback`
-    const scope = 'repo user'
+    const scope = 'repo user:email'
     
-    // Generate and store state parameter
+    // Generate and store state parameter for security
     const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
     sessionStorage.setItem('github_oauth_state', state)
     
-    const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`
-    const authWindow = window.open(authUrl, 'github-auth', 'width=600,height=700')
+    const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&state=${state}`
+    
+    console.log('Opening GitHub OAuth with URL:', authUrl)
+    
+    const authWindow = window.open(authUrl, 'github-auth', 'width=600,height=700,scrollbars=yes,resizable=yes')
+    
+    if (!authWindow) {
+      toast({
+        title: "Popup Blocked",
+        description: "Please allow popups for this site and try again.",
+        variant: "destructive"
+      })
+      return
+    }
     
     const handleMessage = async (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return
@@ -311,19 +333,32 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
           </Alert>
         )}
 
-        {!isConnected ? (
+        {!process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              GitHub integration is not configured. Please set NEXT_PUBLIC_GITHUB_CLIENT_ID environment variable.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {!isConnected && process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID ? (
           <div className="text-center py-8">
             <Github className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">Connect GitHub</h3>
+            <h3 className="text-lg font-semibold mb-2">Connect GitHub Repository Access</h3>
             <p className="text-sm text-muted-foreground mb-6">
-              Import repositories directly from your GitHub account
+              Connect GitHub to import and analyze your repositories.
+              <br />
+              <span className="text-xs text-muted-foreground">
+                This is separate from your account login and grants repository access only.
+              </span>
             </p>
             <Button onClick={connectGitHub} className="gap-2">
               <Github className="w-4 h-4" />
-              Connect GitHub Account
+              Connect GitHub for Repository Access
             </Button>
           </div>
-        ) : (
+        ) : isConnected ? (
           <div className="space-y-4">
             {/* User Info */}
             {githubUser && (
@@ -467,7 +502,7 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
               </Button>
             </div>
           </div>
-        )}
+        ) : null}
       </DialogContent>
     </Dialog>
   )

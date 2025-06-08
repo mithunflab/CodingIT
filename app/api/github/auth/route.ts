@@ -38,7 +38,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Store token in Supabase user metadata
     const cookieStore = cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -56,7 +56,6 @@ export function ChatPicker({
                 <SelectItem key={templateId} value={templateId}>
                   <div className="flex items-center space-x-2">
                     <Image
-                      className="flex"
                       src={`/thirdparty/templates/${templateId}.svg`}
                       alt={templateId}
                       width={14}
@@ -89,7 +88,6 @@ export function ChatPicker({
                   <SelectItem key={model.id} value={model.id}>
                     <div className="flex items-center space-x-2">
                       <Image
-                        className="flex"
                         src={`/thirdparty/logos/${model.providerId}.svg`}
                         alt={model.provider}
                         width={14}

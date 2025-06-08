@@ -2,12 +2,11 @@
 
 import type React from "react"
 import Image from "next/image"
-
 import { RepoBanner } from "./repo-banner"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { isFileInArray } from "@/lib/utils"
-import { ArrowUp, Paperclip, Square, X, AlertTriangle, RefreshCw, Github } from "lucide-react"
+import { ArrowUp, Paperclip, Square, X, AlertTriangle, RefreshCw, Sparkles, Loader2 } from "lucide-react"
 import { type SetStateAction, useEffect, useMemo, useState, useCallback } from "react"
 import TextareaAutosize from "react-textarea-autosize"
 import { GitHubImportModal } from "./modals/github-import-modal"
@@ -67,6 +66,8 @@ export function EnhancedChatInput({
   children: React.ReactNode
 }) {
   const [dragActive, setDragActive] = useState(false)
+  const [isEnhancing, setIsEnhancing] = useState(false)
+  const [enhanceError, setEnhanceError] = useState<string | null>(null)
 
   function handleFileInput(e: React.ChangeEvent<HTMLInputElement>) {
     handleFileChange((prev) => {
@@ -151,6 +152,56 @@ export function EnhancedChatInput({
       handleSubmit(syntheticEvent, files, analysis)
     }, 100)
   }, [handleFileChange, handleSubmit, input])
+
+  const handleEnhanceMessage = async () => {
+    if (!input.trim() || isLoading || isEnhancing || isErrored) return;
+
+    setIsEnhancing(true);
+    setEnhanceError(null);
+
+    try {
+      const response = await fetch("/api/ai/enhance-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ textToEnhance: input }),
+      });
+
+      if (!response.ok) {
+        let errorMsg = "Failed to enhance message.";
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorData.message || `Server error: ${response.status}`;
+        } catch (e) {
+          errorMsg = `Server error: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMsg);
+      }
+
+      const data = await response.json();
+      const enhancedMessage = data.enhancedText;
+
+      if (typeof enhancedMessage !== 'string') {
+        throw new Error("Invalid response from enhancement service.");
+      }
+
+      const textarea = document.getElementById('chat-textarea') as HTMLTextAreaElement;
+      if (textarea) {
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+          window.HTMLTextAreaElement.prototype,
+          'value'
+        )?.set;
+        nativeInputValueSetter?.call(textarea, enhancedMessage);
+        const event = new Event('input', { bubbles: true });
+        textarea.dispatchEvent(event);
+      } else {
+        console.warn("Chat textarea not found for enhancement. Cannot update input.");
+      }
+    } catch (error: any) {
+      setEnhanceError(error.message || "An unexpected error occurred during enhancement.");
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
 
   const filePreview = useMemo(() => {
     if (files.length === 0) return null
@@ -279,6 +330,16 @@ export function EnhancedChatInput({
           <div className="ml-2">{getErrorAction()}</div>
         </div>
       )}
+      {enhanceError && (
+        <div className="flex items-center p-2 mx-4 mb-2 rounded-md text-xs bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border border-yellow-500/20">
+          <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
+          <span className="flex-1">Enhancement failed: {enhanceError}</span>
+          <Button variant="ghost" size="sm" className="ml-2 h-6 p-1 text-xs" onClick={() => setEnhanceError(null)}>
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
+
       <div className="relative">
         <RepoBanner className="absolute bottom-full inset-x-2 translate-y-1 z-0 pb-2" />
         <div
@@ -296,6 +357,8 @@ export function EnhancedChatInput({
             className="text-normal px-3 resize-none ring-0 bg-inherit w-full m-0 outline-none"
             required={true}
             placeholder="Describe your app..."
+            id="chat-textarea"
+            name="chat-textarea"
             disabled={isErrored}
             value={input}
             onChange={handleInputChange}
@@ -333,6 +396,7 @@ export function EnhancedChatInput({
                 </Tooltip>
               </TooltipProvider>
 
+
               <GitHubImportModal
                 onImport={handleGitHubImport}
                 isLoading={isLoading}
@@ -341,6 +405,23 @@ export function EnhancedChatInput({
               {files.length > 0 && filePreview}
             </div>
             <div>
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      disabled={!input.trim() || isLoading || isEnhancing || isErrored}
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="rounded-xl h-10 w-10 mr-2" // Added mr-2 for spacing
+                      onClick={handleEnhanceMessage}
+                    >
+                      {isEnhancing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Enhance message with AI</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               {!isLoading ? (
                 <TooltipProvider>
                   <Tooltip delayDuration={0}>

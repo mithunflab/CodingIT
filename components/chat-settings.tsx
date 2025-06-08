@@ -47,6 +47,7 @@ export function ChatSettings({
             <div className="flex flex-col gap-2 px-2 py-2">
               <Label htmlFor="apiKey">API Key</Label>
               <Input
+                id="apiKey"
                 name="apiKey"
                 type="password"
                 placeholder="Auto"
@@ -69,6 +70,7 @@ export function ChatSettings({
             <div className="flex flex-col gap-2 px-2 py-2">
               <Label htmlFor="baseURL">Base URL</Label>
               <Input
+                id="baseURL"
                 name="baseURL"
                 type="text"
                 placeholder="Auto"
@@ -89,10 +91,12 @@ export function ChatSettings({
         <div className="flex flex-col gap-1.5 px-2 py-2">
           <span className="text-sm font-medium">Parameters</span>
           <div className="flex space-x-4 items-center">
-            <span className="text-sm flex-1 text-muted-foreground">
+            <Label htmlFor="outputTokens" className="text-sm flex-1 text-muted-foreground font-normal">
               Output tokens
-            </span>
+            </Label>
             <Input
+              id="outputTokens"
+              name="outputTokens"
               type="number"
               defaultValue={languageModel.maxTokens}
               min={50}
@@ -108,10 +112,12 @@ export function ChatSettings({
             />
           </div>
           <div className="flex space-x-4 items-center">
-            <span className="text-sm flex-1 text-muted-foreground">
+            <Label htmlFor="temperature" className="text-sm flex-1 text-muted-foreground font-normal">
               Temperature
-            </span>
+            </Label>
             <Input
+              id="temperature"
+              name="temperature"
               type="number"
               defaultValue={languageModel.temperature}
               min={0}
@@ -127,8 +133,10 @@ export function ChatSettings({
             />
           </div>
           <div className="flex space-x-4 items-center">
-            <span className="text-sm flex-1 text-muted-foreground">Top P</span>
+            <Label htmlFor="topP" className="text-sm flex-1 text-muted-foreground font-normal">Top P</Label>
             <Input
+              id="topP"
+              name="topP"
               type="number"
               defaultValue={languageModel.topP}
               min={0}
@@ -144,8 +152,10 @@ export function ChatSettings({
             />
           </div>
           <div className="flex space-x-4 items-center">
-            <span className="text-sm flex-1 text-muted-foreground">Top K</span>
+            <Label htmlFor="topK" className="text-sm flex-1 text-muted-foreground font-normal">Top K</Label>
             <Input
+              id="topK"
+              name="topK"
               type="number"
               defaultValue={languageModel.topK}
               min={0}
@@ -161,10 +171,12 @@ export function ChatSettings({
             />
           </div>
           <div className="flex space-x-4 items-center">
-            <span className="text-sm flex-1 text-muted-foreground">
-              Frequence penalty
-            </span>
+            <Label htmlFor="frequencyPenalty" className="text-sm flex-1 text-muted-foreground font-normal">
+              Frequency penalty
+            </Label>
             <Input
+              id="frequencyPenalty"
+              name="frequencyPenalty"
               type="number"
               defaultValue={languageModel.frequencyPenalty}
               min={0}
@@ -180,10 +192,12 @@ export function ChatSettings({
             />
           </div>
           <div className="flex space-x-4 items-center">
-            <span className="text-sm flex-1 text-muted-foreground">
+            <Label htmlFor="presencePenalty" className="text-sm flex-1 text-muted-foreground font-normal">
               Presence penalty
-            </span>
+            </Label>
             <Input
+              id="presencePenalty"
+              name="presencePenalty"
               type="number"
               defaultValue={languageModel.presencePenalty}
               min={0}
