@@ -1,352 +1,261 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import SettingsLayout from "@/components/settings-layout"
-import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useToast } from "@/components/ui/use-toast"
+import * as React from "react";
 import { 
-  Github,
-  CheckCircle2,
-  AlertCircle,
-  ExternalLink,
-  Unlink,
-  RefreshCw,
-  Info
-} from "lucide-react"
-import { createBrowserClient } from "@supabase/ssr"
+  GitHubLogoIcon, 
+  DiscordLogoIcon,
+  ExternalLinkIcon,
+  CheckIcon,
+  Cross2Icon,
+  GearIcon
+} from "@radix-ui/react-icons";
+import { Slack, Chrome, Webhook } from "lucide-react";
 
-interface GitHubUser {
-  id: number
-  login: string
-  name: string | null
-  avatar_url: string
-  public_repos: number
+interface Integration {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  category: "development" | "communication" | "productivity" | "automation";
+  connected: boolean;
+  lastSync?: string;
+  permissions?: string[];
 }
 
+const integrations: Integration[] = [
+  {
+    id: "github",
+    name: "GitHub",
+    description: "Connect your GitHub repositories for seamless code integration",
+    icon: <GitHubLogoIcon className="h-5 w-5" />,
+    category: "development",
+    connected: true,
+    lastSync: "2 hours ago",
+    permissions: ["Read repositories", "Read issues", "Write commits"]
+  },
+  {
+    id: "slack",
+    name: "Slack",
+    description: "Get notifications and interact with your workspace",
+    icon: <Slack className="h-5 w-5" />,
+    category: "communication",
+    connected: true,
+    lastSync: "1 hour ago",
+    permissions: ["Send messages", "Read channels", "Manage notifications"]
+  },
+  {
+    id: "discord",
+    name: "Discord",
+    description: "Connect to Discord servers and receive notifications",
+    icon: <DiscordLogoIcon className="h-5 w-5" />,
+    category: "communication",
+    connected: false,
+    permissions: ["Send messages", "Read messages", "Manage webhooks"]
+  },
+  {
+    id: "chrome",
+    name: "Chrome Extension",
+    description: "Browser extension for quick access and web automation",
+    icon: <Chrome className="h-5 w-5" />,
+    category: "productivity",
+    connected: false,
+    permissions: ["Access browsing data", "Modify web pages", "Read bookmarks"]
+  },
+  {
+    id: "webhooks",
+    name: "Webhooks",
+    description: "Custom webhook endpoints for external integrations",
+    icon: <Webhook className="h-5 w-5" />,
+    category: "automation",
+    connected: true,
+    lastSync: "Active",
+    permissions: ["Receive HTTP requests", "Send responses", "Process data"]
+  }
+];
+
+const categories = {
+  development: "Development",
+  communication: "Communication", 
+  productivity: "Productivity",
+  automation: "Automation"
+};
+
 export default function IntegrationsPage() {
-  const { toast } = useToast()
-  const [githubUser, setGithubUser] = useState<GitHubUser | null>(null)
-  const [isGithubConnected, setIsGithubConnected] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isCheckingConnection, setIsCheckingConnection] = useState(true)
+  const [activeFilter, setActiveFilter] = React.useState<string>("all");
+  const [integrationStates, setIntegrationStates] = React.useState<Record<string, boolean>>(
+    Object.fromEntries(integrations.map(i => [i.id, i.connected]))
+  );
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const filteredIntegrations = integrations.filter(
+    integration => activeFilter === "all" || integration.category === activeFilter
+  );
 
-  const checkGitHubConnection = useCallback(async () => {
-    setIsCheckingConnection(true)
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (user?.user_metadata?.github_connected) {
-        setIsGithubConnected(true)
-        
-        // Try to fetch GitHub user info
-        const response = await fetch('/api/github/repositories')
-        if (response.ok) {
-          const data = await response.json()
-          setGithubUser(data.user)
-        }
-      }
-    } catch (error) {
-      console.error('Failed to check GitHub connection:', error)
-    } finally {
-      setIsCheckingConnection(false)
-    }
-  }, [supabase])
+  const toggleIntegration = (integrationId: string) => {
+    setIntegrationStates(prev => ({
+      ...prev,
+      [integrationId]: !prev[integrationId]
+    }));
+  };
 
-  useEffect(() => {
-    checkGitHubConnection()
-  }, [checkGitHubConnection])
-
-  const connectGitHub = () => {
-    setIsLoading(true)
-    const clientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID
-    const redirectUri = `${window.location.origin}/api/github/callback`
-    const scope = 'repo user'
-
-    // Generate and store state parameter
-    const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    sessionStorage.setItem('github_oauth_state', state);
-    
-    const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`
-    const authWindow = window.open(authUrl, 'github-auth', 'width=600,height=700')
-    
-    const handleMessage = async (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return
-
-      const storedState = sessionStorage.getItem('github_oauth_state');
-      sessionStorage.removeItem('github_oauth_state'); // Clean up state immediately
-
-      if (event.data.type === 'GITHUB_AUTH_CALLBACK') {
-        if (!event.data.state || event.data.state !== storedState) {
-          toast({
-            title: "Authentication Failed",
-            description: "Invalid state parameter. Please try connecting again.",
-            variant: "destructive"
-          });
-          setIsLoading(false);
-          window.removeEventListener('message', handleMessage);
-          authWindow?.close();
-          return;
-        }
-
-        if (event.data.code) {
-          try {
-            const response = await fetch('/api/github/auth', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ code: event.data.code })
-            });
-
-            if (response.ok) {
-              setIsGithubConnected(true);
-              toast({
-                title: "GitHub Connected",
-                description: "Your GitHub account has been successfully connected.",
-              });
-              checkGitHubConnection();
-            } else {
-              const errorResult = await response.json().catch(() => ({ error: "Failed to exchange code for token."}));
-              toast({
-                title: "Connection Failed",
-                description: errorResult.error || "Failed to obtain GitHub token. Please try again.",
-                variant: "destructive"
-              });
-            }
-          } catch (error) {
-            toast({
-              title: "Connection Error",
-              description: "An error occurred while trying to connect to GitHub. Please try again.",
-              variant: "destructive"
-            });
-          }
-        } else { // Should have been caught by GITHUB_AUTH_ERROR from popup, but as a fallback
-           toast({
-            title: "Connection Failed",
-            description: "No authorization code received. Please try again.",
-            variant: "destructive"
-          });
-        }
-      } else if (event.data.type === 'GITHUB_AUTH_ERROR') {
-        toast({
-          title: "Connection Failed",
-          description: `${event.data.errorDescription || event.data.error || "Failed to connect GitHub account."} Please try again.`,
-          variant: "destructive"
-        })
-      }
-      
-      setIsLoading(false);
-      window.removeEventListener('message', handleMessage);
-      authWindow?.close();
-    }
-    
-    window.addEventListener('message', handleMessage)
-    
-    // Handle window close
-    const checkClosed = setInterval(() => {
-      if (authWindow?.closed) {
-        clearInterval(checkClosed)
-        setIsLoading(false)
-        window.removeEventListener('message', handleMessage)
-      }
-    }, 1000)
-  }
-
-  const disconnectGitHub = async () => {
-    try {
-      const { error } = await supabase.auth.updateUser({
-        data: { 
-          github_access_token: null,
-          github_connected: false,
-          github_connected_at: null
-        }
-      })
-
-      if (error) throw error
-
-      setIsGithubConnected(false)
-      setGithubUser(null)
-      
-      toast({
-        title: "GitHub Disconnected",
-        description: "Your GitHub account has been disconnected.",
-      })
-    } catch (error) {
-      toast({
-        title: "Disconnection Failed",
-        description: "Failed to disconnect GitHub account. Please try again.",
-        variant: "destructive"
-      })
-    }
-  }
+  const getStatusColor = (connected: boolean) => {
+    return connected
+      ? "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950"
+      : "text-gray-600 bg-gray-50 dark:text-gray-400 dark:bg-gray-950";
+  };
 
   return (
-    <SettingsLayout>
-      <div className="space-y-8">
-        {/* Capabilities */}
-        <div className="bg-card rounded-lg p-6 border">
-          <h2 className="text-xl font-medium mb-2">Capabilities</h2>
-          <p className="text-sm text-muted-foreground mb-6">Control which capabilities CodinIT uses in your conversations.</p>
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium">Integrations</h3>
+        <p className="text-sm text-muted-foreground">
+          Connect external services and tools to enhance your workflow.
+        </p>
+      </div>
 
-          <div className="flex items-center justify-between py-4 border-b">
-            <div>
-              <h3 className="font-medium">Artifacts</h3>
-              <p className="text-sm text-muted-foreground">
-                Ask CodinIT to generate content like code snippets, text documents, or website designs, and CodinIT will
-                create an Artifact that appears in a dedicated window alongside your conversation.
-              </p>
-            </div>
-            <Switch defaultChecked />
+      {/* Filter Tabs */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setActiveFilter("all")}
+          className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+            activeFilter === "all"
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground hover:bg-muted/80"
+          }`}
+        >
+          All
+        </button>
+        {Object.entries(categories).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setActiveFilter(key)}
+            className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+              activeFilter === key
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Connected Integrations Summary */}
+      <div className="rounded-lg bg-muted/50 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-sm font-medium">Connected Services</h4>
+            <p className="text-xs text-muted-foreground">
+              {Object.values(integrationStates).filter(Boolean).length} of {integrations.length} integrations connected
+            </p>
           </div>
-        </div>
-
-        {/* Integrations */}
-        <div className="bg-card rounded-lg p-6 border">
-          <h2 className="text-xl font-medium mb-2">Integrations</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            Allow CodinIT to reference other apps and services for more context.
-          </p>
-
-          <div className="space-y-4">
-            {/* GitHub Integration */}
-            <Card className="border-2">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Github className="h-8 w-8" />
-                    <div>
-                      <CardTitle className="text-lg">GitHub</CardTitle>
-                      <CardDescription>
-                        Import repositories and collaborate on your code
-                      </CardDescription>
-                    </div>
-                  </div>
-                  
-                  {isCheckingConnection ? (
-                    <Badge variant="secondary">
-                      <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                      Checking...
-                    </Badge>
-                  ) : isGithubConnected ? (
-                    <Badge variant="default" className="bg-green-600">
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                      Connected
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary">
-                      <AlertCircle className="w-3 h-3 mr-1" />
-                      Disconnected
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                {isGithubConnected && githubUser ? (
-                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={githubUser.avatar_url} alt={githubUser.login} />
-                      <AvatarFallback>{githubUser.login.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">{githubUser.name || githubUser.login}</div>
-                      <div className="text-sm text-muted-foreground">
-                        @{githubUser.login} • {githubUser.public_repos} repositories
-                      </div>
-                    </div>
-                  </div>
-                ) : isGithubConnected ? (
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      GitHub is connected but user information is not available.
-                    </AlertDescription>
-                  </Alert>
-                ) : null}
-
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>What you can do with GitHub integration:</strong>
-                    <ul className="mt-2 list-disc list-inside space-y-1">
-                      <li>Import repositories directly into CodinIT</li>
-                      <li>AI-powered code analysis and enhancement</li>
-                      <li>Automated code reviews and suggestions</li>
-                      <li>Generate new features based on existing codebase</li>
-                    </ul>
-                  </AlertDescription>
-                </Alert>
-
-                <div className="flex gap-2">
-                  {isGithubConnected ? (
-                    <>
-                      <Button variant="outline" onClick={checkGitHubConnection} className="gap-2">
-                        <RefreshCw className="w-4 h-4" />
-                        Refresh Connection
-                      </Button>
-                      <Button variant="destructive" onClick={disconnectGitHub} className="gap-2">
-                        <Unlink className="w-4 h-4" />
-                        Disconnect
-                      </Button>
-                    </>
-                  ) : (
-                    <Button onClick={connectGitHub} disabled={isLoading} className="gap-2">
-                      {isLoading ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Github className="w-4 h-4" />
-                      )}
-                      Connect GitHub
-                    </Button>
-                  )}
-                  
-                  <Button variant="outline" className="gap-2" asChild>
-                    <a href="https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps" target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="w-4 h-4" />
-                      Learn More
-                    </a>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Placeholder for other integrations */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[
-                { name: "Google Drive", status: "Coming Soon", icon: "📁" },
-                { name: "Gmail", status: "Coming Soon", icon: "📧" },
-                { name: "Google Calendar", status: "Coming Soon", icon: "📅" },
-                { name: "Slack", status: "Coming Soon", icon: "💬" },
-              ].map((service) => (
-                <Card key={service.name} className="opacity-60">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{service.icon}</span>
-                        <div>
-                          <h3 className="font-medium">{service.name}</h3>
-                          <p className="text-sm text-muted-foreground">{service.status}</p>
-                        </div>
-                      </div>
-                      <Button variant="outline" disabled size="sm">
-                        Connect
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+          <div className="text-right">
+            <div className="text-lg font-semibold">
+              {Object.values(integrationStates).filter(Boolean).length}
             </div>
+            <div className="text-xs text-muted-foreground">Active</div>
           </div>
         </div>
       </div>
-    </SettingsLayout>
-  )
+
+      {/* Integrations List */}
+      <div className="space-y-4">
+        {filteredIntegrations.map((integration) => {
+          const isConnected = integrationStates[integration.id];
+          
+          return (
+            <div key={integration.id} className="rounded-lg border p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
+                    {integration.icon}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium">{integration.name}</h4>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(
+                          isConnected
+                        )}`}
+                      >
+                        <div className={`mr-1 h-1.5 w-1.5 rounded-full ${
+                          isConnected ? "bg-green-500" : "bg-gray-400"
+                        }`} />
+                        {isConnected ? "Connected" : "Not connected"}
+                      </span>
+                    </div>
+                    
+                    <p className="text-sm text-muted-foreground">
+                      {integration.description}
+                    </p>
+                    
+                    {isConnected && integration.lastSync && (
+                      <p className="text-xs text-muted-foreground">
+                        Last sync: {integration.lastSync}
+                      </p>
+                    )}
+                    
+                    {integration.permissions && (
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium text-muted-foreground">
+                          Permissions:
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {integration.permissions.map((permission) => (
+                            <span
+                              key={permission}
+                              className="rounded bg-muted px-2 py-1 text-xs"
+                            >
+                              {permission}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {isConnected && (
+                    <button className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:bg-muted">
+                      <GearIcon className="h-4 w-4" />
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={() => toggleIntegration(integration.id)}
+                    className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                      isConnected
+                        ? "border border-border text-foreground hover:bg-accent"
+                        : "bg-primary text-primary-foreground hover:bg-primary/90"
+                    }`}
+                  >
+                    {isConnected ? "Disconnect" : "Connect"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Custom Integration */}
+      <div className="rounded-lg border border-dashed p-6">
+        <div className="text-center space-y-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted mx-auto">
+            <ExternalLinkIcon className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <div>
+            <h4 className="font-medium">Need a custom integration?</h4>
+            <p className="text-sm text-muted-foreground">
+              Use our API to build custom integrations for your specific needs.
+            </p>
+          </div>
+          <button className="rounded-md border px-4 py-2 text-sm hover:bg-accent">
+            View API documentation
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }

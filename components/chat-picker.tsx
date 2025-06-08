@@ -20,7 +20,7 @@ export function ChatPicker({
   models,
   languageModel,
   onLanguageModelChange,
-  hasMounted, // Add hasMounted prop
+  hasMounted,
 }: {
   templates: TemplatesDataObject
   selectedTemplate: 'auto' | TemplateId
@@ -41,7 +41,7 @@ export function ChatPicker({
           <SelectTrigger className="whitespace-nowrap border-none shadow-none focus:ring-0 px-0 py-0 h-6 text-xs">
             <SelectValue placeholder="Select a persona" />
           </SelectTrigger>
-          <SelectContent side="top">
+          <SelectContent side="top" forceMount>
             <SelectGroup>
               <SelectLabel>Persona</SelectLabel>
               <SelectItem value="auto">
@@ -81,7 +81,7 @@ export function ChatPicker({
           <SelectTrigger className="whitespace-nowrap border-none shadow-none focus:ring-0 px-0 py-0 h-6 text-xs">
             <SelectValue placeholder="Language model" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent forceMount>
             {Object.entries(
               Object.groupBy(models, ({ provider }) => provider),
             ).map(([provider, models]) => (

@@ -1,4 +1,3 @@
-// File: app/page.tsx
 "use client"
 
 import React from "react"
@@ -526,45 +525,55 @@ export default function Home() {
 
             {/* Chat Input - Fixed at bottom */}
             <div className="flex-shrink-0 border-t bg-background">
-              <EnhancedChatInput
-                input={chatInput}
-                handleInputChange={handleSaveInputChange}
-                handleSubmit={handleSubmitAuth}
-                isLoading={isSubmitting}
-                isErrored={error !== undefined}
-                errorMessage={errorMessage}
-                isRateLimited={isRateLimited}
-                retry={retry}
-                stop={stop}
-                isMultiModal={currentModel?.multiModal || false}
-                files={files}
-                handleFileChange={handleFileChange}
-              >
-                <ChatPicker
-                  templates={templates}
-                  selectedTemplate={selectedTemplate}
-                  onSelectedTemplateChange={(template) => {
-                    if (template !== "auto") {
-                      setSelectedTemplate(template)
-                    }
-                  }}
-                  models={availableModels}
-                  languageModel={languageModel}
-                  onLanguageModelChange={handleLanguageModelChange}
-                  hasMounted={hasMounted}
-                />
-                <ChatSettings
-                  apiKeyConfigurable={!process.env.NEXT_PUBLIC_NO_API_KEY_INPUT}
-                  baseURLConfigurable={!process.env.NEXT_PUBLIC_NO_BASE_URL_INPUT}
-                  languageModel={languageModel}
-                  onLanguageModelChange={handleLanguageModelChange}
-                />
-              </EnhancedChatInput>
+              {hasMounted ? (
+                <EnhancedChatInput
+                  input={chatInput}
+                  handleInputChange={handleSaveInputChange}
+                  handleSubmit={handleSubmitAuth}
+                  isLoading={isSubmitting}
+                  isErrored={error !== undefined}
+                  errorMessage={errorMessage}
+                  isRateLimited={isRateLimited}
+                  retry={retry}
+                  stop={stop}
+                  isMultiModal={currentModel?.multiModal || false}
+                  files={files}
+                  handleFileChange={handleFileChange}
+                >
+                  {/* ChatPicker is already using hasMounted internally or via its props */}
+                   <ChatPicker
+                      templates={templates}
+                      selectedTemplate={selectedTemplate}
+                      onSelectedTemplateChange={(template) => {
+                        if (template !== "auto") {
+                          setSelectedTemplate(template)
+                        }
+                      }}
+                      models={availableModels}
+                      languageModel={languageModel}
+                      onLanguageModelChange={handleLanguageModelChange}
+                      hasMounted={hasMounted}
+                    />
+                  <ChatSettings
+                    apiKeyConfigurable={!process.env.NEXT_PUBLIC_NO_API_KEY_INPUT}
+                    baseURLConfigurable={!process.env.NEXT_PUBLIC_NO_BASE_URL_INPUT}
+                    languageModel={languageModel}
+                    onLanguageModelChange={handleLanguageModelChange}
+                  />
+                </EnhancedChatInput>
+              ) : (
+                <div className="p-4 space-y-3">
+                  <div className="h-10 bg-muted rounded-lg animate-pulse" />
+                  <div className="h-20 bg-muted rounded-2xl animate-pulse" />
+                  <div className="h-10 bg-muted rounded-lg animate-pulse" />
+                  <div className="h-4 w-1/2 mx-auto bg-muted rounded animate-pulse mt-1" />
+                  </div>
+              )}
             </div>
           </div>
 
           {/* Preview Panel */}
-          {fragment && (
+          {fragment && hasMounted && ( // Also ensure preview panel respects hasMounted if its content could cause issues
             <div className="hidden md:flex md:flex-col border-l border-border">
               <Preview
                 teamID={userTeam?.id}
