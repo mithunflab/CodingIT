@@ -320,6 +320,7 @@ export function EnhancedChatInput({
       onDragLeave={isMultiModal ? handleDrag : undefined}
       onDragOver={isMultiModal ? handleDrag : undefined}
       onDrop={isMultiModal ? handleDrop : undefined}
+      suppressHydrationWarning
     >
       {isErrored && (
         <div className={`flex items-center p-3 text-sm font-medium mx-4 mb-4 rounded-xl ${getErrorStyling()}`}>
@@ -356,7 +357,8 @@ export function EnhancedChatInput({
             maxRows={5}
             className="text-normal px-3 resize-none ring-0 bg-inherit w-full m-0 outline-none"
             required={true}
-            placeholder="Describe your app..."
+            placeholder="What would you like to ship today...?"
+            autoComplete="off"
             id="chat-textarea"
             name="chat-textarea"
             disabled={isErrored}

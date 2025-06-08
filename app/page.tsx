@@ -1,6 +1,8 @@
+// File: app/page.tsx
 "use client"
 
 import React from "react"
+import { useRouter } from "next/navigation"
 
 import type { ViewType } from "@/components/auth"
 import { AuthDialog } from "@/components/auth-dialog"
@@ -10,6 +12,7 @@ import { ChatPicker } from "@/components/chat-picker"
 import { ChatSettings } from "@/components/chat-settings"
 import { NavBar } from "@/components/navbar"
 import { Preview } from "@/components/preview"
+import CommandPalette from "@/components/ui/command-palette"
 import { useAuth } from "@/lib/auth"
 import { type Message, toAISDKMessages, toMessageImage } from "@/lib/messages"
 import type { LLMModelConfig } from "@/lib/models"
@@ -22,7 +25,7 @@ import type { DeepPartial } from "ai"
 import { experimental_useObject as useObject } from "ai/react"
 import { usePostHog } from "posthog-js/react"
 import { type SetStateAction, useCallback, useEffect, useState } from "react"
-import { useLocalStorage } from "usehooks-ts";
+import { useLocalStorage } from "usehooks-ts"
 import posthog from "posthog-js"
 
 const TEMPLATE_IDS = {
@@ -32,369 +35,245 @@ const TEMPLATE_IDS = {
   STREAMLIT_DEVELOPER: "streamlit-developer",
   GRADIO_DEVELOPER: "gradio-developer",
   CODINIT_ENGINEER: "codinit-engineer",
-} as const;
+} as const
 
 interface ProjectAnalysis {
- structure: {
+  structure: {
     files: Array<{
- name: string
- path: string
- language: string
- size: number
- type: string
- content?: string
+      name: string
+      path: string
+      language: string
+      size: number
+      type: string
+      content?: string
     }>
- dependencies: Set<string>
- frameworks: Set<string>
- patterns: Set<string>
- components: Set<string>
- types: Set<string>
- utilities: Set<string>
- architecture: {
- type: string
- description: string
+    dependencies: Set<string>
+    frameworks: Set<string>
+    patterns: Set<string>
+    components: Set<string>
+    types: Set<string>
+    utilities: Set<string>
+    architecture: {
+      type: string
+      description: string
     }
- configFiles?: string[]
+    configFiles?: string[]
   }
- analysis: string
- recommendations: string[]
+  analysis: string
+  recommendations: string[]
 }
 
-type ParsedApiError = { code: string; message: string; rawData: any };
+type ParsedApiError = { code: string; message: string; rawData: any }
 
 const parseApiError = (error: Error | any): ParsedApiError => {
-  let errorData: any = {};
-  let errorCode = "UNKNOWN_ERROR";
-  let errorMessage = error.message || "An unexpected error occurred";
+  let errorData: any = {}
+  let errorCode = "UNKNOWN_ERROR"
+  let errorMessage = error.message || "An unexpected error occurred"
 
   try {
-    const errorText = error.message || "";
-    const jsonMatch = errorText.match(/\{[\s\S]*\}/);
+    const errorText = error.message || ""
+    const jsonMatch = errorText.match(/\{[\s\S]*\}/)
     if (jsonMatch && jsonMatch[0]) {
-      errorData = JSON.parse(jsonMatch[0]);
-      errorCode = errorData.code || errorCode;
-      errorMessage = errorData.error || errorData.message || errorMessage;
+      errorData = JSON.parse(jsonMatch[0])
+      errorCode = errorData.code || errorCode
+      errorMessage = errorData.error || errorData.message || errorMessage
     } else if (errorText.includes("Internal Server Error")) {
-      errorCode = "INTERNAL_SERVER_ERROR";
-      errorMessage = "Internal server error occurred. Please try again.";
-    } else if (errorText.includes("fetch") || errorText.toLowerCase().includes("networkerror")) {
-      errorCode = "NETWORK_ERROR";
-      errorMessage = "Network error. Please check your connection and try again.";
-    } else if (error.name === 'AbortError') {
-      errorCode = "REQUEST_ABORTED";
-      errorMessage = "The request was cancelled.";
+      errorCode = "INTERNAL_SERVER_ERROR"
+      errorMessage = "Internal server error occurred. Please try again."
+    } else if (errorText.toLowerCase().includes("fetch") || errorText.toLowerCase().includes("networkerror")) {
+      errorCode = "NETWORK_ERROR"
+      errorMessage = "Network error. Please check your connection and try again."
+    } else if (errorText.toLowerCase().includes("rate limit")) {
+      errorCode = "RATE_LIMIT_ERROR"
+      errorMessage = "Rate limit exceeded. Please wait before trying again."
     }
   } catch (parseError) {
-    console.warn("[parseApiError] Failed to parse error response:", parseError);
-    errorCode = errorCode === "UNKNOWN_ERROR" && error.message?.includes("rate limit") ? "RATE_LIMITED" : errorCode;
-    errorMessage = error.message || "An unexpected error occurred after failing to parse error details.";
-  }
-  return { code: errorCode, message: errorMessage, rawData: errorData };
-};
-
-const API_ERROR_DISPLAY_MESSAGES: Record<string, string> = {
-  MISSING_AUTH: "Authentication error: Please sign out and sign in again to refresh your session.",
-  AUTH_ERROR: "Authentication error: Please sign out and sign in again to refresh your session.",
-  RATE_LIMITED: "Rate limit exceeded. Please try again later or use your own API key.",
-  PROVIDER_RATE_LIMITED: "Rate limit exceeded. Please try again later or use your own API key.",
-  ACCESS_DENIED: "Access denied. Please check your API key configuration.",
-  NETWORK_ERROR: "Network error. Please check your connection and try again.",
-  TIMEOUT_ERROR: "Network error or timeout. Please check your connection and try again.",
-  SERVICE_UNAVAILABLE: "AI service is temporarily unavailable. Please try again in a few moments.",
-  SERVICE_NOT_CONFIGURED: "Development environment service is not properly configured. Please contact support.",
-  PROVIDER_OVERLOADED: "AI service is temporarily unavailable. Please try again in a few moments.",
-  MODEL_NOT_FOUND: "The selected model is not available. Please choose a different model.",
-  MODEL_INIT_ERROR: "Failed to initialize the AI model. Please try a different model or check your API key.",
-  VALIDATION_ERROR: "Invalid request data. Please refresh the page and try again.",
-  SANDBOX_ERROR: "Failed to create development environment. Please try again.",
-  SANDBOX_TIMEOUT: "Development environment creation timed out. Please try again.",
-  SANDBOX_QUOTA_EXCEEDED: "Development environment quota exceeded. Please try again later.",
-  SANDBOX_AUTH_ERROR: "Development environment authentication failed. Please contact support.",
-  INVALID_TEMPLATE: "Invalid template selected. Please choose a different template.",
-  FILE_ERROR: "Error processing uploaded files. Please check your files and try again.",
-  CHAT_PROCESSING_ERROR: "Error processing chat request. Please try again.",
-  PROMPT_GENERATION_ERROR: "Error generating AI prompt. Please try again.",
-  INTERNAL_SERVER_ERROR: "A server error occurred. Please try again or contact support if the issue persists.",
-  INTERNAL_ERROR: "An internal error occurred. Please try again or contact support if the issue persists.",
-  REQUEST_PROCESSING_ERROR: "Failed to process request. Please try again.",
-  REQUEST_ABORTED: "The operation was cancelled.",
-  UNKNOWN_ERROR: "An unexpected error occurred. Please try again.",
-};
-
-const getDisplayErrorMessageForCode = (errorCode: string, specificMessage?: string): string => {
-  const defaultMessage = API_ERROR_DISPLAY_MESSAGES[errorCode] || API_ERROR_DISPLAY_MESSAGES.UNKNOWN_ERROR;
-
-  if (
-    ["INTERNAL_SERVER_ERROR", "INTERNAL_ERROR", "UNKNOWN_ERROR"].includes(errorCode) &&
-    specificMessage &&
-    typeof specificMessage === "string" &&
-    specificMessage.trim().length > 10 &&
-    !/internal server error/i.test(specificMessage) &&
-    !/an unexpected error occurred/i.test(specificMessage) &&
-    !/status code [45]\d\d/i.test(specificMessage)
-  ) {
-    return specificMessage;
+    console.warn("Could not parse error details:", parseError)
   }
 
-  return defaultMessage;
-};
-
-async function handleSandboxCreation(
-  completedFragment: DeepPartial<FragmentSchema>,
-  sessionData: { userId?: string; teamId?: string; accessToken?: string } | undefined,
-  posthogInstance: ReturnType<typeof usePostHog>,
-  currentRequestIdValue: string | null
-): Promise<ExecutionResult> {
-  const sandboxPayload = {
-    fragment: completedFragment,
-    userID: sessionData?.userId,
-    teamID: sessionData?.teamId,
-    accessToken: sessionData?.accessToken,
-  };
-
-  console.log("[handleSandboxCreation] Creating sandbox with payload:", {
-    template: sandboxPayload.fragment.template,
-    userID: sandboxPayload.userID ? sandboxPayload.userID.substring(0, 8) + "..." : "N/A",
-    teamID: sandboxPayload.teamID ? sandboxPayload.teamID.substring(0, 8) + "..." : "N/A",
-    hasFiles: !!(sandboxPayload.fragment.files && sandboxPayload.fragment.files.length > 0),
-    filesCount: sandboxPayload.fragment.files?.length || 0,
-  });
-
-  const response = await fetch("/api/sandbox", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(sandboxPayload),
-  });
-
-  const responseData = await response.json();
-
-  if (!response.ok) {
-    console.error("[handleSandboxCreation] Sandbox creation failed:", {
-      status: response.status,
-      statusText: response.statusText,
-      data: responseData,
-    });
-    
-    const apiErrorMessage = responseData.error || responseData.message || `Sandbox API error: ${response.status}`;
-    const errorCode = responseData.code || "SANDBOX_ERROR";
-    
-    const error = new Error(JSON.stringify({
-      code: errorCode,
-      error: apiErrorMessage,
-      message: apiErrorMessage
-    }));
-    throw error;
+  return {
+    code: errorCode,
+    message: errorMessage,
+    rawData: errorData,
   }
-
-  console.log("[handleSandboxCreation] Sandbox created successfully:", {
-    sbxId: responseData.sbxId,
-    template: responseData.template,
-    url: responseData.url,
-  });
-
-  posthogInstance.capture("sandbox_created", {
-    url: responseData.url,
-    template: responseData.template,
-    requestId: currentRequestIdValue,
-  });
-  return responseData as ExecutionResult;
 }
 
 export default function Home() {
-  const [chatInput, setChatInput] = useLocalStorage("chat", "")
-  const [files, setFiles] = useState<File[]>([])
-  const [selectedTemplate, setSelectedTemplate] = useState<"auto" | TemplateId>("auto")
-  const [languageModel, setLanguageModel] = useLocalStorage<LLMModelConfig>("languageModel", {
-    model: "gemini-2.5-flash-preview-05-20"
-  })
-
+  const router = useRouter()
   const posthog = usePostHog()
 
-  const [result, setResult] = useState<ExecutionResult>()
-  const [messages, setMessages] = useState<Message[]>([])
-  const [fragment, setFragment] = useState<DeepPartial<FragmentSchema>>()
-  const [currentTab, setCurrentTab] = useState<"code" | "preview" | "editor">("code")
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false)
+  // Auth and session state
   const [isAuthDialogOpen, setAuthDialog] = useState(false)
   const [authView, setAuthView] = useState<ViewType>("sign_in")
-  const [isRateLimited, setIsRateLimited] = useState(false)
+  const [authError, setAuthError] = useState<string | null>(null)
+  const { session, isLoading, userTeam, authError: authStateError } = useAuth(setAuthDialog, setAuthView)
+
+  // Chat and UI state
+  const [messages, setMessages] = useState<Message[]>([])
+  const [chatInput, setChatInput] = useState("")
+  const [files, setFiles] = useState<File[]>([])
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateId>("nextjs-developer")
+  const [languageModel, setLanguageModel] = useLocalStorage<LLMModelConfig>(
+    "languageModel",
+    modelsList.models[0] as LLMModelConfig
+  )
+  const [currentTab, setCurrentTab] = useState<"code" | "preview" | "editor">("code")
+  const [currentPreview, setCurrentPreview] = useState<string | null>(null)
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
-  const [currentRequestId, setCurrentRequestId] = useState<string | null>(null)
+  const [isRateLimited, setIsRateLimited] = useState(false)
+  const [currentRequestId, setCurrentRequestId] = useState<string>("")
   const [projectContext, setProjectContext] = useState<{
     files: File[]
     analysis: ProjectAnalysis | null
   }>({ files: [], analysis: null })
 
-  const { session, userTeam, isLoading, authError } = useAuth(setAuthDialog, setAuthView)
-
-  const setMessage = useCallback(
-    (message: Partial<Message>, index?: number) => {
-      setMessages((previousMessages) => {
-        const updatedMessages = [...previousMessages]
-        const targetIndex = index ?? previousMessages.length - 1
-        if (previousMessages[targetIndex]) {
-          updatedMessages[targetIndex] = {
-            ...previousMessages[targetIndex],
-            ...message,
-          }
-        }
-        return updatedMessages
-      })
-    },
-    [setMessages],
+  // Template and model configuration
+  const currentTemplate = templates[selectedTemplate]
+  const availableModels = modelsList.models.filter((model) => 
+    !("providerId" in currentTemplate) || model.providerId === (currentTemplate as any).providerId
   )
+  const currentModel = availableModels.find((model) => model.id === languageModel.model)
 
-  useEffect(() => {
-    console.log("[Enhanced Chat] Auth state:", {
-      sessionId: session?.user?.id?.substring(0, 8) + "...",
-      teamId: userTeam?.id?.substring(0, 8) + "...",
-      isLoading,
-      authError,
-    })
-  }, [session, userTeam, isLoading, authError])
-
-  const filteredModels = modelsList.models.filter((model) => {
-    if (process.env.NEXT_PUBLIC_HIDE_LOCAL_MODELS) {
-      return model.providerId !== "ollama"
-    }
-    return true
-  })
-
-  const currentModel = filteredModels.find((model) => model.id === languageModel.model)
-  const currentTemplate = React.useMemo(
-    () => selectedTemplate === "auto" ? templates : { [selectedTemplate]: templates[selectedTemplate] },
-    [selectedTemplate]
-  )
-
-  const {
-    object,
-    submit,
-    isLoading: isSubmitting,
-    stop,
-    error,
-  } = useObject({
+  // Object streaming for fragment generation
+  const { object, submit, isLoading: isSubmitting, stop, error } = useObject({
     api: "/api/chat",
     schema,
-    onError: (error) => {
-      console.error("[useObject] Error in onError:", error);
-      const parsedError = parseApiError(error);
-      const displayMessage = getDisplayErrorMessageForCode(parsedError.code, parsedError.message);
-
-      console.log("[useObject] Processed error in onError:", { 
-        errorCode: parsedError.code, 
-        errorMessage: parsedError.message, 
-        displayMessage,
-        requestId: currentRequestId 
-      });
-
-      setErrorMessage(displayMessage);
-
-      if (parsedError.code === "RATE_LIMITED" || parsedError.code === "PROVIDER_RATE_LIMITED") {
-        setIsRateLimited(true);
+    onFinish: useCallback((event: { object: DeepPartial<FragmentSchema> | undefined; error: Error | undefined }) => {
+      const result = event.object
+      if (result && result.files && result.files.length > 0) {
+        setCurrentTab("preview")
       }
-
-      setIsPreviewLoading(false);
-      setCurrentTab("code");
-
-      posthog.capture("chat_error", {
-        errorCode: parsedError.code,
-        errorMessage: parsedError.message,
-        provider: currentModel?.providerId,
-        model: currentModel?.id,
-        requestId: currentRequestId,
-      });
-    },
-    onFinish: async ({ object: completedFragment, error }) => {
-      if (error) {
-        console.error("[useObject] Finished with error:", error);
-        const parsedError = parseApiError(error);
-        const displayMessage = getDisplayErrorMessageForCode(parsedError.code, parsedError.message);
-        setErrorMessage(displayMessage);
-        setIsPreviewLoading(false);
-        setCurrentTab("code");
-        return;
+    }, []),
+    onError: useCallback((error: Error) => {
+      console.error("[useObject] Error:", error)
+      const parsedError = parseApiError(error)
+      
+      if (parsedError.code === "RATE_LIMIT_ERROR") {
+        setIsRateLimited(true)
       }
-
-      if (!completedFragment) {
-        console.warn("[useObject] No fragment returned onFinish");
-        setErrorMessage("Failed to generate content. The AI model did not return a valid response.");
-        setIsPreviewLoading(false);
-        setCurrentTab("code");
-        return;
-      }
-
-      if (completedFragment.template === "codinit template") {
-        console.warn(
-          `[useObject] Normalizing template ID from "codinit template" to "${TEMPLATE_IDS.CODINIT_ENGINEER}"`,
-        );
-        completedFragment.template = TEMPLATE_IDS.CODINIT_ENGINEER;
-      }
-
-      console.log("[useObject] Fragment generation completed:", {
-        template: completedFragment.template,
-        hasFiles: !!(completedFragment.files && completedFragment.files.length > 0),
-        requestId: currentRequestId,
-      });
-
-      posthog.capture("fragment_generated", {
-        template: completedFragment.template,
-        requestId: currentRequestId,
-      });
-
-      if (completedFragment.template === TEMPLATE_IDS.CODINIT_ENGINEER) {
-        console.log("[useObject] CodinIT Engineer template - no sandbox needed");
-        setResult(undefined);
-        setCurrentTab("code");
-        setIsPreviewLoading(false);
-        return;
-      }
-
-      setIsPreviewLoading(true);
-      try {
-        const sessionData = {
-          userId: session?.user?.id,
-          teamId: userTeam?.id,
-          accessToken: session?.access_token,
-        };
-        const sandboxResult = await handleSandboxCreation(
-          completedFragment, 
-          sessionData, 
-          posthog, 
-          currentRequestId
-        );
-        
-        setResult(sandboxResult);
-        setMessage({ result: sandboxResult });
-
-        if (sandboxResult.template !== TEMPLATE_IDS.CODE_INTERPRETER_V1) {
-          if ('url' in sandboxResult && typeof (sandboxResult as any).url === 'string' && (sandboxResult as any).url) {
-            setCurrentTab("preview");
-          } else {
-            console.warn("[onFinish] Non-interpreter template but no valid URL on sandboxResult, defaulting to code tab. Template:", sandboxResult.template);
-            setCurrentTab("code");
-          }
-        } else {
-          setCurrentTab("code");
-        }
-      } catch (sandboxError: any) {
-        console.error("[useObject] Sandbox creation failed in onFinish:", sandboxError);
-        let parsedSandboxError: ParsedApiError | null = null;
-        if (sandboxError && typeof sandboxError === "object" && sandboxError.message) {
-          parsedSandboxError = parseApiError(sandboxError);
-        }
-        const displayError = getDisplayErrorMessageForCode(
-          parsedSandboxError?.code || "SANDBOX_ERROR",
-          parsedSandboxError?.message || sandboxError.message || "Failed to create development environment."
-        );
-        setErrorMessage(displayError);
-        setResult(undefined);
-        setCurrentTab("code");
-      } finally {
-        setIsPreviewLoading(false);
-      }
-    },
+      
+      setErrorMessage(parsedError.message)
+      setCurrentTab("code")
+    }, []),
   })
 
+  // Fragment state management
+  const [fragment, setFragment] = useState<FragmentSchema | null>(null)
+  const [result, setResult] = useState<ExecutionResult | undefined>()
+
+  // Navigation and action handlers
+  const handleSocialClick = useCallback((platform: string) => {
+    const urls = {
+      twitter: "https://twitter.com/intent/tweet?text=Check%20out%20this%20amazing%20AI%20App%20Builder!",
+      github: "https://github.com/Gerome-Elassaad/CodinIT",
+      discord: "https://discord.gg/invite",
+    }
+    window.open(urls[platform as keyof typeof urls], "_blank")
+  }, [])
+
+  const handleClearChat = useCallback(() => {
+    setMessages([])
+    setChatInput("")
+    setFragment(null)
+    setResult(undefined)
+    setErrorMessage("")
+    setFiles([])
+    setCurrentPreview(null)
+    setProjectContext({ files: [], analysis: null })
+  }, [])
+
+  const handleUndo = useCallback(() => {
+    if (messages.length > 1) {
+      const newMessages = messages.slice(0, -1)
+      setMessages(newMessages)
+      
+      const lastMessage = newMessages[newMessages.length - 1]
+      if (!lastMessage || lastMessage.role !== "assistant") {
+        setFragment(null)
+        setResult(undefined)
+      }
+    }
+  }, [messages])
+
+  const handleRetryAuth = useCallback(() => {
+    setAuthError(null)
+    setAuthDialog(true)
+  }, [])
+
+  const handlePreviewClose = useCallback(() => {
+    setFragment(null)
+    setResult(undefined)
+    setCurrentPreview(null)
+  }, [])
+
+  const handleSaveInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setChatInput(e.target.value)
+  }, [])
+
+  const handleFileChange = useCallback((change: React.SetStateAction<File[]>) => {
+    setFiles(change)
+  }, [])
+
+  const handleLanguageModelChange = useCallback((newModel: LLMModelConfig) => {
+    setLanguageModel(newModel)
+  }, [setLanguageModel])
+
+  const retry = useCallback(() => {
+    if (fragment) {
+      // Retry the last submission
+      const form = document.querySelector("form") as HTMLFormElement
+      if (form) {
+        form.requestSubmit()
+      }
+    }
+  }, [fragment])
+
+  // Fragment execution effect
+  useEffect(() => {
+    if (!fragment || !session?.access_token || !userTeam?.id) return
+
+    const executeFragment = async () => {
+      setIsPreviewLoading(true)
+      setErrorMessage("")
+      setResult(undefined)
+
+      try {
+          const response = await fetch("/api/sandbox", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            fragment,
+            userID: session.user.id,
+            teamID: userTeam.id,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+
+        const executionResult = await response.json()
+        setResult(executionResult)
+        setCurrentTab("preview")
+      } catch (error) {
+        console.error("[Fragment Execution] Error:", error)
+        const parsedError = parseApiError(error)
+        setErrorMessage(parsedError.message)
+        setResult(undefined)
+        setCurrentTab("code")
+      } finally {
+        setIsPreviewLoading(false)
+      }
+    }
+
+    executeFragment()
+  }, [fragment, session?.access_token, session?.user?.id, userTeam?.id])
+
+  // Object update effect
   useEffect(() => {
     if (!object) return
 
@@ -404,7 +283,22 @@ export default function Home() {
       codeFinished: object.code_finished,
     })
 
-    setFragment(object)
+    if (
+      object &&
+      typeof object.commentary === "string" &&
+      typeof object.template === "string" &&
+      typeof object.template_ready === "boolean" &&
+      typeof object.title === "string" &&
+      typeof object.description === "string" &&
+      typeof object.has_additional_dependencies === "boolean" &&
+      typeof object.install_dependencies_ready === "boolean" &&
+      ("port" in object)
+    ) {
+      setFragment(object as FragmentSchema)
+    } else {
+      // Optionally, handle the case where required fields are missing
+      setFragment(null)
+    }
 
     setMessages((prevMessages) => {
       const newAssistantContent: Message["content"] = [
@@ -412,13 +306,20 @@ export default function Home() {
       ]
 
       if (object.files?.[0]?.file_content) {
-        newAssistantContent.push({ type: "code", text: `\`\`\`\n${object.files[0].file_content}\n\`\`\`` })
+        newAssistantContent.push({ 
+          type: "code", 
+          text: `\`\`\`\n${object.files[0].file_content}\n\`\`\`` 
+        })
       }
 
       const currentLastMessage = prevMessages.length > 0 ? prevMessages[prevMessages.length - 1] : null
 
       if (!currentLastMessage || currentLastMessage.role !== "assistant") {
-        return [...prevMessages, { role: "assistant", content: newAssistantContent, object }]
+        return [...prevMessages, { 
+          role: "assistant", 
+          content: newAssistantContent, 
+          object 
+        }]
       }
 
       const updatedMessages = [...prevMessages]
@@ -431,6 +332,7 @@ export default function Home() {
     })
   }, [object])
 
+  // Error handling effect
   useEffect(() => {
     if (error) {
       console.error("[useObject] Stopping due to error:", error)
@@ -438,6 +340,7 @@ export default function Home() {
     }
   }, [error, stop])
 
+  // Main form submission handler
   const handleSubmitAuth = useCallback(async (
     e: React.FormEvent<HTMLFormElement>, 
     projectFiles?: File[], 
@@ -496,8 +399,8 @@ export default function Home() {
       content,
     }
 
-    const currentMessagesSnapshot = [...messages];
-    setMessages((prevMessages) => [...prevMessages, newUserMessage]);
+    const currentMessagesSnapshot = [...messages]
+    setMessages((prevMessages) => [...prevMessages, newUserMessage])
 
     const messagesForApi = [...currentMessagesSnapshot, newUserMessage]
 
@@ -551,147 +454,59 @@ export default function Home() {
           f.includes('package.json') || f.includes('.git')
         ) ? "detected" : "none",
       })
-    } catch (error: any) {
-      console.error("[handleSubmitAuth] Submit error:", error)
-      setErrorMessage("Failed to submit request. Please try again.")
+    } catch (error) {
+      console.error("[handleSubmitAuth] Submission error:", error)
+      const parsedError = parseApiError(error)
+      
+      if (parsedError.code === "RATE_LIMIT_ERROR") {
+        setIsRateLimited(true)
+      }
+      
+      setErrorMessage(parsedError.message)
     }
-  }, [isLoading, session, userTeam, currentModel, isSubmitting, stop, chatInput, files, messages, currentTemplate, languageModel, setAuthDialog, setErrorMessage, setCurrentRequestId, setChatInput, setFiles, setCurrentTab, setIsRateLimited, setProjectContext, posthog, submit, selectedTemplate])
+  }, [
+    isLoading,
+    session,
+    userTeam,
+    currentModel,
+    chatInput,
+    files,
+    selectedTemplate,
+    languageModel,
+    messages,
+    submit,
+    stop,
+    isSubmitting,
+    currentTemplate,
+    posthog
+  ])
 
-  const retry = useCallback(() => {
-    if (!session?.user?.id || !userTeam?.id) {
-      console.error("[retry] Missing authentication data")
-      setErrorMessage("Authentication error. Please sign out and sign in again.")
-      return
-    }
-
-    if (!currentModel) {
-      console.error("[retry] No model selected")
-      setErrorMessage("Please select a model before retrying.")
-      return
-    }
-
-    const requestId = `retry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    setCurrentRequestId(requestId)
-
-    setErrorMessage("")
-    setIsRateLimited(false)
-    setIsPreviewLoading(false)
-
-    const submitData = {
-      userID: session.user.id,
-      teamID: userTeam.id,
-      messages: toAISDKMessages(messages),
-      template: currentTemplate,
-      model: currentModel,
-      config: languageModel,
-      uploadedFiles: projectContext.files.length > 0 ? projectContext.files : undefined,
-      projectAnalysis: projectContext.analysis,
-    }
-
-    console.log("[retry] Retrying request:", {
-      requestId,
-      messagesCount: submitData.messages.length,
-      model: submitData.model.id,
-      hasProjectContext: !!(projectContext.files.length > 0),
-      hasGitHubAnalysis: !!projectContext.analysis,
+  function logout(): void {
+    supabase.auth.signOut().then(() => {
+      window.location.reload()
+    }).catch((error) => {
+      console.error("Logout failed:", error)
     })
-
-    submit(submitData)
-  }, [session, userTeam, currentModel, messages, currentTemplate, languageModel, projectContext, setErrorMessage, setIsRateLimited, setIsPreviewLoading, setCurrentRequestId, submit])
-
-  const handleSaveInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement> | React.ChangeEvent<HTMLInputElement>) => {
-    setChatInput(e.target.value)
-  }, [setChatInput]);
-
-  const handleFileChange = useCallback((change: SetStateAction<File[]>) => {
-    setFiles(change)
-  }, [setFiles]);
-
-  const logout = useCallback(() => {
-    supabase ? supabase.auth.signOut() : console.warn("Supabase is not initialized")
-  }, []); // supabase is stable
-
-  const handleLanguageModelChange = useCallback((e: LLMModelConfig) => {
-    setLanguageModel({ ...languageModel, ...e })
-  }, [languageModel, setLanguageModel]);
-
-  const handleSocialClick = useCallback((target: "github" | "x" | "discord") => {
-    if (target === "github") {
-      window.open("https://github.com/Gerome-Elassaad/CodinIT", "_blank")
-    } else if (target === "x") {
-      window.open("https://x.com/codinit_dev", "_blank")
-    } else if (target === "discord") {
-      window.open("https://discord.gg/codinit", "_blank")
-    }
-    posthog.capture(`${target}_click`)
-  }, [posthog]);
-
-  const handleClearChat = useCallback(() => {
-    stop()
-    setChatInput("")
-    setFiles([])
-    setMessages([])
-    setFragment(undefined)
-    setResult(undefined)
-    setCurrentTab("code")
-    setIsPreviewLoading(false)
-    setErrorMessage("")
-    setIsRateLimited(false)
-    setCurrentRequestId(null)
-    setProjectContext({ files: [], analysis: null })
-  }, [stop, setChatInput, setFiles, setMessages, setFragment, setResult, setCurrentTab, setIsPreviewLoading, setErrorMessage, setIsRateLimited, setCurrentRequestId, setProjectContext]);
-
-  const setCurrentPreview = useCallback((preview: {
-    fragment: DeepPartial<FragmentSchema> | undefined
-    result: ExecutionResult | undefined
-  }) => {
-    setFragment(preview.fragment)
-    setResult(preview.result)
-  }, [setFragment, setResult]);
-
-  const handleUndo = useCallback(() => {
-    if (messages.length > 1) {
-      setMessages((previousMessages) => [...previousMessages.slice(0, -2)])
-      setCurrentPreview({ fragment: undefined, result: undefined })
-      setErrorMessage("")
-      setIsPreviewLoading(false)
-    }
-  }, [messages.length, setMessages, setCurrentPreview, setErrorMessage, setIsPreviewLoading]);
-
-  const handleRetryAuth = useCallback(() => {
-    if (supabase) {
-      supabase.auth.signOut().then(() => {
-        setTimeout(() => setAuthDialog(true), 500)
-      })
-    }
-  }, [setAuthDialog]); // supabase is a stable import, setAuthDialog is a stable state setter
-
-  const handlePreviewClose = useCallback(() => {
-    setFragment(undefined);
-    setResult(undefined);
-    setCurrentTab("code");
-  }, [setFragment, setResult, setCurrentTab]);
-
-  if (isLoading) {
-    return (
-      <main className="flex min-h-screen max-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </main>
-    )
   }
 
   return (
-    <div className="flex h-screen max-h-screen">
-      <div className="flex flex-1 min-h-0">
-        <div className={`flex-1 grid w-full min-h-0 ${fragment ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
+    <div className="flex flex-col min-h-screen bg-background">
+      <div className="flex flex-1 overflow-hidden">
+        <div className={`flex w-full ${
+          fragment ? "md:grid md:grid-cols-2" : ""
+        }`}>
           {supabase && (
-            <AuthDialog open={isAuthDialogOpen} setOpen={setAuthDialog} view={authView} supabase={supabase} />
+            <AuthDialog 
+              open={isAuthDialogOpen} 
+              setOpen={setAuthDialog} 
+              view={authView} 
+              supabase={supabase} 
+            />
           )}
 
-          <div className="flex flex-col w-full max-w-4xl max-h-full mx-auto px-4 overflow-y-auto">
+          {/* Main Chat Area */}
+          <div className="flex flex-col w-full max-w-4xl mx-auto px-4 min-h-0">
+            {/* Navigation Bar */}
             <NavBar
               session={session}
               showLogin={() => setAuthDialog(true)}
@@ -704,8 +519,18 @@ export default function Home() {
               authError={authError}
               onRetryAuth={handleRetryAuth}
             />
-            <Chat messages={messages} isLoading={isSubmitting} setCurrentPreview={setCurrentPreview} />
-            <div className="mt-auto">
+
+            {/* Chat Messages Area - Flexible, scrollable */}
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <Chat 
+                messages={messages} 
+                isLoading={isSubmitting} 
+                setCurrentPreview={(preview) => setCurrentPreview(preview?.fragment?.title ?? null)} 
+              />
+            </div>
+
+            {/* Chat Input - Fixed at bottom */}
+            <div className="flex-shrink-0 border-t bg-background">
               <EnhancedChatInput
                 input={chatInput}
                 handleInputChange={handleSaveInputChange}
@@ -723,8 +548,12 @@ export default function Home() {
                 <ChatPicker
                   templates={templates}
                   selectedTemplate={selectedTemplate}
-                  onSelectedTemplateChange={setSelectedTemplate}
-                  models={filteredModels}
+                  onSelectedTemplateChange={(template) => {
+                    if (template !== "auto") {
+                      setSelectedTemplate(template)
+                    }
+                  }}
+                  models={availableModels}
                   languageModel={languageModel}
                   onLanguageModelChange={handleLanguageModelChange}
                 />
@@ -738,8 +567,9 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Preview Panel */}
           {fragment && (
-            <div className="hidden md:flex md:flex-col max-h-full overflow-y-auto">
+            <div className="hidden md:flex md:flex-col border-l border-border">
               <Preview
                 teamID={userTeam?.id}
                 accessToken={session?.access_token}
@@ -755,6 +585,25 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      {/* Command Palette Integration */}
+      <CommandPalette 
+        onCreateFragment={() => {
+          setChatInput("Create a new React component with modern best practices including TypeScript, responsive design, and accessibility features.")
+          setSelectedTemplate("nextjs-developer")
+          
+          setTimeout(() => {
+            const form = document.querySelector("form") as HTMLFormElement
+            if (form) {
+              form.requestSubmit()
+            }
+          }, 100)
+        }}
+        onClearChat={handleClearChat}
+        onOpenSettings={() => {
+          router.push('/settings')
+        }}
+      />
     </div>
   )
 }

@@ -68,7 +68,14 @@ type CommandHistory = {
   count: number;
 };
 
-export default function CommandPalette() {
+// Define props for CommandPalette
+type CommandPaletteProps = {
+  onCreateFragment?: () => void;
+  onClearChat?: () => void;
+  onOpenSettings?: () => void;
+};
+
+export default function CommandPalette({ onCreateFragment, onClearChat, onOpenSettings }: CommandPaletteProps) {
   const [open, setOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [activeCategory, setActiveCategory] = useState<CommandCategory | "All">(
@@ -541,7 +548,7 @@ export default function CommandPalette() {
       section: "all",
       icon: <GitBranch className="h-3 w-3" />,
       action: () => {
-        window.open("https://github.com", "_blank");
+        window.open("https://github.com/Gerome-Elassaad/codingIT", "_blank");
         recordCommandUsage("social-github");
         setOpen(false);
       },
@@ -660,7 +667,50 @@ export default function CommandPalette() {
       },
       keywords: ["language", "localization", "translate", "international"],
     },
-  ], [navigateTo, showNotification, copyToClipboard, sharePage, refreshPage, clearCache, toggleFullscreen, printPage, toggleAIPrompt, recordCommandUsage]);
+    // Add commands for the new props if they are provided
+    ...(onCreateFragment ? [{
+      id: "create-fragment",
+      title: "Create New Fragment",
+      description: "Start a new coding fragment or component",
+      category: "Development" as CommandCategory,
+      section: "favorites" as CommandSection,
+      icon: <RocketIcon className="h-3 w-3" />,
+      action: () => {
+        onCreateFragment();
+        recordCommandUsage("create-fragment");
+        setOpen(false);
+      },
+      keywords: ["new", "create", "fragment", "component", "code"],
+    }] : []),
+    ...(onClearChat ? [{
+      id: "clear-chat",
+      title: "Clear Chat History",
+      description: "Remove all messages from the current chat",
+      category: "Utility" as CommandCategory,
+      section: "all" as CommandSection,
+      icon: <Trash2 className="h-3 w-3" />,
+      action: () => {
+        onClearChat();
+        recordCommandUsage("clear-chat");
+        setOpen(false);
+      },
+      keywords: ["clear", "chat", "history", "messages", "reset"],
+    }] : []),
+    ...(onOpenSettings ? [{
+      id: "open-settings",
+      title: "Open Settings",
+      description: "Navigate to the application settings page",
+      category: "Settings" as CommandCategory,
+      section: "all" as CommandSection,
+      icon: <GearIcon className="h-3 w-3" />,
+      action: () => {
+        onOpenSettings();
+        recordCommandUsage("open-settings");
+        setOpen(false);
+      },
+      keywords: ["settings", "preferences", "configuration", "options"],
+    }] : []),
+  ], [navigateTo, showNotification, copyToClipboard, sharePage, refreshPage, clearCache, toggleFullscreen, printPage, toggleAIPrompt, recordCommandUsage, onCreateFragment, onClearChat, onOpenSettings]);
 
   // Get recent commands based on history
   const getRecentCommands = useCallback(() => {

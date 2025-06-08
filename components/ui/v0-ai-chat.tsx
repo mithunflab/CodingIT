@@ -278,7 +278,6 @@ export function VercelV0Chat({
                   handleInputChange(e)
                 }}
                 onKeyDown={handleTextareaKeyDown}
-                placeholder=""
                 className={cn(
                   "w-full px-4 py-3",
                   "resize-none",

@@ -1,24 +1,30 @@
 import Image from 'next/image'
 import { useTheme } from 'next-themes'
+import { useEffect, useState } from 'react'
 
 const Logo = () => {
-  const { theme } = useTheme()
-  const isDark = theme === 'dark'
-  const isLight = theme === 'light'
+  const { resolvedTheme } = useTheme() // Use resolvedTheme for actual light/dark
+  const [mounted, setMounted] = useState(false)
 
-  let logoSrc = '/android-chrome-192x192.png'
-  if (isDark) {
-    logoSrc = '/logo-dark.png'
-  } else if (isLight) {
-    logoSrc = '/android-chrome-192x192.png'
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  let logoSrcToRender: string;
+
+  if (!mounted) {
+    logoSrcToRender = '/logo-dark.png';
+  } else {
+    logoSrcToRender = resolvedTheme === 'dark' ? '/logo-dark.png' : '/android-chrome-192x192.png';
   }
 
   return (
     <Image
-      src={logoSrc}
+      src={logoSrcToRender}
       width={42}
       height={42}
       alt="Logo"
+      key={mounted ? resolvedTheme : 'initial'} // Add key to help React differentiate if src changes
     />
   )
 }
