@@ -305,9 +305,9 @@ export function EnhancedChatInput({
     }
 
     return (
-      <button className="px-2 py-1 rounded-sm bg-red-400/20 hover:bg-red-400/30 transition-colors" onClick={retry}>
+      <Button className="px-2 py-1 rounded-sm bg-red-400/20 hover:bg-red-400/30 transition-colors" onClick={retry}>
         Try Again
-      </button>
+      </Button>
     )
   }
 
@@ -377,53 +377,57 @@ export function EnhancedChatInput({
               onChange={handleFileInput}
             />
             <div className="flex items-center flex-1 gap-2">
-              <TooltipProvider>
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      disabled={!isMultiModal || isErrored}
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="rounded-xl h-10 w-10"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        document.getElementById("multimodal")?.click()
-                      }}
-                    >
-                      <Paperclip className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Add attachments</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <div className="relative">
+                  <div className="rounded-xl h-10 w-10" />
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        disabled={!isMultiModal || isErrored}
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="absolute inset-0 rounded-xl h-10 w-10 z-10"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          document.getElementById("multimodal")?.click()
+                        }}
+                      >
+                        <Paperclip className="h-5 w-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Add attachments</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
 
-
-              <GitHubImportModal
-                onImport={handleGitHubImport}
-                isLoading={isLoading}
-              />
+              <div className="relative">
+                  <GitHubImportModal
+                    onImport={handleGitHubImport}
+                    isLoading={isLoading}
+                  />
+              </div>
 
               {files.length > 0 && filePreview}
             </div>
             <div>
-              <TooltipProvider>
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      disabled={!input.trim() || isLoading || isEnhancing || isErrored}
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="rounded-xl h-10 w-10 mr-2" // Added mr-2 for spacing
-                      onClick={handleEnhanceMessage}
-                    >
-                      {isEnhancing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Enhance message with AI</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        disabled={!input.trim() || isLoading || isEnhancing || isErrored}
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="rounded-xl h-10 w-10 mr-2" // Added mr-2 for spacing
+                        onClick={handleEnhanceMessage}
+                      >
+                        {isEnhancing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Enhance message with AI</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               {!isLoading ? (
                 <TooltipProvider>
                   <Tooltip delayDuration={0}>

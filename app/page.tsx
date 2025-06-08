@@ -2,7 +2,6 @@
 "use client"
 
 import React from "react"
-import { useRouter } from "next/navigation"
 
 import type { ViewType } from "@/components/auth"
 import { AuthDialog } from "@/components/auth-dialog"
@@ -24,18 +23,8 @@ import type { ExecutionResult } from "@/lib/types"
 import type { DeepPartial } from "ai"
 import { experimental_useObject as useObject } from "ai/react"
 import { usePostHog } from "posthog-js/react"
-import { type SetStateAction, useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useLocalStorage } from "usehooks-ts"
-import posthog from "posthog-js"
-
-const TEMPLATE_IDS = {
-  CODE_INTERPRETER_V1: "code-interpreter-v1",
-  NEXTJS_DEVELOPER: "nextjs-developer",
-  VUE_DEVELOPER: "vue-developer",
-  STREAMLIT_DEVELOPER: "streamlit-developer",
-  GRADIO_DEVELOPER: "gradio-developer",
-  CODINIT_ENGINEER: "codinit-engineer",
-} as const
 
 interface ProjectAnalysis {
   structure: {
@@ -99,14 +88,13 @@ const parseApiError = (error: Error | any): ParsedApiError => {
 }
 
 export default function Home() {
-  const router = useRouter()
   const posthog = usePostHog()
 
   // Auth and session state
   const [isAuthDialogOpen, setAuthDialog] = useState(false)
   const [authView, setAuthView] = useState<ViewType>("sign_in")
   const [authError, setAuthError] = useState<string | null>(null)
-  const { session, isLoading, userTeam, authError: authStateError } = useAuth(setAuthDialog, setAuthView)
+  const { session, isLoading, userTeam } = useAuth(setAuthDialog, setAuthView)
 
   // Chat and UI state
   const [messages, setMessages] = useState<Message[]>([])
@@ -123,6 +111,7 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState("")
   const [isRateLimited, setIsRateLimited] = useState(false)
   const [currentRequestId, setCurrentRequestId] = useState<string>("")
+  const [hasMounted, setHasMounted] = useState(false)
   const [projectContext, setProjectContext] = useState<{
     files: File[]
     analysis: ProjectAnalysis | null
@@ -161,6 +150,7 @@ export default function Home() {
   // Fragment state management
   const [fragment, setFragment] = useState<FragmentSchema | null>(null)
   const [result, setResult] = useState<ExecutionResult | undefined>()
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false)
 
   // Navigation and action handlers
   const handleSocialClick = useCallback((platform: string) => {
@@ -339,6 +329,11 @@ export default function Home() {
       stop()
     }
   }, [error, stop])
+
+  // Effect to track component mounting for client-side only logic
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
 
   // Main form submission handler
   const handleSubmitAuth = useCallback(async (
@@ -556,6 +551,7 @@ export default function Home() {
                   models={availableModels}
                   languageModel={languageModel}
                   onLanguageModelChange={handleLanguageModelChange}
+                  hasMounted={hasMounted}
                 />
                 <ChatSettings
                   apiKeyConfigurable={!process.env.NEXT_PUBLIC_NO_API_KEY_INPUT}
@@ -589,7 +585,7 @@ export default function Home() {
       {/* Command Palette Integration */}
       <CommandPalette 
         onCreateFragment={() => {
-          setChatInput("Create a new React component with modern best practices including TypeScript, responsive design, and accessibility features.")
+          setChatInput("Create a new Next.js React component with modern best practices including TypeScript, responsive design, and accessibility features.")
           setSelectedTemplate("nextjs-developer")
           
           setTimeout(() => {
@@ -601,7 +597,6 @@ export default function Home() {
         }}
         onClearChat={handleClearChat}
         onOpenSettings={() => {
-          router.push('/settings')
         }}
       />
     </div>

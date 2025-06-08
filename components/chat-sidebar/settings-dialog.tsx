@@ -1,8 +1,9 @@
 "use client"
 
+import { shallow } from "zustand/shallow"
+import { useChatSidebarStore } from "@/lib/stores/chat-sidebar-stores"
 import type React from "react"
 import { useState } from "react"
-import { useChatSidebarStore } from "@/lib/stores/chat-sidebar-stores"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -27,22 +28,35 @@ interface SettingsDialogProps {
 }
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-  const { chatSessions, projects, clearAll, exportData, importData } = useChatSidebarStore()
-
   const [autoSave, setAutoSave] = useState(true)
   const [showTimestamps, setShowTimestamps] = useState(true)
   const [compactView, setCompactView] = useState(false)
 
-  const totalMessages = chatSessions.reduce((sum, session) => sum + session.messages.length, 0)
-  const storageSize = JSON.stringify({ chatSessions, projects }).length
+  const { chatSessions, projects, exportStoreData, importStoreData, clearStoreData } =
+    useChatSidebarStore(
+      (state) => ({
+        chatSessions: state.chatSessions,
+        projects: state.projects,
+        exportStoreData: state.exportData,
+        importStoreData: state.importData,
+        clearStoreData: state.clearAll,
+      })
+    )
+
+  // Defensive defaults in case chatSessions or projects are not yet populated
+  const safeChatSessions = chatSessions || []
+  const safeProjects = projects || []
+
+  const totalMessages = safeChatSessions.reduce((sum: number, session: any) => sum + (session.messages?.length || 0), 0)
+  const storageSize = JSON.stringify({ chatSessions: safeChatSessions, projects: safeProjects }).length
 
   const handleExport = () => {
-    const data = exportData()
+    const data = exportStoreData ? exportStoreData() : ""
     const blob = new Blob([data], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `chat-history-${new Date().toISOString().split("T")[0]}.json`
+    a.download = `codinit-data-${new Date().toISOString().split("T")[0]}.json`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -56,7 +70,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     const reader = new FileReader()
     reader.onload = (e) => {
       const content = e.target?.result as string
-      importData(content)
+      if (importStoreData) {
+        importStoreData(content)
+      }
     }
     reader.readAsText(file)
     event.target.value = ""
@@ -76,11 +92,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             <h4 className="text-sm font-medium">Statistics</h4>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-3 bg-muted rounded-lg">
-                <div className="text-2xl font-bold">{chatSessions.length}</div>
+                <div className="text-2xl font-bold">{safeChatSessions.length}</div>
                 <div className="text-xs text-muted-foreground">Chat Sessions</div>
               </div>
               <div className="text-center p-3 bg-muted rounded-lg">
-                <div className="text-2xl font-bold">{projects.length}</div>
+                <div className="text-2xl font-bold">{safeProjects.length}</div>
                 <div className="text-xs text-muted-foreground">Projects</div>
               </div>
               <div className="text-center p-3 bg-muted rounded-lg">
@@ -158,8 +174,10 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() => {
-                        clearAll()
-                        onOpenChange(false)
+                        if (clearStoreData) {
+                          clearStoreData()
+                        }
+                        onOpenChange(false) // Close dialog after clearing
                       }}
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >

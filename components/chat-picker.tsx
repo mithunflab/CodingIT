@@ -20,6 +20,7 @@ export function ChatPicker({
   models,
   languageModel,
   onLanguageModelChange,
+  hasMounted, // Add hasMounted prop
 }: {
   templates: TemplatesDataObject
   selectedTemplate: 'auto' | TemplateId
@@ -27,6 +28,7 @@ export function ChatPicker({
   models: LLMModel[]
   languageModel: LLMModelConfig
   onLanguageModelChange: (config: LLMModelConfig) => void
+  hasMounted: boolean // Define type for hasMounted
 }) {
   return (
     <div className="flex items-center space-x-2">
@@ -71,6 +73,7 @@ export function ChatPicker({
       </div>
       <div className="flex flex-col">
         <Select
+          key={hasMounted ? `lm-client-${languageModel.model}` : 'lm-server'} // Add key here
           name="languageModel"
           defaultValue={languageModel.model}
           onValueChange={(e) => onLanguageModelChange({ model: e })}

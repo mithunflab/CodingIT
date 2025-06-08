@@ -4,6 +4,12 @@ import type { ChatSession, Project, ChatSidebarState } from "@/lib/types/chat-si
 
 interface ChatSidebarStore extends ChatSidebarState {
   // State
+  isOpen: boolean
+  activeTab: "chats" | "projects"
+  searchQuery: string
+  selectedChatId: string | null
+  isLoading: boolean
+  error: string | null
   chatSessions: ChatSession[]
   projects: Project[]
 
@@ -139,7 +145,7 @@ export const useChatSidebarStore = create<ChatSidebarStore>()(
         return chatSessions.filter(
           (session) =>
             session.title.toLowerCase().includes(query) ||
-            session.messages.some((msg) => msg.content.toLowerCase().includes(query)),
+            session.messages.some((msg: any) => msg.content.toLowerCase().includes(query)),
         )
       },
 
@@ -152,7 +158,7 @@ export const useChatSidebarStore = create<ChatSidebarStore>()(
           (project) =>
             project.name.toLowerCase().includes(query) ||
             project.description?.toLowerCase().includes(query) ||
-            project.tags?.some((tag) => tag.toLowerCase().includes(query)),
+            project.tags?.some((tag: string) => tag.toLowerCase().includes(query)),
         )
       },
 
