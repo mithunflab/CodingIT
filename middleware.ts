@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
   // Enhanced request logging and validation
-  const requestId = `mid_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const requestId = `mid_${crypto.randomUUID()}`
   const startTime = Date.now()
   
   console.log(`[Middleware ${requestId}] ${request.method} ${request.nextUrl.pathname}`)

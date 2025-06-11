@@ -130,7 +130,7 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
     const scope = 'repo user:email'
     
     // Generate and store state parameter for security
-    const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+    const state = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('')
     sessionStorage.setItem('github_oauth_state', state)
     
     const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&state=${state}`

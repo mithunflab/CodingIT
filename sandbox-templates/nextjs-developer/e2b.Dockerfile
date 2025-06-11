@@ -1,8 +1,12 @@
 # You can use most Debian-based base images
 FROM node:21-slim
 
-# Install curl
-RUN apt-get update && apt-get install -y curl && apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install curl with security patches
+RUN apt-get update \
+ && apt-get upgrade -y \
+ && apt-get install -y --no-install-recommends curl \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
 COPY compile_page.sh /compile_page.sh
 RUN chmod +x /compile_page.sh

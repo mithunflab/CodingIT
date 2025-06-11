@@ -131,10 +131,22 @@ export default function Home() {
     analysis: ProjectAnalysis | null
   }>({ files: [], analysis: null })
 
-  // Template and model configuration
-  const currentTemplate = templates[selectedTemplate]
-  const availableModels = modelsList.models.filter((model) => 
-    !("providerId" in currentTemplate) || model.providerId === (currentTemplate as any).providerId
+  // Safely get the current template configuration
+  let currentTemplateConfig: (typeof templates)[keyof typeof templates] | Record<string, any>;
+  if (selectedTemplate in templates) {
+    currentTemplateConfig = templates[selectedTemplate as keyof typeof templates];
+  } else if (selectedTemplate === 'codinit-engineer') {
+    // Provide a default for 'codinit-engineer' if not in templates.json
+    // This default ensures 'providerId' is not present, making the filter work.
+    currentTemplateConfig = { name: "CodinIT Engineer (Default)", lib: [], files: {}, instructions: "Default instructions for CodinIT Engineer", port: null };
+  } else {
+    // Fallback for any other unexpected template ID
+    console.warn(`Unknown template ID: ${selectedTemplate}. Using a default empty config.`);
+    currentTemplateConfig = {};
+  }
+
+  const availableModels = modelsList.models.filter((model) =>
+    !("providerId" in currentTemplateConfig) || model.providerId === (currentTemplateConfig as any).providerId
   )
   const currentModel = availableModels.find((model) => model.id === languageModel.model)
 
@@ -220,7 +232,7 @@ export default function Home() {
   }, [])
 
   const handleLanguageModelChange = useCallback((newModel: LLMModelConfig) => {
-    setLanguageModel(newModel)
+    setLanguageModel(prevModel => ({ ...prevModel, ...newModel }))
   }, [setLanguageModel])
 
   const retry = useCallback(() => {
@@ -393,7 +405,8 @@ export default function Home() {
       return
     }
 
-    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    // Generate a unique request ID using a more robust method
+    const requestId = `req_${Date.now()}_${crypto.randomUUID()}`
     setCurrentRequestId(requestId)
 
     const content: Message["content"] = [{ type: "text", text: chatInput }]
@@ -419,7 +432,7 @@ export default function Home() {
       userID: session.user.id,
       teamID: userTeam.id,
       messages: toAISDKMessages(messagesForApi),
-      template: currentTemplate,
+      template: currentTemplateConfig, // Use the safely derived config
       model: currentModel,
       config: languageModel,
       uploadedFiles: projectFiles,
@@ -488,7 +501,7 @@ export default function Home() {
     submit,
     stop,
     isSubmitting,
-    currentTemplate,
+    currentTemplateConfig, // Use the corrected variable name
     posthog
   ])
 

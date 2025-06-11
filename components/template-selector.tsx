@@ -4,19 +4,22 @@ import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import templatesData from '@/lib/templates.json'; // Import directly
+import templatesData from '@/lib/templates.json';
+import { convertToEnhancedTemplates, type EnhancedTemplate, type TemplatesDataObject } from '@/lib/templates';
 
-interface Template {
-  name: string;
-  lib: string[];
-  file: string | null;
-  instructions: string;
-  port: number | null;
-}
+// Use EnhancedTemplate for consistency
+// interface Template {
+//   name: string;
+//   lib: string[];
+//   file: string | null;
+//   instructions: string;
+//   port: number | null;
+// }
 
-interface Templates {
-  [key: string]: Template;
-}
+// The state will now be an array of EnhancedTemplate
+// interface Templates {
+//   [key: string]: Template;
+// }
 
 interface StackItem {
   id: string; // Corresponds to a key in templates.json
@@ -26,10 +29,14 @@ interface StackItem {
 }
 
 const TemplateSelector: React.FC = () => {
-  const [templates, setTemplates] = useState<Templates>(templatesData);
+  // Initialize state with the transformed array of templates
+  const [enhancedTemplates, setEnhancedTemplates] = useState<EnhancedTemplate[]>(() =>
+    convertToEnhancedTemplates(templatesData as TemplatesDataObject)
+  );
 
   const handleTemplateSelect = (templateId: string) => {
-    const selectedTemplate = templates[templateId];
+    // Find the template by its id in the array
+    const selectedTemplate = enhancedTemplates.find(t => t.id === templateId);
     if (selectedTemplate) {
       console.log(`Selected template: ${selectedTemplate.name}`, selectedTemplate);
       // Here you would typically trigger the build process

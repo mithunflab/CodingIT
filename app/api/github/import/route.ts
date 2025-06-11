@@ -5,7 +5,7 @@ import { GitHubIntegration } from "@/lib/github-integration"
 import { ProjectAnalyzer } from "@/lib/project-analyzer"
 
 export async function POST(request: NextRequest) {
-  const requestId = `github_import_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const requestId = `github_import_${crypto.randomUUID()}`
   
   try {
     const { owner, repo, maxFiles = 50 } = await request.json()

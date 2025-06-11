@@ -54,7 +54,7 @@ function buildProjectStructure(files: Array<{ name: string; size: number; type: 
 }
 
 export async function POST(request: NextRequest) {
-  const requestId = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const requestId = `upload_${crypto.randomUUID()}`
   console.log(`[Upload API ${requestId}] Processing file upload`)
 
   try {

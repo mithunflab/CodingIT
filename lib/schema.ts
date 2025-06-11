@@ -1,8 +1,11 @@
 import { z } from 'zod'
+import templatesData from './templates.json';
+
+const templateIds = Object.keys(templatesData) as [keyof typeof templatesData, ...(keyof typeof templatesData)[]];
 
 export const fragmentSchema = z.object({
   commentary: z.string().describe('Describe what you are doing and the steps you are taking for generating the fragment in great detail.'),
-  template: z.string().describe('Name of the template used to generate the fragment.'),
+  template: z.enum(templateIds).describe('Name of the template used to generate the fragment. Must be one of the predefined valid template IDs.'),
   template_ready: z.boolean().describe('Detect if finished identifying the template.'),
   title: z.string().describe('Short title of the fragment. Max 5 words.'),
   description: z.string().describe('Short description of the fragment. Max 2 sentences.'),

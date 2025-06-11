@@ -115,7 +115,7 @@ export class RequestTracker {
 }
 
 export function generateRequestId(): string {
-  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  return `req_${crypto.randomUUID()}`
 }
 
 export function logError(context: string, error: any, metadata?: Record<string, any>): void {

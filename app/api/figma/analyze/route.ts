@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { FigmaIntegration } from "@/lib/figma-integration"
 
 export async function POST(request: NextRequest) {
-  const requestId = `figma_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const requestId = `figma_${crypto.randomUUID()}`
   console.log(`[Figma Analysis API ${requestId}] Processing request`)
 
   try {

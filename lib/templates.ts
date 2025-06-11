@@ -2,9 +2,10 @@ import templatesData from './templates.json';
 
 export type TemplatesDataObject = typeof templatesData;
 
-export type TemplateId = keyof TemplatesDataObject;
+// Allow 'codinit-engineer' as a possible TemplateId even if not always in templates.json
+export type TemplateId = keyof TemplatesDataObject | 'codinit-engineer';
 
-export type BaseTemplateConfig = TemplatesDataObject[TemplateId];
+export type BaseTemplateConfig = TemplatesDataObject[keyof TemplatesDataObject];
 
 export interface EnhancedTemplate {
   id: TemplateId;
@@ -40,9 +41,19 @@ export function templatesToPrompt(templates: TemplatesDataObject): string {
         `Invalid template data for ID "${id}" in templatesToPrompt. Expected an object, but received ${typeof t}.`
       );
     }
-    // After the type guard, t is known to be an object, so its properties can be safely accessed.
-    const portDisplay = ('port' in t && t.port !== undefined && t.port !== null) ? t.port : 'none';
-    return `${index + 1}. ${id}: "${t.instructions}". File: ${t.file || 'none'}. Dependencies installed: ${t.lib.join(', ')}. Port: ${portDisplay}.`;
+    // After the type guard, t is known to be an object.
+    // Defensively access instructions and port, accounting for potential nesting in t.files (for gradio-developer)
+    const t_any = t as any;
+    const currentInstructions = (('instructions' in t_any && typeof t_any.instructions === 'string') ? t_any.instructions :
+                                (t_any.files && typeof t_any.files === 'object' && 'instructions' in t_any.files && typeof t_any.files.instructions === 'string') ? t_any.files.instructions : "");
+
+    const currentPortRaw = (('port' in t_any && (typeof t_any.port === 'number' || t_any.port === null)) ? t_any.port :
+                           (t_any.files && typeof t_any.files === 'object' && 'port' in t_any.files && (typeof t_any.files.port === 'number' || t_any.files.port === null)) ? t_any.files.port : null);
+    const portDisplay = (currentPortRaw !== undefined && currentPortRaw !== null) ? currentPortRaw : 'none';
+
+    const mainFile = (t_any.files && typeof t_any.files === 'object' && Object.keys(t_any.files).length > 0) ? Object.keys(t_any.files)[0] : 'none';
+    
+    return `${index + 1}. ${id}: "${currentInstructions}". File: ${mainFile}. Dependencies installed: ${t_any.lib ? t_any.lib.join(', ') : 'none'}. Port: ${portDisplay}.`;
   }).join('\n')}`
 }
 
@@ -106,20 +117,27 @@ export function convertToEnhancedTemplates(data: TemplatesDataObject): EnhancedT
       );
     }
 
+    const bc_any = baseConfig as any;
+
+    const actualInstructions = (('instructions' in bc_any && typeof bc_any.instructions === 'string') ? bc_any.instructions :
+                                (bc_any.files && typeof bc_any.files === 'object' && 'instructions' in bc_any.files && typeof bc_any.files.instructions === 'string') ? bc_any.files.instructions : "");
+
+    const actualPort = (('port' in bc_any && (typeof bc_any.port === 'number' || bc_any.port === null)) ? bc_any.port :
+                        (bc_any.files && typeof bc_any.files === 'object' && 'port' in bc_any.files && (typeof bc_any.files.port === 'number' || bc_any.files.port === null)) ? bc_any.files.port : null);
+
+    const mainFileFromBC = (bc_any.files && typeof bc_any.files === 'object' && Object.keys(bc_any.files).length > 0) ? Object.keys(bc_any.files)[0] : null;
+
     return {
       id: templateId,
-      name: baseConfig.name,
-      lib: baseConfig.lib,
-      file: baseConfig.file,
-      instructions: baseConfig.instructions,
-      // After the type guard, baseConfig is known to be an object.
-      // The 'in' operator is safe, and baseConfig.port can be accessed directly.
-      // The type of baseConfig.port (if it exists and is not undefined) is expected to be number | null.
-      port: ('port' in baseConfig && baseConfig.port !== undefined) ? baseConfig.port : null,
+      name: bc_any.name || 'Unnamed Template',
+      lib: bc_any.lib || [],
+      file: mainFileFromBC,
+      instructions: actualInstructions,
+      port: actualPort,
       category,
       complexity,
-      description: baseConfig.instructions || baseConfig.name || 'No description available.',
-      technologies: baseConfig.lib || [],
+      description: actualInstructions || bc_any.name || 'No description available.',
+      technologies: bc_any.lib || [],
       aiCapabilities: templateId === 'codinit-engineer'
         ? [{ type: 'tool-use', enabled: true, description: 'Can use various development tools.' }]
         : [],

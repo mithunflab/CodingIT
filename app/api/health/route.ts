@@ -2,7 +2,7 @@ import { healthMonitor } from "@/lib/api-health"
 import { apiClient } from "@/lib/api-client"
 
 export async function GET() {
-  const requestId = `health_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const requestId = `health_${crypto.randomUUID()}`
   
   try {
     console.log(`[Health API ${requestId}] Performing health check`)

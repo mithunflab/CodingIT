@@ -302,9 +302,44 @@ ${constraints.productionReady ? '- All code must be immediately deployable\n- En
   }
 
   private static templatesToPrompt(templates: TemplatesDataObject): string {
-    return `${Object.entries(templates).map(([id, t], index) => 
-      `${index + 1}. ${id}: "${t.instructions}". File: ${t.file || 'none'}. Dependencies installed: ${t.lib.join(', ')}. Port: ${t.port || 'none'}.`
-    ).join('\n')}`
+    return `${Object.entries(templates).map(([id, t], index) => {
+      // Type guard to ensure t is an object and not null.
+      if (typeof t !== 'object' || t === null) {
+        // This case should ideally not be hit if TemplatesDataObject is correctly typed and populated
+        // but it's a good defensive check.
+        console.error(`Invalid template data for ID "${id}" in EnhancedPromptGenerator.templatesToPrompt. Expected an object, but received ${typeof t}.`);
+        return `${index + 1}. ${id}: Error - Invalid template data.`;
+      }
+
+      const t_any = t as any; // Use 'as any' for flexible property access, similar to lib/templates.ts
+
+      const currentInstructions = (('instructions' in t_any && typeof t_any.instructions === 'string') ? t_any.instructions :
+                                  (t_any.files && typeof t_any.files === 'object' && 'instructions' in t_any.files && typeof t_any.files.instructions === 'string') ? t_any.files.instructions : "No instructions provided");
+
+      const currentPortRaw = (('port' in t_any && (typeof t_any.port === 'number' || t_any.port === null)) ? t_any.port :
+                             (t_any.files && typeof t_any.files === 'object' && 'port' in t_any.files && (typeof t_any.files.port === 'number' || t_any.files.port === null)) ? t_any.files.port : null);
+      const portDisplay = (currentPortRaw !== undefined && currentPortRaw !== null) ? String(currentPortRaw) : 'none';
+      
+      // Determine the main file. If 'file' property exists directly, use it. Otherwise, derive from 'files' object.
+      let mainFileDisplay = 'none';
+      if ('file' in t_any && t_any.file !== null && typeof t_any.file === 'string') {
+        mainFileDisplay = t_any.file;
+      } else if (t_any.files && typeof t_any.files === 'object' && Object.keys(t_any.files).length > 0) {
+        // Attempt to find a common main file name or just list the first one.
+        // For templates like 'gradio-developer', 'app.py' is a key in 'files', not a top-level 'file' property.
+        const fileKeys = Object.keys(t_any.files);
+        // Prioritize known main files or just take the first if no specific logic.
+        if (fileKeys.includes('app.py')) mainFileDisplay = 'app.py';
+        else if (fileKeys.includes('main.py')) mainFileDisplay = 'main.py';
+        else if (fileKeys.includes('index.tsx')) mainFileDisplay = 'pages/index.tsx'; // Assuming nextjs-developer structure
+        else if (fileKeys.includes('app.vue')) mainFileDisplay = 'app.vue'; // Assuming vue-developer structure
+        else mainFileDisplay = fileKeys[0]; 
+      }
+      
+      const dependencies = t_any.lib && Array.isArray(t_any.lib) ? t_any.lib.join(', ') : 'none';
+
+      return `${index + 1}. ${id}: "${currentInstructions}". File: ${mainFileDisplay}. Dependencies installed: ${dependencies}. Port: ${portDisplay}.`;
+    }).join('\n')}`
   }
 }
 

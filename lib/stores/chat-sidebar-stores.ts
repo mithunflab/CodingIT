@@ -92,7 +92,7 @@ export const useChatSidebarStore = create<ChatSidebarStore>()(
         if (!chatSession) return
 
         const project: Project = {
-          id: `project_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          id: `project_${crypto.randomUUID()}`,
           name: projectName,
           description,
           chatSessionId: chatId,

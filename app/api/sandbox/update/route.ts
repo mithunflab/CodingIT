@@ -11,7 +11,7 @@ interface UpdateFileRequestBody {
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  const operationId = `sandbox_update_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const operationId = `sandbox_update_${crypto.randomUUID()}`;
   console.log(`[Sandbox Update API ${operationId}] Processing request`);
 
   let requestBody: UpdateFileRequestBody;
@@ -184,7 +184,7 @@ export async function POST(req: Request) {
     // For E2B, usually, they auto-close after inactivity.
     if (sbx) {
       console.log(`[Sandbox Update API ${operationId}] Operations completed for sandbox ${sbx.sandboxId}`);
-      // await sbx.close(); // Uncomment if explicit close is needed for reconnected sandboxes
+      // no explicit close needed or supported on Sandbox instances
     }
   }
 }

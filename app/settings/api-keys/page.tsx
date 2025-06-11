@@ -62,7 +62,7 @@ export default function ApiKeysPage() {
     const newKey: ApiKey = {
       id: Date.now().toString(),
       name: newKeyName,
-      key: `ak_${newKeyPermissions.includes('write') ? 'live' : 'test'}_${Math.random().toString(36).substring(2, 42)}`,
+      key: `ak_${newKeyPermissions.includes('write') ? 'live' : 'test'}_${Array.from(crypto.getRandomValues(new Uint8Array(20))).map(b => b.toString(16).padStart(2, '0')).join('')}`,
       lastUsed: "Never",
       created: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       permissions: newKeyPermissions

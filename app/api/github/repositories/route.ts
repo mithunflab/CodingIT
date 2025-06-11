@@ -4,7 +4,7 @@ import { cookies } from "next/headers"
 import { GitHubIntegration } from "@/lib/github-integration"
 
 export async function GET(request: NextRequest) {
-  const requestId = `github_repos_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const requestId = `github_repos_${crypto.randomUUID()}`
   
   try {
     const cookieStore = await cookies()
@@ -13,15 +13,12 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          async get(name: string) {
-
-            const store = cookieStore; 
-            return store.get(name)?.value
+          get(name: string) {
+            return cookieStore.get(name)?.value
           },
-          async set(name: string, value: string, options: CookieOptions) {
+          set(name: string, value: string, options: CookieOptions) {
             try {
-              const store = await cookieStore;
-              store.set({ name, value, ...options })
+              cookieStore.set(name, value, options)
             } catch (error) {
               // The `set` method was called from a Server Component.
               // This can be ignored if you have middleware refreshing
@@ -29,10 +26,9 @@ export async function GET(request: NextRequest) {
               // console.warn(`Failed to set cookie '${name}' from Server Component:`, error);
             }
           },
-          async remove(name: string, options: CookieOptions) {
+          remove(name: string, options: CookieOptions) {
             try {
-              const store = await cookieStore;
-              store.set({ name, value: '', ...options })
+              cookieStore.set({ name, value: '', ...options })
             } catch (error) {
               // The `delete` method was called from a Server Component.
               // This can be ignored if you have middleware refreshing

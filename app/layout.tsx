@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://codingit.vercel.app'),
-  title: 'CodinIT #1 Open Source AI Software Engineer',
+  title: 'CodinIT',
   keywords: [
     'AI software engineer',
     'open source',
@@ -37,7 +37,8 @@ export const metadata: Metadata = {
     images: ["/opengraph.png"],
     url: "https://codingit.vercel.app",
     siteName: "CodinIT",
-    type: "website"
+    type: "website",
+    locale: "en_US",
   }
 }
 

@@ -4,7 +4,8 @@ import { getModelClient } from "@/lib/models"
 import { toEnhancedPrompt } from "@/lib/enhanced-prompt"
 import ratelimit from "@/lib/ratelimit"
 import { fragmentSchema as schema } from "@/lib/schema"
-import type { TemplatesDataObject } from "@/lib/templates"
+import type { TemplatesDataObject, TemplateId } from "@/lib/templates" // Import TemplateId
+import templatesDataFromFile from "@/lib/templates" // Import the actual templates data
 import { ProjectAnalyzer, type ProjectStructure } from "@/lib/project-analyzer"
 import { streamObject, type LanguageModel, type CoreMessage } from "ai"
 import { logError, generateRequestId, validateRequestData } from "@/lib/debug"
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
       messages,
       userID,
       teamID,
-      template,
+      selectedTemplateId, // Changed from 'template' to 'selectedTemplateId'
       model,
       config,
       uploadedFiles,
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
       messages: CoreMessage[]
       userID: string
       teamID: string
-      template: TemplatesDataObject
+      selectedTemplateId: TemplateId // Type is now TemplateId (string)
       model: LLMModel
       config: LLMModelConfig
       uploadedFiles?: File[]
@@ -167,10 +168,12 @@ export async function POST(req: Request) {
     try {
       if (projectStructure && userPrompt) {
         console.log(`[Chat API ${requestId}] Generating enhanced prompt with project context`)
-        systemPrompt = toEnhancedPrompt(template, userPrompt, projectStructure)
+        // Pass the full templatesDataFromFile to toEnhancedPrompt
+        systemPrompt = toEnhancedPrompt(templatesDataFromFile, userPrompt, projectStructure)
       } else {
         console.log(`[Chat API ${requestId}] Using standard prompt generation`)
-        systemPrompt = generateFallbackPrompt(template)
+        // Pass the full templatesDataFromFile to generateFallbackPrompt
+        systemPrompt = generateFallbackPrompt(templatesDataFromFile)
       }
       
       console.log(`[Chat API ${requestId}] System prompt generated`)
@@ -302,21 +305,21 @@ export async function POST(req: Request) {
   }
 }
 
-// Fallback prompt generation function
 function generateFallbackPrompt(template: TemplatesDataObject): string {
-  const validTemplates = Object.entries(template)
-    .filter(([_, t]) => typeof t === 'object' && t !== null && 'instructions' in t && 'lib' in t)
-    .map(([id, t], index) => {
-      // Now t is known to be an object with at least instructions and lib
-      const templateObject = t as { instructions: string; file?: string | null; lib: string[]; port?: number | null };
-      return `${index + 1}. ${id}: "${templateObject.instructions}". File: ${templateObject.file || 'none'}. Dependencies: ${templateObject.lib.join(', ')}. Port: ${templateObject.port || 'none'}.`;
-    });
-
   return `You are an expert software engineer with deep knowledge of modern web development, programming languages, frameworks, and best practices.
 
 Generate production-ready code based on the user's requirements using the following templates:
 
-${validTemplates.join('\n')}
+${Object.entries(template).map(([id, t], index) => {
+  const instructions = "instructions" in t
+    ? t.instructions
+    : (t.files as any).instructions;
+  const port = "port" in t
+    ? t.port
+    : (t.files as any).port;
+  const fileNames = Object.keys(t.files).join(', ');
+  return `${index + 1}. ${id}: "${instructions}". Files: ${fileNames || 'none'}. Dependencies: ${t.lib.join(', ')}. Port: ${port ?? 'none'}.`;
+}).join('\n')}
 
 IMPORTANT GUIDELINES:
 - Write clean, maintainable, and well-documented code

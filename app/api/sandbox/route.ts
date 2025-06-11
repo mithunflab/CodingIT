@@ -1,18 +1,35 @@
-import { FragmentSchema as OriginalFragmentSchema } from '@/lib/schema'
-import { ExecutionResultInterpreter, ExecutionResultWeb } from '@/lib/types'
-import { Sandbox } from '@e2b/code-interpreter'
-
-type CodeFile = { file_path: string; file_content: string };
-type FragmentSchema = OriginalFragmentSchema & {
-  code?: string | CodeFile[];
-  file_path?: string;
-};
+import type { FragmentSchema } from "@/lib/schema"
+import type { ExecutionResultInterpreter, ExecutionResultWeb } from "@/lib/types"
+import { Sandbox } from "@e2b/code-interpreter"
+import templatesData from "@/lib/templates.json"
 
 const sandboxTimeout = 10 * 60 * 1000
 
 export const maxDuration = 60
 
 export async function POST(req: Request) {
+  const requestId = `sandbox_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  console.log(`[Sandbox API ${requestId}] Processing request`)
+
+  let requestBody: any
+
+  try {
+    requestBody = await req.json()
+  } catch (error) {
+    console.error(`[Sandbox API ${requestId}] Failed to parse request body:`, error)
+    return new Response(
+      JSON.stringify({
+        error: "Invalid JSON in request body",
+        code: "INVALID_JSON",
+        requestId,
+      }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      },
+    )
+  }
+
   const {
     fragment,
     userID,
@@ -20,114 +37,333 @@ export async function POST(req: Request) {
     accessToken,
   }: {
     fragment: FragmentSchema
-    userID: string | undefined
-    teamID: string | undefined
-    accessToken: string | undefined
-  } = await req.json()
-  console.log('fragment', fragment)
-  console.log('userID', userID)
-  // console.log('apiKey', apiKey)
+    userID: string
+    teamID: string
+    accessToken: string
+  } = requestBody
 
-  const sbx = await Sandbox.create(fragment.template, {
-        metadata: {
-            template: fragment.template,
-            userID: userID ?? '',
-            teamID: teamID ?? '',
-        },
-        timeoutMs: sandboxTimeout,
-        ...(teamID && accessToken
-            ? {
-                headers: {
-                    'X-Supabase-Team': teamID,
-                    'X-Supabase-Token': accessToken,
-                },
-            }
-            : {}),
+  // Enhanced validation
+  const validationResult = validateSandboxRequest({ fragment, userID, teamID, accessToken })
+  if (!validationResult.valid) {
+    return new Response(
+      JSON.stringify({
+        error: validationResult.error,
+        code: validationResult.code,
+        requestId,
+      }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      },
+    )
+  }
+
+  console.log(`[Sandbox API ${requestId}] Processing request:`, {
+    fragmentTemplate: fragment.template,
+    userID: userID.substring(0, 8) + "...",
+    teamID: teamID.substring(0, 8) + "...",
+    hasAccessToken: !!accessToken,
+    filesCount: fragment.files?.length || 0,
+  })
+
+  const apiKey = process.env.E2B_API_KEY
+  if (!apiKey) {
+    console.error(`[Sandbox API ${requestId}] E2B API key not configured`)
+    return new Response(
+      JSON.stringify({
+        error: "Sandbox service not configured",
+        code: "SERVICE_NOT_CONFIGURED",
+        requestId,
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      },
+    )
+  }
+
+  let sbx: Sandbox | null = null
+
+  try {
+    // Create sandbox with enhanced error handling
+    console.log(`[Sandbox API ${requestId}] Creating sandbox with template:`, fragment.template)
+
+    const sandboxConfig = {
+      metadata: {
+        template: fragment.template,
+        userID: userID || "",
+        teamID: teamID || "",
+        requestId,
+      },
+      timeoutMs: sandboxTimeout,
+      ...(teamID && accessToken
+        ? {
+            headers: {
+              "X-Supabase-Team": teamID,
+              "X-Supabase-Token": accessToken,
+            },
+          }
+        : {}),
+    }
+
+    sbx = await Sandbox.create(fragment.template, sandboxConfig)
+    console.log(`[Sandbox API ${requestId}] Sandbox created successfully:`, sbx.sandboxId)
+
+    // Install dependencies with enhanced error handling
+    if (fragment.has_additional_dependencies && fragment.install_dependencies_command) {
+      try {
+        console.log(`[Sandbox API ${requestId}] Installing dependencies:`, fragment.additional_dependencies)
+        const installResult = await sbx.commands.run(fragment.install_dependencies_command, {
+          timeoutMs: 120000, // 2 minutes timeout for installation
+        })
+
+        if (installResult.exitCode !== 0) {
+          console.warn(`[Sandbox API ${requestId}] Dependency installation failed:`, {
+            exitCode: installResult.exitCode,
+            stderr: installResult.stderr,
+            stdout: installResult.stdout,
+          })
+          // Continue anyway, some dependencies might be optional
+        } else {
+          console.log(`[Sandbox API ${requestId}] Dependencies installed successfully`)
+        }
+      } catch (installError) {
+        console.warn(`[Sandbox API ${requestId}] Failed to install dependencies:`, installError)
+        // Continue without dependencies
+      }
+    }
+
+    // Enhanced file copying with better error handling
+    if (fragment.files && Array.isArray(fragment.files) && fragment.files.length > 0) {
+      console.log(`[Sandbox API ${requestId}] Copying ${fragment.files.length} file(s)`)
+      
+      const copyResults = await Promise.allSettled(
+        fragment.files.map(async (file, index) => {
+          if (!file.file_path || typeof file.file_content !== 'string') {
+            throw new Error(`File ${index}: Missing path or content is not a string`)
+          }
+
+          // Validate file path for security
+          if (!isValidFilePath(file.file_path)) {
+            throw new Error(`File ${index}: Invalid file path: ${file.file_path}`)
+          }
+
+          await sbx!.files.write(file.file_path, file.file_content)
+          console.log(`[Sandbox API ${requestId}] Copied file: ${file.file_path}`)
+          return file.file_path
+        })
+      )
+
+      // Check for failed file copies
+      const failedCopies = copyResults.filter(result => result.status === 'rejected')
+      if (failedCopies.length > 0) {
+        const errors = failedCopies.map(result => (result as PromiseRejectedResult).reason.message)
+        console.error(`[Sandbox API ${requestId}] Failed to copy files:`, errors)
+        throw new Error(`Failed to copy ${failedCopies.length} file(s): ${errors.join(', ')}`)
+      }
+    }
+
+    // Execute based on template type
+    if (fragment.template === "code-interpreter-v1") {
+      return await handleCodeInterpreter(sbx, fragment, requestId)
+    } else {
+      return await handleWebSandbox(sbx, fragment, requestId)
+    }
+
+  } catch (error: any) {
+    console.error(`[Sandbox API ${requestId}] Sandbox operation failed:`, {
+      error: error.message,
+      stack: error.stack,
+      template: fragment?.template,
     })
 
-  // Install dependencies if specified
-  if (
-    fragment.has_additional_dependencies &&
-    typeof fragment.install_dependencies_command === 'string' &&
-    fragment.install_dependencies_command.trim() !== ''
-  ) {
-    console.log(`Attempting to install dependencies with command: ${fragment.install_dependencies_command}`);
-    const { stdout, stderr, exitCode } = await sbx.commands.run(fragment.install_dependencies_command);
-    if (exitCode !== 0) {
-      console.error('Error installing dependencies. Exit code:', exitCode);
-      console.error('Installation stdout:', stdout);
-      console.error('Installation stderr:', stderr);
-      await sbx.kill();
-      return new Response(JSON.stringify({ error: 'Failed to install dependencies', details: `Exit code: ${exitCode}`, stdout, stderr }), { status: 500 });
-    }
-    console.log('Dependencies installed successfully. stdout:', stdout, 'stderr:', stderr);
-  }
-
-  // Write files to the sandbox
-  // Prioritize fragment.files as it matches the schema from AI generation
-  if (fragment.files && Array.isArray(fragment.files) && fragment.files.length > 0) {
-    for (const file of fragment.files) {
-      if (file.file_path && typeof file.file_content === 'string') {
-        await sbx.files.write(file.file_path, file.file_content);
-        console.log(`Copied file from fragment.files to ${file.file_path} in ${sbx.sandboxId}`);
-      } else {
-        console.warn(`Skipping file from fragment.files due to missing path or content: ${JSON.stringify(file)}`);
-      }
-    }
-  } else if (fragment.code && Array.isArray(fragment.code)) { // Fallback for fragment.code as array
-    for (const file of fragment.code as CodeFile[]) {
-      if (file.file_path && typeof file.file_content === 'string') {
-        await sbx.files.write(file.file_path, file.file_content);
-        console.log(`Copied file from fragment.code (array) to ${file.file_path} in ${sbx.sandboxId}`);
-      } else {
-        console.warn(`Skipping file from fragment.code (array) due to missing path or content: ${JSON.stringify(file)}`);
-      }
-    }
-  } else if (typeof fragment.code === 'string' && fragment.file_path) {
-    await sbx.files.write(fragment.file_path, fragment.code);
-    console.log(`Copied file from fragment.code (string) to ${fragment.file_path} in ${sbx.sandboxId}`);
-  } else {
-    console.warn(`No files or code provided in the fragment to write to sandbox ${sbx.sandboxId}`);
-  }
-
-  // Execute code or return a URL to the running sandbox
-  if (fragment.template === 'code-interpreter-v1') {
-    let codeToRun = '';
-    if (typeof fragment.code === 'string') {
-        codeToRun = fragment.code;
-    } else if (fragment.files && fragment.files.length > 0) {
-        const pyFile = fragment.files.find(f => f.file_path && f.file_path.endsWith('.py'));
-        if (pyFile && typeof pyFile.file_content === 'string') {
-            codeToRun = pyFile.file_content;
-        }
-    }
-
-    if (!codeToRun) {
-        console.error('Code interpreter template, but no executable Python code found in fragment.code string or fragment.files.');
-        await sbx.kill();
-        return new Response(JSON.stringify({ error: 'No executable Python code found for code-interpreter-v1' }), { status: 400 });
-    }
-
-    const { logs, error, results } = await sbx.runCode(codeToRun);
-    await sbx.kill(); // Close sandbox after execution for interpreter
     return new Response(
       JSON.stringify({
-        sbxId: sbx?.sandboxId,
-        template: fragment.template,
-        stdout: logs.stdout,
-        stderr: logs.stderr,
-        runtimeError: error,
-        cellResults: results,
-      } as ExecutionResultInterpreter),
-    );
-  } else {
-    // For web templates (e.g., 'nextjs'), return the URL
-    return new Response(
-      JSON.stringify({
-        sbxId: sbx?.sandboxId,
-        template: fragment.template,
-        url: `https://${sbx?.getHost(fragment.port || 80)}`,
-      } as ExecutionResultWeb),
-    );
+        error: getErrorMessage(error),
+        code: getErrorCode(error),
+        details: error.message,
+        template: fragment?.template,
+        requestId,
+      }),
+      {
+        status: getErrorStatus(error),
+        headers: { "Content-Type": "application/json" },
+      },
+    )
+  } finally {
+    // Note: E2B handles cleanup automatically via timeouts
+    if (sbx) {
+      console.log(`[Sandbox API ${requestId}] Sandbox ${sbx.sandboxId} operations completed`)
+    }
   }
+}
+
+// Enhanced validation function
+function validateSandboxRequest(request: any): { valid: boolean; error?: string; code?: string } {
+  if (!request.fragment) {
+    return { valid: false, error: "Fragment is required", code: "MISSING_FRAGMENT" }
+  }
+
+  if (!request.userID || typeof request.userID !== 'string') {
+    return { valid: false, error: "Valid user ID is required", code: "MISSING_USER_ID" }
+  }
+
+  if (!request.teamID || typeof request.teamID !== 'string') {
+    return { valid: false, error: "Valid team ID is required", code: "MISSING_TEAM_ID" }
+  }
+
+  const { fragment } = request
+
+  if (!fragment.template || typeof fragment.template !== 'string') {
+    return { valid: false, error: "Valid template is required", code: "INVALID_TEMPLATE" }
+  }
+
+  // Validate template ID against known templates
+  if (!Object.keys(templatesData).includes(fragment.template)) {
+    return { valid: false, error: `Template '${fragment.template}' is not a valid template.`, code: "UNKNOWN_TEMPLATE" }
+  }
+
+  // Validate files if present
+  if (fragment.files && Array.isArray(fragment.files)) {
+    for (let i = 0; i < fragment.files.length; i++) {
+      const file = fragment.files[i]
+      if (!file.file_path || typeof file.file_path !== 'string') {
+        return { valid: false, error: `File ${i}: Missing or invalid file path`, code: "INVALID_FILE_PATH" }
+      }
+      if (typeof file.file_content !== 'string') {
+        return { valid: false, error: `File ${i}: File content must be a string`, code: "INVALID_FILE_CONTENT" }
+      }
+    }
+  }
+
+  return { valid: true }
+}
+
+// Security: Validate file paths
+function isValidFilePath(filePath: string): boolean {
+  // Prevent directory traversal attacks
+  if (filePath.includes('..') || filePath.includes('~') || filePath.startsWith('/')) {
+    return false
+  }
+
+  // Only allow reasonable file extensions
+  const allowedExtensions = [
+    '.js', '.ts', '.jsx', '.tsx', '.html', '.css', '.json', '.md', '.txt',
+    '.py', '.java', '.php', '.rb', '.go', '.rs', '.sql', '.yml', '.yaml'
+  ]
+  
+  const hasValidExtension = allowedExtensions.some(ext => filePath.endsWith(ext))
+  if (!hasValidExtension) {
+    return false
+  }
+
+  // Reasonable path length
+  if (filePath.length > 200) {
+    return false
+  }
+
+  return true
+}
+
+// Handle code interpreter execution
+async function handleCodeInterpreter(
+  sbx: Sandbox, 
+  fragment: FragmentSchema, 
+  requestId: string
+): Promise<Response> {
+  console.log(`[Sandbox API ${requestId}] Running code in interpreter`)
+
+  try {
+    let codeToRun = ""
+    
+    if (fragment.file_path && fragment.files && fragment.files.length > 0) {
+      const mainFile = fragment.files.find(f => f.file_path === fragment.file_path)
+      if (mainFile && typeof mainFile.file_content === 'string') {
+        codeToRun = mainFile.file_content
+      } else {
+        console.warn(`[Sandbox API ${requestId}] Main script not found: ${fragment.file_path}`)
+      }
+    } else if (fragment.files && fragment.files.length === 1 && typeof fragment.files[0].file_content === 'string') {
+      codeToRun = fragment.files[0].file_content
+      console.log(`[Sandbox API ${requestId}] Using single file content`)
+    }
+
+    const { logs, error, results } = await sbx.runCode(codeToRun)
+
+    const response = {
+      sbxId: sbx.sandboxId,
+      template: fragment.template,
+      stdout: logs.stdout,
+      stderr: logs.stderr,
+      runtimeError: error,
+      cellResults: results,
+    } as ExecutionResultInterpreter
+
+    console.log(`[Sandbox API ${requestId}] Code execution completed successfully`)
+    return new Response(JSON.stringify(response), {
+      headers: { "Content-Type": "application/json" },
+    })
+  } catch (execError) {
+    console.error(`[Sandbox API ${requestId}] Code execution failed:`, execError)
+    throw new Error(`Code execution failed: ${execError instanceof Error ? execError.message : String(execError)}`)
+  }
+}
+
+// Handle web-based sandbox
+async function handleWebSandbox(
+  sbx: Sandbox, 
+  fragment: FragmentSchema, 
+  requestId: string
+): Promise<Response> {
+  const port = fragment.port || 80
+  const host = sbx.getHost(port)
+  const url = `https://${host}`
+
+  console.log(`[Sandbox API ${requestId}] Web sandbox created:`, url)
+
+  const response = {
+    sbxId: sbx.sandboxId,
+    template: fragment.template,
+    url: url,
+  } as ExecutionResultWeb
+
+  return new Response(JSON.stringify(response), {
+    headers: { "Content-Type": "application/json" },
+  })
+}
+
+// Enhanced error handling
+function getErrorCode(error: any): string {
+  const message = error.message || ""
+  
+  if (message.includes("timeout")) return "SANDBOX_TIMEOUT"
+  if (message.includes("quota") || message.includes("limit")) return "SANDBOX_QUOTA_EXCEEDED"
+  if (message.includes("authentication") || message.includes("unauthorized")) return "SANDBOX_AUTH_ERROR"
+  if (message.includes("template")) return "INVALID_TEMPLATE"
+  if (message.includes("file")) return "FILE_ERROR"
+  
+  return "SANDBOX_ERROR"
+}
+
+function getErrorMessage(error: any): string {
+  const message = error.message || ""
+  
+  if (message.includes("timeout")) return "Sandbox creation timed out. Please try again."
+  if (message.includes("quota") || message.includes("limit")) return "Sandbox quota exceeded. Please try again later."
+  if (message.includes("authentication") || message.includes("unauthorized")) return "Sandbox authentication failed."
+  if (message.includes("template")) return "Invalid sandbox template specified."
+  if (message.includes("file")) return "Error processing uploaded files."
+  
+  return "Failed to create sandbox environment"
+}
+
+function getErrorStatus(error: any): number {
+  const message = error.message || ""
+  
+  if (message.includes("authentication") || message.includes("unauthorized")) return 401
+  if (message.includes("quota") || message.includes("limit")) return 429
+  if (message.includes("template")) return 400
+  if (message.includes("timeout")) return 408
+  
+  return 500
 }

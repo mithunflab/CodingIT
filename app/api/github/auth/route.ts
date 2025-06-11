@@ -3,7 +3,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
 export async function POST(request: NextRequest) {
-  const requestId = `github_auth_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const requestId = `github_auth_${crypto.randomUUID()}`
   
   try {
     const { code } = await request.json()
