@@ -17,6 +17,7 @@ interface GitHubFile {
   name: string
   path: string
   type: 'file' | 'dir'
+  sha: string // Added SHA for file updates/deletions
   size?: number
   download_url?: string
 }
@@ -168,5 +169,114 @@ export class GitHubIntegration {
 
     await processDirectory()
     return files
+  }
+
+  async createOrUpdateFile(
+    owner: string,
+    repo: string,
+    path: string,
+    content: string,
+    message: string,
+    sha?: string, // SHA is needed for updating an existing file
+    branch?: string
+  ): Promise<{ path: string; sha: string } | null> {
+    try {
+      const body: {
+        message: string
+        content: string
+        sha?: string
+        branch?: string
+      } = {
+        message,
+        content: Buffer.from(content).toString('base64'), // Content must be base64 encoded
+      }
+
+      if (sha) {
+        body.sha = sha
+      }
+      if (branch) {
+        body.branch = branch
+      }
+
+      const response = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `bearer ${this.accessToken}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('GitHub API error (createOrUpdateFile):', response.status, errorData)
+        throw new Error(
+          `GitHub API error: ${response.status} - ${errorData.message || 'Failed to create/update file'}`
+        )
+      }
+
+      const result = await response.json()
+      return {
+        path: result.content.path,
+        sha: result.content.sha,
+      }
+    } catch (error) {
+      console.error('Failed to create or update GitHub file:', error)
+      return null
+    }
+  }
+
+  async deleteFile(
+    owner: string,
+    repo: string,
+    path: string,
+    message: string,
+    sha: string, // SHA is required for deleting a file
+    branch?: string
+  ): Promise<boolean> {
+    try {
+      const body: {
+        message: string
+        sha: string
+        branch?: string
+      } = {
+        message,
+        sha,
+      }
+      if (branch) {
+        body.branch = branch
+      }
+
+      const response = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `bearer ${this.accessToken}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('GitHub API error (deleteFile):', response.status, errorData)
+        throw new Error(
+          `GitHub API error: ${response.status} - ${errorData.message || 'Failed to delete file'}`
+        )
+      }
+      // Successful deletion returns 200 OK with commit details or 204 No Content if the file didn't exist.
+      // For simplicity, we'll consider it a success if response.ok is true.
+      return true
+    } catch (error) {
+      console.error('Failed to delete GitHub file:', error)
+      return false
+    }
   }
 }
