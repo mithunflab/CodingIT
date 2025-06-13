@@ -1,7 +1,7 @@
 "use client"
 
 import { supabase } from "./supabase"
-import type { ViewType } from "@/components/auth"
+import type { ViewType } from "@/components/auth/types"
 import type { Session } from "@supabase/supabase-js"
 import { usePostHog } from "posthog-js/react"
 import { useState, useEffect, useCallback } from "react"

@@ -13,6 +13,7 @@
 # update files
 .clinerules
 .memory-bank
+.learnings
 
 # debug
 npm-debug.log*
