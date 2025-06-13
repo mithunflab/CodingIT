@@ -18,9 +18,13 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  ExternalLink
+  ExternalLink,
+  ChevronDown,
+  Settings2
 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -89,6 +93,14 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
   const [error, setError] = useState<string | null>(null)
   const [connectionChecked, setConnectionChecked] = useState(false)
 
+  // Advanced settings state
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [advMaxFiles, setAdvMaxFiles] = useState<string>("50")
+  const [advAllowedExtensions, setAdvAllowedExtensions] = useState<string>(".js,.ts,.jsx,.tsx,.py,.md,.json,.html,.css") // Comma-separated
+  const [advMaxDepth, setAdvMaxDepth] = useState<string>("5")
+  const [advIncludeDotFolders, setAdvIncludeDotFolders] = useState<boolean>(false)
+  const [advMaxFileSizeMB, setAdvMaxFileSizeMB] = useState<string>("1")
+
   const filteredRepositories = repositories.filter(repo =>
     repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     repo.description?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -115,7 +127,6 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
   }, [connectionChecked])
 
   const connectGitHub = useCallback(() => {
-    // Check if GitHub Client ID is configured
     if (!process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID) {
       toast({
         title: "Configuration Error",
@@ -129,13 +140,10 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
     const redirectUri = `${window.location.origin}/api/github/callback`
     const scope = 'repo user:email'
     
-    // Generate and store state parameter for security
     const state = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('')
     sessionStorage.setItem('github_oauth_state', state)
     
     const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&state=${state}`
-    
-    console.log('Opening GitHub OAuth with URL:', authUrl)
     
     const authWindow = window.open(authUrl, 'github-auth', 'width=600,height=700,scrollbars=yes,resizable=yes')
     
@@ -176,7 +184,7 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
 
             if (response.ok) {
               setIsConnected(true)
-              setConnectionChecked(false) // Force recheck
+              setConnectionChecked(false) 
               toast({
                 title: "GitHub Connected",
                 description: "Successfully connected to GitHub!",
@@ -212,7 +220,6 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
     
     window.addEventListener('message', handleMessage)
     
-    // Handle window close
     const checkClosed = setInterval(() => {
       if (authWindow?.closed) {
         clearInterval(checkClosed)
@@ -230,16 +237,30 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
     try {
       const [owner, repo] = selectedRepo.full_name.split('/')
       
+      const parsedMaxFiles = parseInt(advMaxFiles, 10)
+      const parsedMaxDepth = parseInt(advMaxDepth, 10)
+      const parsedMaxFileSizeMB = parseInt(advMaxFileSizeMB, 10)
+
+      const importPayload: any = {
+        owner,
+        repo,
+      }
+
+      if (!isNaN(parsedMaxFiles) && parsedMaxFiles > 0) importPayload.maxFiles = parsedMaxFiles
+      if (!isNaN(parsedMaxDepth) && parsedMaxDepth > 0) importPayload.maxDepth = parsedMaxDepth
+      if (!isNaN(parsedMaxFileSizeMB) && parsedMaxFileSizeMB > 0) importPayload.maxFileSizeMB = parsedMaxFileSizeMB
+      
+      const extensions = advAllowedExtensions.split(',').map(ext => ext.trim()).filter(ext => ext.length > 0 && ext.startsWith('.'))
+      if (extensions.length > 0) importPayload.allowedExtensions = extensions
+      
+      importPayload.includeDotFolders = advIncludeDotFolders
+
       const response = await fetch('/api/github/import', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          owner,
-          repo,
-          maxFiles: 50
-        }),
+        body: JSON.stringify(importPayload),
       })
       
       const data = await response.json()
@@ -248,7 +269,6 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
         throw new Error(data.error || 'Failed to import repository')
       }
       
-      // Create File objects from the imported data
       const files = await Promise.all(
         data.analysis.structure.files.map(async (file: any) => {
           const blob = new Blob([file.content || ''], { type: 'text/plain' })
@@ -276,7 +296,7 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
     } finally {
       setIsImporting(false)
     }
-  }, [selectedRepo, onImport, toast])
+  }, [selectedRepo, onImport, toast, advMaxFiles, advAllowedExtensions, advMaxDepth, advIncludeDotFolders, advMaxFileSizeMB])
 
   useEffect(() => {
     if (open && !connectionChecked) {
@@ -360,7 +380,6 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
           </div>
         ) : isConnected ? (
           <div className="space-y-4">
-            {/* User Info */}
             {githubUser && (
               <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
                 <Avatar className="h-8 w-8">
@@ -378,7 +397,6 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
               </div>
             )}
 
-            {/* Search */}
             <div className="space-y-2">
               <Label htmlFor="repo-search" className="text-sm">Search repositories</Label>
               <div className="relative">
@@ -393,7 +411,6 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
               </div>
             </div>
 
-            {/* Repository List */}
             <ScrollArea className="h-60 border rounded-md">
               <div className="p-3 space-y-2">
                 {isLoadingRepos ? (
@@ -453,7 +470,6 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
               </div>
             </ScrollArea>
 
-            {/* Selected Repository Info */}
             {selectedRepo && (
               <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
                 <div className="flex items-center gap-2 text-sm">
@@ -479,8 +495,50 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="flex justify-end gap-2 pt-2">
+            <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced} className="pt-2">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-start gap-2 px-2 text-sm text-muted-foreground hover:text-foreground">
+                  <Settings2 className="w-4 h-4" />
+                  Advanced Settings
+                  <ChevronDown className={cn("w-4 h-4 ml-auto transition-transform", showAdvanced && "rotate-180")} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3 px-1 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="advMaxFiles" className="text-xs">Max Files</Label>
+                    <Input id="advMaxFiles" type="number" value={advMaxFiles} onChange={(e) => setAdvMaxFiles(e.target.value)} placeholder="e.g., 100" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="advMaxDepth" className="text-xs">Max Depth</Label>
+                    <Input id="advMaxDepth" type="number" value={advMaxDepth} onChange={(e) => setAdvMaxDepth(e.target.value)} placeholder="e.g., 10" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="advAllowedExtensions" className="text-xs">Allowed Extensions (comma-separated, e.g. .js,.ts)</Label>
+                  <Input 
+                    id="advAllowedExtensions" 
+                    value={advAllowedExtensions} 
+                    onChange={(e) => setAdvAllowedExtensions(e.target.value)} 
+                    placeholder=".js,.ts,.py,.md" 
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="advMaxFileSizeMB" className="text-xs">Max File Size (MB)</Label>
+                    <Input id="advMaxFileSizeMB" type="number" value={advMaxFileSizeMB} onChange={(e) => setAdvMaxFileSizeMB(e.target.value)} placeholder="e.g., 5" />
+                  </div>
+                  <div className="flex items-center space-x-2 pt-5">
+                    <Checkbox id="advIncludeDotFolders" checked={advIncludeDotFolders} onCheckedChange={(checked) => setAdvIncludeDotFolders(checked as boolean)} />
+                    <Label htmlFor="advIncludeDotFolders" className="text-xs font-normal">
+                      Include dot-folders (e.g. .github)
+                    </Label>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" onClick={() => setOpen(false)} disabled={isImporting}>
                 Cancel
               </Button>

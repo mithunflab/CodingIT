@@ -1,8 +1,6 @@
 "use client"
 
 import React from "react"
-
-import type { ViewType } from "@/components/auth"
 import { AuthDialog } from "@/components/auth-dialog"
 import { Chat } from "@/components/chat"
 import { EnhancedChatInput } from "@/components/enhanced-chat-input"
@@ -13,7 +11,7 @@ import { Preview } from "@/components/preview"
 import CommandPalette from "@/components/ui/command-palette"
 import { ProjectDialog } from "@/components/ui/project-dialog"
 import { useProjectDialog } from "@/hooks/use-project-dialog"
-import { useAuth } from "@/lib/auth"
+import { useAuth } from "@/contexts/AuthContext" // Updated to use AuthContext
 import { type Message, toAISDKMessages, toMessageImage } from "@/lib/messages"
 import type { LLMModelConfig } from "@/lib/models"
 import modelsList from "@/lib/models.json"
@@ -28,7 +26,9 @@ import { motion, AnimatePresence } from "framer-motion"
 import { usePostHog } from "posthog-js/react"
 import { useCallback, useEffect, useState } from "react"
 import { useLocalStorage } from "usehooks-ts"
-import { useProjectStore } from "@/lib/stores/projects"
+import { ViewType } from "@/components/auth/types"
+import { parseApiError, type ParsedApiError } from "@/lib/utils"
+import { SettingsDialog } from "@/components/chat-sidebar/settings-dialog" // Import SettingsDialog
 
 interface ProjectAnalysis {
   structure: {
@@ -56,49 +56,14 @@ interface ProjectAnalysis {
   recommendations: string[]
 }
 
-type ParsedApiError = { code: string; message: string; rawData: any }
-
-const parseApiError = (error: Error | any): ParsedApiError => {
-  let errorData: any = {}
-  let errorCode = "UNKNOWN_ERROR"
-  let errorMessage = error.message || "An unexpected error occurred"
-
-  try {
-    const errorText = error.message || ""
-    const jsonMatch = errorText.match(/\{[\s\S]*\}/)
-    if (jsonMatch && jsonMatch[0]) {
-      errorData = JSON.parse(jsonMatch[0])
-      errorCode = errorData.code || errorCode
-      errorMessage = errorData.error || errorData.message || errorMessage
-    } else if (errorText.includes("Internal Server Error")) {
-      errorCode = "INTERNAL_SERVER_ERROR"
-      errorMessage = "Internal server error occurred. Please try again."
-    } else if (errorText.toLowerCase().includes("fetch") || errorText.toLowerCase().includes("networkerror")) {
-      errorCode = "NETWORK_ERROR"
-      errorMessage = "Network error. Please check your connection and try again."
-    } else if (errorText.toLowerCase().includes("rate limit")) {
-      errorCode = "RATE_LIMIT_ERROR"
-      errorMessage = "Rate limit exceeded. Please wait before trying again."
-    }
-  } catch (parseError) {
-    console.warn("Could not parse error details:", parseError)
-  }
-
-  return {
-    code: errorCode,
-    message: errorMessage,
-    rawData: errorData,
-  }
-}
-
 export default function Home() {
   const posthog = usePostHog()
 
   // Auth and session state
   const [isAuthDialogOpen, setAuthDialog] = useState(false)
   const [authView, setAuthView] = useState<ViewType>("sign_in")
-  const [authError, setAuthError] = useState<string | null>(null)
-  const { session, isLoading, userTeam } = useAuth(setAuthDialog, setAuthView)
+  // const [authError, setAuthError] = useState<string | null>(null); // Local authError state. Context provides global authError.
+  const { session, isLoading, userTeam, authError: globalAuthError, signOut } = useAuth(); // Using global useAuth. Renamed context's authError to avoid conflict if local one is kept.
 
   const {
     isOpen: isProjectDialogOpen,
@@ -120,7 +85,7 @@ export default function Home() {
     modelsList.models[0] as LLMModelConfig
   )
   const [currentTab, setCurrentTab] = useState<"code" | "preview" | "editor">("code")
-  const [currentPreview, setCurrentPreview] = useState<string | null>(null)
+  // const [currentPreview, setCurrentPreview] = useState<string | null>(null) // Removed currentPreview state
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const [isRateLimited, setIsRateLimited] = useState(false)
@@ -136,13 +101,29 @@ export default function Home() {
   if (selectedTemplate in templates) {
     currentTemplateConfig = templates[selectedTemplate as keyof typeof templates];
   } else if (selectedTemplate === 'codinit-engineer') {
-    // Provide a default for 'codinit-engineer' if not in templates.json
-    // This default ensures 'providerId' is not present, making the filter work.
-    currentTemplateConfig = { name: "CodinIT Engineer (Default)", lib: [], files: {}, instructions: "Default instructions for CodinIT Engineer", port: null };
+    // SPECIAL CASE: Provide a default for 'codinit-engineer' if it's not found in templates.json.
+    // This ensures 'providerId' is not present, allowing all models to be available for it.
+    // TODO: Verify if 'codinit-engineer' should be formally added to templates.json or if this special handling is intended.
+    console.warn(`Template ID '${selectedTemplate}' not found in templates.json. Using special fallback configuration.`);
+    currentTemplateConfig = { 
+      name: "CodinIT Engineer (Fallback)", 
+      lib: [], 
+      files: {}, 
+      instructions: "Default instructions for CodinIT Engineer (fallback). Please define this template in templates.json if it's a standard persona.", 
+      port: null 
+      // No providerId, so all models are available
+    };
   } else {
     // Fallback for any other unexpected template ID
-    console.warn(`Unknown template ID: ${selectedTemplate}. Using a default empty config.`);
-    currentTemplateConfig = {};
+    console.warn(`Unknown template ID: '${selectedTemplate}'. Using a very basic default config. Consider adding this template to templates.json.`);
+    currentTemplateConfig = {
+      name: `Unknown Template (${selectedTemplate})`,
+      lib: [],
+      files: {},
+      instructions: `Configuration for template '${selectedTemplate}' not found.`,
+      port: null
+      // No providerId, so all models are available
+    };
   }
 
   const availableModels = modelsList.models.filter((model) =>
@@ -178,6 +159,10 @@ export default function Home() {
   const [result, setResult] = useState<ExecutionResult | undefined>()
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false)
 
+  useEffect(() => {
+    console.log("Settings dialog state:", isSettingsDialogOpen)
+  }, [isSettingsDialogOpen, setIsSettingsDialogOpen])
+
   // Navigation and action handlers
   const handleSocialClick = useCallback((platform: string) => {
     const urls = {
@@ -195,7 +180,7 @@ export default function Home() {
     setResult(undefined)
     setErrorMessage("")
     setFiles([])
-    setCurrentPreview(null)
+    // setCurrentPreview(null) // Removed currentPreview state update
     setProjectContext({ files: [], analysis: null })
   }, [])
 
@@ -213,14 +198,16 @@ export default function Home() {
   }, [messages])
 
   const handleRetryAuth = useCallback(() => {
-    setAuthError(null)
-    setAuthDialog(true)
-  }, [])
+    // If a local authError state was used for UI specific to this page, it could be cleared here.
+    // For now, assuming globalAuthError from context is primary.
+    // setAuthError(null); 
+    setAuthDialog(true);
+  }, [setAuthDialog]);
 
   const handlePreviewClose = useCallback(() => {
     setFragment(null)
     setResult(undefined)
-    setCurrentPreview(null)
+    // setCurrentPreview(null) // Removed currentPreview state update
   }, [])
 
   const handleSaveInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -279,6 +266,9 @@ export default function Home() {
         console.error("[Fragment Execution] Error:", error)
         const parsedError = parseApiError(error)
         setErrorMessage(parsedError.message)
+        if (parsedError.code === "RATE_LIMIT_ERROR") {
+          setIsRateLimited(true)
+        }
         setResult(undefined)
         setCurrentTab("code")
       } finally {
@@ -532,24 +522,35 @@ export default function Home() {
           <div className="flex flex-col w-full max-w-4xl mx-auto px-4 min-h-0">
             {/* Navigation Bar */}
             <NavBar
-              session={session}
+              // session={session} // Provided by context via useAuth in NavBar
               showLogin={() => setAuthDialog(true)}
-              signOut={logout}
+              // signOut={logout} // Provided by context via useAuth in NavBar. This page's logout has a page reload.
               onSocialClick={handleSocialClick}
               onClear={handleClearChat}
               canClear={messages.length > 0}
               canUndo={messages.length > 1 && !isSubmitting}
               onUndo={handleUndo}
-              authError={authError}
-              onRetryAuth={handleRetryAuth}
+              // authError={authError} // Provided by context via useAuth in NavBar
+              onRetryAuth={handleRetryAuth} // This page's specific retry logic for its auth dialog
             />
 
             {/* Chat Messages Area - Flexible, scrollable */}
             <div className="flex-1 min-h-0 overflow-y-auto">
-              <Chat 
-                messages={messages} 
-                isLoading={isSubmitting} 
-                setCurrentPreview={(preview) => setCurrentPreview(preview?.fragment?.title ?? null)} 
+              <Chat
+                messages={messages}
+                isLoading={isSubmitting}
+                onFragmentSelect={(selectedFragment, selectedResult) => {
+                  // Ensure selectedFragment is treated as FragmentSchema or null
+                  // The DeepPartial from Chat component needs to be cast or handled appropriately if setFragment expects full FragmentSchema
+                  // For now, assuming setFragment can handle DeepPartial or it's cast internally
+                  setFragment(selectedFragment ? (selectedFragment as FragmentSchema) : null);
+                  setResult(selectedResult);
+                  if (selectedFragment?.files && selectedFragment.files.length > 0) {
+                    setCurrentTab("preview"); // Switch to preview if the fragment has files
+                  } else {
+                    setCurrentTab("code"); // Default to code tab otherwise
+                  }
+                }}
               />
             </div>
 
@@ -569,6 +570,7 @@ export default function Home() {
                   isMultiModal={currentModel?.multiModal || false}
                   files={files}
                   handleFileChange={handleFileChange}
+                  onRateLimit={() => setIsRateLimited(true)} // Pass the handler
                 >
                   {/* ChatPicker is already using hasMounted internally or via its props */}
                    <ChatPicker
@@ -585,8 +587,8 @@ export default function Home() {
                       hasMounted={hasMounted}
                     />
                   <ChatSettings
-                    apiKeyConfigurable={!process.env.NEXT_PUBLIC_NO_API_KEY_INPUT}
-                    baseURLConfigurable={!process.env.NEXT_PUBLIC_NO_BASE_URL_INPUT}
+                    apiKeyConfigurable={process.env.NEXT_PUBLIC_NO_API_KEY_INPUT !== 'true'}
+                    baseURLConfigurable={process.env.NEXT_PUBLIC_NO_BASE_URL_INPUT !== 'true'}
                     languageModel={languageModel}
                     onLanguageModelChange={handleLanguageModelChange}
                   />
@@ -659,33 +661,16 @@ export default function Home() {
           }, 100)
         }}
         onClearChat={handleClearChat}
-        onOpenSettings={() => {
-        }}
+        onOpenSettings={() => setIsSettingsDialogOpen(true)} // Updated to toggle dialog
       />
 
-      {/* Floating Action Button for New Project */}
-      <AnimatePresence>
-        {session && hasMounted && (
-          <motion.button
-            onClick={openCreateDialog}
-            className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            initial={{ opacity: 0, scale: 0, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0, y: 20 }}
-            transition={{
-              type: "spring",
-              damping: 25,
-              stiffness: 300,
-              duration: 0.3,
-            }}
-            title="Create New Project"
-          >
-            <FolderPlus className="h-6 w-6" />
-          </motion.button>
-        )}
-      </AnimatePresence>
+      {/* Settings Dialog from Sidebar */}
+      {hasMounted && ( // Ensure dialog doesn't mismatch on hydration
+        <SettingsDialog
+          open={isSettingsDialogOpen}
+          onOpenChange={setIsSettingsDialogOpen}
+        />
+      )}
 
       {/* Project Dialog */}
       <ProjectDialog

@@ -2,8 +2,8 @@
 
 import { shallow } from "zustand/shallow"
 import { useChatSidebarStore } from "@/lib/stores/chat-sidebar-stores"
-import type React from "react"
-import { useState } from "react"
+import React from "react" // Changed to value import
+import { useLocalStorage } from "usehooks-ts" // Import useLocalStorage
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -28,27 +28,34 @@ interface SettingsDialogProps {
 }
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-  const [autoSave, setAutoSave] = useState(true)
-  const [showTimestamps, setShowTimestamps] = useState(true)
-  const [compactView, setCompactView] = useState(false)
+  const [autoSave, setAutoSave] = useLocalStorage("chatSidebar_autoSave", true)
+  const [showTimestamps, setShowTimestamps] = useLocalStorage("chatSidebar_showTimestamps", true)
+  const [compactView, setCompactView] = useLocalStorage("chatSidebar_compactView", false)
 
-  const { chatSessions, projects, exportStoreData, importStoreData, clearStoreData } =
-    useChatSidebarStore(
-      (state) => ({
-        chatSessions: state.chatSessions,
-        projects: state.projects,
-        exportStoreData: state.exportData,
-        importStoreData: state.importData,
-        clearStoreData: state.clearAll,
-      })
-    )
+  // Select state individually. If chatSessions or projects can be large and cause re-renders
+  // due to new array references from the store, consider using shallow equality with useStore if applicable,
+  // or ensure the store itself provides stable references or memoized selectors.
+  // For now, direct selection is used. The `shallow` import is kept if needed for other store patterns.
+  const chatSessions = useChatSidebarStore((state) => state.chatSessions)
+  const projects = useChatSidebarStore((state) => state.projects)
+  const exportStoreData = useChatSidebarStore((state) => state.exportData)
+  const importStoreData = useChatSidebarStore((state) => state.importData)
+  const clearStoreData = useChatSidebarStore((state) => state.clearAll)
+  
+  // Defensive defaults and memoized calculations
+  // Ensure chatSessions and projects are arrays before trying to use array methods.
+  const safeChatSessions = React.useMemo(() => Array.isArray(chatSessions) ? chatSessions : [], [chatSessions])
+  const safeProjects = React.useMemo(() => Array.isArray(projects) ? projects : [], [projects])
 
-  // Defensive defaults in case chatSessions or projects are not yet populated
-  const safeChatSessions = chatSessions || []
-  const safeProjects = projects || []
-
-  const totalMessages = safeChatSessions.reduce((sum: number, session: any) => sum + (session.messages?.length || 0), 0)
-  const storageSize = JSON.stringify({ chatSessions: safeChatSessions, projects: safeProjects }).length
+  const totalMessages = React.useMemo(() => 
+    safeChatSessions.reduce((sum: number, session: any) => sum + (Array.isArray(session.messages) ? session.messages.length : 0), 0),
+    [safeChatSessions]
+  )
+  
+  const storageSize = React.useMemo(() =>
+    JSON.stringify({ chatSessions: safeChatSessions, projects: safeProjects }).length,
+    [safeChatSessions, safeProjects]
+  )
 
   const handleExport = () => {
     const data = exportStoreData ? exportStoreData() : ""

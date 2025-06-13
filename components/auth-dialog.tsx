@@ -1,4 +1,5 @@
-import Auth, { ViewType } from './auth'
+import Auth from './auth'
+import { type ViewType } from './auth/types' // Updated import path for ViewType
 import Logo from './logo'
 import { validateEmail } from '@/app/actions/validate-email'
 import {
@@ -27,7 +28,7 @@ export function AuthDialog({
         <VisuallyHidden>
           <DialogTitle>Sign in to CodinIT</DialogTitle>
           <DialogDescription>
-            Sign in or create an account to access Fragments
+            Sign in or create an account to access CodinIT
           </DialogDescription>
         </VisuallyHidden>
         <div className="flex justify-center items-center flex-col">

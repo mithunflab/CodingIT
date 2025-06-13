@@ -50,13 +50,12 @@ export function ChatSettings({
                 id="apiKey"
                 name="apiKey"
                 type="password"
-                placeholder="Auto"
-                required={true}
-                defaultValue={languageModel.apiKey}
+                placeholder={languageModel.apiKey ? "" : "Auto (uses default)"}
+                value={languageModel.apiKey || ""} // Controlled component
                 onChange={(e) =>
                   onLanguageModelChange({
                     apiKey:
-                      e.target.value.length > 0 ? e.target.value : undefined,
+                      e.target.value.trim().length > 0 ? e.target.value.trim() : undefined,
                   })
                 }
                 className="text-sm"
@@ -73,13 +72,12 @@ export function ChatSettings({
                 id="baseURL"
                 name="baseURL"
                 type="text"
-                placeholder="Auto"
-                required={true}
-                defaultValue={languageModel.baseURL}
+                placeholder={languageModel.baseURL ? "" : "Auto (uses default)"}
+                value={languageModel.baseURL || ""} // Controlled component
                 onChange={(e) =>
                   onLanguageModelChange({
                     baseURL:
-                      e.target.value.length > 0 ? e.target.value : undefined,
+                      e.target.value.trim().length > 0 ? e.target.value.trim() : undefined,
                   })
                 }
                 className="text-sm"

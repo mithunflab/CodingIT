@@ -156,12 +156,14 @@ export function useAuth(setAuthDialog: (value: boolean) => void, setAuthView: (v
 
           // Proceed with user metadata update and PostHog identification
           if (!initialSession.user.user_metadata?.is_fragments_user) {
+            // Add a small delay to allow session to fully settle after OAuth redirect
+            await new Promise(resolve => setTimeout(resolve, 500)); 
             try {
               await activeSupabase.auth.updateUser({
                 data: { is_fragments_user: true },
               });
             } catch (updateError) {
-              console.warn("[useAuth] Failed to update user metadata:", updateError);
+              console.warn("[useAuth] Failed to update user metadata (after delay):", updateError);
             }
           }
 
@@ -223,12 +225,14 @@ export function useAuth(setAuthDialog: (value: boolean) => void, setAuthView: (v
         setAuthDialog(false)
 
         if (!session?.user.user_metadata?.is_fragments_user) {
+          // Add a small delay to allow session to fully settle after OAuth redirect
+          await new Promise(resolve => setTimeout(resolve, 500));
           try { // @ts-ignore
             await activeSupabase.auth.updateUser({
               data: { is_fragments_user: true },
             })
           } catch (updateError) {
-            console.warn("[useAuth] Failed to update user metadata:", updateError)
+            console.warn("[useAuth] Failed to update user metadata (onAuthStateChange, after delay):", updateError)
           }
         }
 

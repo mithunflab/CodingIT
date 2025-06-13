@@ -11,6 +11,7 @@ import { type SetStateAction, useEffect, useMemo, useState, useCallback } from "
 import TextareaAutosize from "react-textarea-autosize"
 import { GitHubImportModal } from "./modals/github-import-modal"
 import "./rainbow-animations.css"
+import { parseApiError } from "@/lib/utils"; // Import the shared error parser
 
 interface ProjectAnalysis {
   structure: {
@@ -50,12 +51,13 @@ export function EnhancedChatInput({
   files,
   handleFileChange,
   children,
+  onRateLimit, // New prop to signal rate limit
 }: {
   retry: () => void
   isErrored: boolean
   errorMessage: string
   isLoading: boolean
-  isRateLimited: boolean
+  isRateLimited: boolean // This prop reflects global rate limit state
   stop: () => void
   input: string
   handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
@@ -64,6 +66,7 @@ export function EnhancedChatInput({
   files: File[]
   handleFileChange: (change: SetStateAction<File[]>) => void
   children: React.ReactNode
+  onRateLimit?: () => void // Optional callback
 }) {
   const [dragActive, setDragActive] = useState(false)
   const [isEnhancing, setIsEnhancing] = useState(false)
@@ -139,19 +142,22 @@ export function EnhancedChatInput({
       }
     } as React.FormEvent<HTMLFormElement>
     
+    // Use handleInputChange to update the input state in the parent component (app/page.tsx)
+    // Create a synthetic event that mimics a textarea change event
     if (input.trim() === '') {
-      const textarea = document.querySelector('textarea')
-      if (textarea) {
-        textarea.value = contextMessage
-        const event = new Event('input', { bubbles: true })
-        textarea.dispatchEvent(event)
-      }
+      const syntheticChangeEvent = {
+        target: { value: contextMessage },
+        currentTarget: { value: contextMessage }, // Ensure currentTarget is also set for consistency
+      } as React.ChangeEvent<HTMLTextAreaElement>;
+      handleInputChange(syntheticChangeEvent);
     }
     
+    // Consider if handleSubmit needs to wait for state update or if current logic is fine.
+    // For now, keeping the setTimeout to allow React to process the state update from handleInputChange.
     setTimeout(() => {
       handleSubmit(syntheticEvent, files, analysis)
     }, 100)
-  }, [handleFileChange, handleSubmit, input])
+  }, [handleFileChange, handleInputChange, handleSubmit, input])
 
   const handleEnhanceMessage = async () => {
     if (!input.trim() || isLoading || isEnhancing || isErrored) return;
@@ -167,14 +173,20 @@ export function EnhancedChatInput({
       });
 
       if (!response.ok) {
-        let errorMsg = "Failed to enhance message.";
+        // Try to get a structured error message from the response body
+        let parsedError;
         try {
           const errorData = await response.json();
-          errorMsg = errorData.error || errorData.message || `Server error: ${response.status}`;
+          // Create a synthetic error object for parseApiError
+          parsedError = parseApiError({ 
+            message: `Server error: ${response.status}`, // Fallback message
+            ...errorData // Spread potential error structure from response
+          });
         } catch (e) {
-          errorMsg = `Server error: ${response.status} ${response.statusText}`;
+          // If parsing response.json() fails, create a more generic error
+          parsedError = parseApiError(new Error(`Server error: ${response.status} ${response.statusText}`));
         }
-        throw new Error(errorMsg);
+        throw new Error(parsedError.message); // Throw with the parsed message
       }
 
       const data = await response.json();
@@ -184,20 +196,19 @@ export function EnhancedChatInput({
         throw new Error("Invalid response from enhancement service.");
       }
 
-      const textarea = document.getElementById('chat-textarea') as HTMLTextAreaElement;
-      if (textarea) {
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-          window.HTMLTextAreaElement.prototype,
-          'value'
-        )?.set;
-        nativeInputValueSetter?.call(textarea, enhancedMessage);
-        const event = new Event('input', { bubbles: true });
-        textarea.dispatchEvent(event);
-      } else {
-        console.warn("Chat textarea not found for enhancement. Cannot update input.");
-      }
+      // Use handleInputChange to update the input state in the parent component (app/page.tsx)
+      const syntheticChangeEvent = {
+        target: { value: enhancedMessage },
+        currentTarget: { value: enhancedMessage },
+      } as React.ChangeEvent<HTMLTextAreaElement>;
+      handleInputChange(syntheticChangeEvent);
+
     } catch (error: any) {
-      setEnhanceError(error.message || "An unexpected error occurred during enhancement.");
+      const parsedError = parseApiError(error); // Use the already imported parser
+      setEnhanceError(parsedError.message);
+      if (parsedError.code === "RATE_LIMIT_ERROR" && onRateLimit) {
+        onRateLimit(); // Call the callback if it's a rate limit error
+      }
     } finally {
       setIsEnhancing(false);
     }

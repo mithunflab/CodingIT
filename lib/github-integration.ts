@@ -123,52 +123,92 @@ export class GitHubIntegration {
     }
   }
 
-  async downloadRepository(owner: string, repo: string, maxFiles = 50): Promise<{ name: string; path: string; content: string }[]> {
-    const allowedExtensions = [
-      '.js', '.ts', '.jsx', '.tsx', '.vue', '.py', '.java', '.php', '.rb', '.go', '.rs',
-      '.html', '.css', '.scss', '.sass', '.less',
-      '.json', '.yaml', '.yml', '.toml', '.ini', '.env',
-      '.md', '.txt', '.gitignore',
-      '.sql', '.prisma', '.graphql'
-    ]
+  async downloadRepository(
+    owner: string,
+    repo: string,
+    options?: {
+      maxFiles?: number;
+      allowedExtensions?: string[];
+      maxDepth?: number;
+      includeDotFolders?: boolean;
+      maxFileSizeMB?: number;
+    }
+  ): Promise<{ name: string; path: string; content: string }[]> {
+    const effectiveOptions = {
+      maxFiles: options?.maxFiles ?? 50,
+      allowedExtensions: options?.allowedExtensions ?? [
+        '.js', '.ts', '.jsx', '.tsx', '.vue', '.py', '.java', '.php', '.rb', '.go', '.rs',
+        '.html', '.css', '.scss', '.sass', '.less',
+        '.json', '.yaml', '.yml', '.toml', '.ini', '.env',
+        '.md', '.txt', '.gitignore',
+        '.sql', '.prisma', '.graphql'
+      ],
+      maxDepth: options?.maxDepth ?? 5,
+      includeDotFolders: options?.includeDotFolders ?? false,
+      maxFileSizeMB: options?.maxFileSizeMB ?? 1,
+    };
 
-    const files: { name: string; path: string; content: string }[] = []
-    const processedPaths = new Set<string>()
+    console.log(`[GitHubIntegration] Downloading repository ${owner}/${repo} with options:`, effectiveOptions);
+
+    const files: { name: string; path: string; content: string }[] = [];
+    const processedPaths = new Set<string>();
 
     const processDirectory = async (path = '', depth = 0): Promise<void> => {
-      if (depth > 5 || files.length >= maxFiles) return
+      if (depth > effectiveOptions.maxDepth || files.length >= effectiveOptions.maxFiles) {
+        if (depth > effectiveOptions.maxDepth) console.log(`[GitHubIntegration] Max depth ${effectiveOptions.maxDepth} reached for path: ${path}`);
+        if (files.length >= effectiveOptions.maxFiles) console.log(`[GitHubIntegration] Max files ${effectiveOptions.maxFiles} reached.`);
+        return;
+      }
 
-      const contents = await this.getRepositoryContents(owner, repo, path)
+      const contents = await this.getRepositoryContents(owner, repo, path);
       
       for (const item of contents) {
-        if (files.length >= maxFiles) break
-        if (processedPaths.has(item.path)) continue
+        if (files.length >= effectiveOptions.maxFiles) break;
+        if (processedPaths.has(item.path)) continue;
 
-        processedPaths.add(item.path)
+        processedPaths.add(item.path);
 
         if (item.type === 'file' && item.download_url) {
-          const fileExtension = '.' + item.name.split('.').pop()?.toLowerCase()
-          const isPackageJson = item.name === 'package.json'
-          const isTsConfig = item.name.includes('tsconfig')
+          const fileExtension = '.' + item.name.split('.').pop()?.toLowerCase();
+          const isPackageJson = item.name === 'package.json';
+          const isTsConfig = item.name.includes('tsconfig');
           
-          if (allowedExtensions.includes(fileExtension) || isPackageJson || isTsConfig) {
-            const content = await this.downloadFile(item.download_url)
-            if (content && content.length < 1024 * 1024) { // 1MB max per file
-              files.push({
-                name: item.name,
-                path: item.path,
-                content
-              })
+          if (effectiveOptions.allowedExtensions.includes(fileExtension) || isPackageJson || isTsConfig) {
+            const content = await this.downloadFile(item.download_url);
+            if (content) {
+              if (content.length < effectiveOptions.maxFileSizeMB * 1024 * 1024) {
+                files.push({
+                  name: item.name,
+                  path: item.path,
+                  content
+                });
+                // console.log(`[GitHubIntegration] Added file: ${item.path}`);
+              } else {
+                console.log(`[GitHubIntegration] Skipped file (too large > ${effectiveOptions.maxFileSizeMB}MB): ${item.path}`);
+              }
+            } else {
+              console.log(`[GitHubIntegration] Skipped file (failed to download): ${item.path}`);
             }
+          } else {
+            // console.log(`[GitHubIntegration] Skipped file (extension not allowed): ${item.path}`);
           }
-        } else if (item.type === 'dir' && !item.name.startsWith('.') && item.name !== 'node_modules') {
-          await processDirectory(item.path, depth + 1)
+        } else if (item.type === 'dir') {
+          if (item.name === 'node_modules') {
+            console.log(`[GitHubIntegration] Skipped directory (node_modules): ${item.path}`);
+            continue;
+          }
+          if (item.name.startsWith('.') && !effectiveOptions.includeDotFolders) {
+            console.log(`[GitHubIntegration] Skipped directory (dot-folder, includeDotFolders=false): ${item.path}`);
+            continue;
+          }
+          await processDirectory(item.path, depth + 1);
         }
       }
-    }
+    };
 
-    await processDirectory()
-    return files
+    await processDirectory();
+    console.log(`[GitHubIntegration] Finished downloading. Total files fetched: ${files.length}`);
+    return files;
   }
 
   async createOrUpdateFile(

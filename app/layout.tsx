@@ -1,5 +1,6 @@
 import './globals.css'
 import { PostHogProvider, ThemeProvider } from './providers'
+import { AuthProvider } from '@/contexts/AuthContext' // Adjust path if needed
 import { Toaster } from '@/components/ui/toaster'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
@@ -57,7 +58,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {children}
+            <AuthProvider>
+              {children}
+            </AuthProvider>
           </ThemeProvider>
           <Toaster />
         </body>

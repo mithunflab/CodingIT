@@ -8,7 +8,15 @@ export async function POST(request: NextRequest) {
   const requestId = `github_import_${crypto.randomUUID()}`
   
   try {
-    const { owner, repo, maxFiles = 50 } = await request.json()
+    const { 
+      owner, 
+      repo, 
+      maxFiles,
+      allowedExtensions,
+      maxDepth,
+      includeDotFolders,
+      maxFileSizeMB
+    } = await request.json()
     
     if (!owner || !repo) {
       return NextResponse.json(
@@ -65,7 +73,19 @@ export async function POST(request: NextRequest) {
     console.log(`[GitHub Import API ${requestId}] Importing repository: ${owner}/${repo}`)
 
     const github = new GitHubIntegration(githubToken)
-    const files = await github.downloadRepository(owner, repo, maxFiles)
+    const importOptions = {
+      maxFiles,
+      allowedExtensions,
+      maxDepth,
+      includeDotFolders,
+      maxFileSizeMB
+    }
+    // Filter out undefined options so defaults in downloadRepository apply
+    const definedImportOptions = Object.fromEntries(
+      Object.entries(importOptions).filter(([_, v]) => v !== undefined)
+    );
+
+    const files = await github.downloadRepository(owner, repo, definedImportOptions)
     
     if (files.length === 0) {
       return NextResponse.json(

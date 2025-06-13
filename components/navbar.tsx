@@ -15,41 +15,44 @@ import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { DiscordLogoIcon, GitHubLogoIcon, TwitterLogoIcon } from "@radix-ui/react-icons"
-import type { Session } from "@supabase/supabase-js"
+// import type { Session } from "@supabase/supabase-js" // No longer directly needed
 import { ArrowRight, LogOut, Trash, Undo, AlertCircle, User, Settings, RefreshCw } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/contexts/AuthContext" // Adjust path if needed
 
 export function NavBar({
-  session,
+  // session, // Removed
   showLogin,
-  signOut,
+  // signOut, // Removed
   onClear,
   canClear,
   onSocialClick,
   onUndo,
   canUndo,
-  authError,
-  onRetryAuth,
+  // authError, // Removed, will come from useAuth
+  onRetryAuth, // Keep if retry logic is specific to NavBar's parent
 }: {
-  session: Session | null
+  // session: Session | null // Removed
   showLogin: () => void
-  signOut: () => void
+  // signOut: () => void // Removed
   onClear: () => void
   canClear: boolean
   onSocialClick: (target: "github" | "x" | "discord") => void
   onUndo: () => void
   canUndo: boolean
-  authError?: string | null
+  // authError?: string | null // Removed
   onRetryAuth?: () => void
 }) {
+  const { session, user, signOut, authError, isLoading } = useAuth(); // Get session and signOut from context
+
   // Get user display name and avatar
   const getUserDisplayName = () => {
-    if (!session?.user) return "User"
+    if (!user) return "User"
 
     return (
-      session.user.user_metadata?.full_name ||
-      session.user.user_metadata?.name ||
-      session.user.email?.split("@")[0] ||
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.email?.split("@")[0] ||
       "User"
     )
   }
@@ -58,15 +61,30 @@ export function NavBar({
     const name = getUserDisplayName()
     return name
       .split(" ")
- .map((word: string) => word[0])
+      .map((word: string) => word[0])
       .join("")
       .toUpperCase()
       .substring(0, 2)
   }
 
   const getAvatarUrl = () => {
-    return session?.user?.user_metadata?.avatar_url || `https://api.google.com/${session?.user?.email || "user"}`
+    return user?.user_metadata?.avatar_url // Fallback can be handled by Avatar component or a default image
   }
+  
+  // Optional: Add a loading state indicator if desired
+  // if (isLoading) {
+  //   return (
+  //     <nav className="w-full flex bg-background py-4 items-center">
+  //       <div className="flex flex-1 items-center">
+  //         {/* Simplified Logo area for loading state */}
+  //       </div>
+  //       <div className="flex items-center gap-1 md:gap-4">
+  //         <div className="h-8 w-8 bg-muted rounded-full animate-pulse"></div>
+  //         <div className="h-8 w-24 bg-muted rounded animate-pulse"></div>
+  //       </div>
+  //     </nav>
+  //   );
+  // }
 
   return (
     <nav className="w-full flex bg-background py-4">
@@ -86,7 +104,7 @@ export function NavBar({
         </Link>
       </div>
 
-      {/* Auth Error Alert */}
+      {/* Auth Error Alert - now uses authError from context */}
       {authError && (
         <div className="flex items-center mr-4">
           <Alert className="border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive">
@@ -145,11 +163,12 @@ export function NavBar({
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
                         <AvatarImage
-                          src={getAvatarUrl() || "/placeholder.svg"}
+                          src={getAvatarUrl() || ""} // Let AvatarFallback handle missing src
                           alt={getUserDisplayName()}
                           onError={(e) => {
                             // Fallback to initials if image fails to load
-                            e.currentTarget.style.display = "none"
+                            // This specific onError might not be needed if AvatarFallback handles it well
+                            // e.currentTarget.style.display = "none" 
                           }}
                         />
                         <AvatarFallback className="text-xs">{getUserInitials()}</AvatarFallback>
@@ -165,7 +184,7 @@ export function NavBar({
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">{getUserDisplayName()}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{session.user.email}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
                 </div>
               </DropdownMenuLabel>
 
@@ -208,7 +227,7 @@ export function NavBar({
 
               <DropdownMenuSeparator />
 
-              <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive focus:text-destructive">
+              <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive focus:text-destructive"> {/* signOut from useAuth() */}
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign out
               </DropdownMenuItem>

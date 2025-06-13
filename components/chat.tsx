@@ -9,14 +9,11 @@ import Image from 'next/image'
 export function Chat({
   messages,
   isLoading,
-  setCurrentPreview,
+  onFragmentSelect, // Renamed prop for clarity
 }: {
   messages: Message[]
   isLoading: boolean
-  setCurrentPreview: (preview: {
-    fragment: DeepPartial<FragmentSchema> | undefined
-    result: ExecutionResult | undefined
-  }) => void
+  onFragmentSelect: (fragment: DeepPartial<FragmentSchema> | undefined, result: ExecutionResult | undefined) => void // Updated prop signature
 }) {
   const messagesString = JSON.stringify(messages)
   useEffect(() => {
@@ -56,10 +53,7 @@ export function Chat({
           {message.object && (
             <div
               onClick={() =>
-                setCurrentPreview({
-                  fragment: message.object,
-                  result: message.result,
-                })
+                onFragmentSelect(message.object, message.result) // Call updated prop
               }
               className="py-2 pl-2 w-full md:w-max flex items-center border border-border rounded-xl select-none hover:bg-accent/80 hover:cursor-pointer"
             >
