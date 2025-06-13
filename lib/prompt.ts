@@ -594,7 +594,6 @@ export function generateProductionPrompt(
   return prompt;
 }
 
-// Generate context analysis from uploaded files
 function generateContextAnalysis(context: ProjectContext): string {
   if (!context.files || context.files.length === 0) {
     return 'No project files uploaded - working within template constraints only.';
@@ -627,7 +626,6 @@ function generateContextAnalysis(context: ProjectContext): string {
 </uploaded_project_analysis>`;
 }
 
-// Utility function for file size formatting
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B';
   const k = 1024;
@@ -636,7 +634,6 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
-// Analyze uploaded files to build project context
 function analyzeProjectContext(files: UploadedFile[]): ProjectContext {
   const dependencies = new Set<string>();
   const frameworks = new Set<string>();
@@ -646,7 +643,6 @@ function analyzeProjectContext(files: UploadedFile[]): ProjectContext {
   const existingUtilities = new Set<string>();
 
   files.forEach(file => {
-    // Extract dependencies from imports
     if (file.imports) {
       file.imports.forEach(imp => {
         if (imp.startsWith('@') || !imp.startsWith('.')) {
@@ -655,7 +651,6 @@ function analyzeProjectContext(files: UploadedFile[]): ProjectContext {
       });
     }
 
-    // Identify frameworks based on content analysis
     const content = file.content.toLowerCase();
     
     if (content.includes('import react') || content.includes('from "react"') || content.includes("from 'react'")) {
@@ -680,7 +675,6 @@ function analyzeProjectContext(files: UploadedFile[]): ProjectContext {
       frameworks.add('Supabase');
     }
 
-    // Extract React component names
     const componentMatches = file.content.match(/(?:export\s+(?:default\s+)?(?:function|const)\s+([A-Z][a-zA-Z0-9]*)|class\s+([A-Z][a-zA-Z0-9]*)\s+extends)/g);
     if (componentMatches) {
       componentMatches.forEach(match => {
@@ -691,7 +685,6 @@ function analyzeProjectContext(files: UploadedFile[]): ProjectContext {
       });
     }
 
-    // Extract type and interface definitions
     const typeMatches = file.content.match(/(?:type|interface)\s+([A-Z][a-zA-Z0-9]*)/g);
     if (typeMatches) {
       typeMatches.forEach(match => {
@@ -702,7 +695,6 @@ function analyzeProjectContext(files: UploadedFile[]): ProjectContext {
       });
     }
 
-    // Extract utility functions and constants
     const utilityMatches = file.content.match(/(?:export\s+(?:function|const)\s+([a-z][a-zA-Z0-9]*)|function\s+([a-z][a-zA-Z0-9]*)\s*\()/g);
     if (utilityMatches) {
       utilityMatches.forEach(match => {
@@ -713,7 +705,6 @@ function analyzeProjectContext(files: UploadedFile[]): ProjectContext {
       });
     }
 
-    // Identify coding patterns
     if (content.includes('usestate') || content.includes('useeffect') || content.includes('usecallback')) {
       patterns.add('React Hooks');
     }
@@ -746,7 +737,6 @@ function analyzeProjectContext(files: UploadedFile[]): ProjectContext {
   };
 }
 
-// Enhanced prompt function with file analysis
 export function toEnhancedPrompt(
   template: TemplatesDataObject,
   userPrompt: string,
@@ -761,7 +751,6 @@ export function toEnhancedPrompt(
   );
 }
 
-// Legacy compatibility function
 export function toPrompt(template: TemplatesDataObject): string {
   return generateProductionPrompt(template, "Generate a production-ready application fragment.");
 }

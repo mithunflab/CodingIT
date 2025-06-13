@@ -4,9 +4,8 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { revalidatePath } from "next/cache"
 
-// Matches the ProfileFormData in app/settings/profile/page.tsx and Supabase table
 export interface ProfileData {
-  id?: string // User ID from auth.users
+  id?: string
   first_name: string | null
   last_name: string | null
   company: string | null
@@ -19,8 +18,7 @@ export interface ProfileData {
   personalized_responses: boolean
   activity_status: boolean
   profile_visibility: "public" | "private" | "contacts"
-  avatar_url?: string | null // For profile picture
-// email will be fetched from auth.user if needed, not stored directly here for update
+  avatar_url?: string | null
 }
 
 export async function getProfile(): Promise<ProfileData | null> {
@@ -39,8 +37,6 @@ export async function getProfile(): Promise<ProfileData | null> {
             const cookieStore = await cookieStorePromise
             cookieStore.set(name, value, options)
           } catch (error) {
-            // If the set method is called from a Server Component, an error may occur.
-            // This can be ignored if you have middleware refreshing user sessions.
             console.warn(`Failed to set cookie '${name}' from Server Action/Component. This might be okay if middleware handles session refresh. Error: ${error}`);
           }
         },
@@ -49,8 +45,6 @@ export async function getProfile(): Promise<ProfileData | null> {
             const cookieStore = await cookieStorePromise
             cookieStore.delete(name)
           } catch (error) {
-            // If the delete method is called from a Server Component, an error may occur.
-            // This can be ignored if you have middleware refreshing user sessions.
             console.warn(`Failed to delete cookie '${name}' from Server Action/Component. This might be okay if middleware handles session refresh. Error: ${error}`);
           }
         },
@@ -77,7 +71,6 @@ export async function getProfile(): Promise<ProfileData | null> {
     if (error) {
       if (error.code === 'PGRST116') { // PGRST116: "Searched for a single row, but 0 rows were found"
         console.log("No profile found for user, returning defaults or null.")
-        // You might want to return a default profile structure or ensure one is created on user signup
         return {
           id: user.id,
           first_name: "",
@@ -145,9 +138,6 @@ export async function updateProfile(
       return { success: false, error: "User not authenticated" }
     }
 
-    // Ensure 'id' is not part of the update payload to Supabase,
-    // as it's used in the .eq() clause and is the primary key.
-    // 'updated_at' will be handled by the database trigger.
     const { id, ...updateData } = profileData
 
     const { error } = await supabase
@@ -160,8 +150,8 @@ export async function updateProfile(
       return { success: false, error }
     }
 
-    revalidatePath("/settings/profile") // Revalidate the profile page to show updated data
-    revalidatePath("/") // Revalidate other paths if profile info is displayed elsewhere
+    revalidatePath("/settings/profile")
+    revalidatePath("/")
     return { success: true }
   } catch (error) {
     console.error("Error in updateProfile:", error)

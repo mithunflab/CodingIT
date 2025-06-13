@@ -19,10 +19,9 @@ export async function getUserTeam(session: Session): Promise<UserTeam | undefine
     return undefined;
   }
   console.log("[getUserTeam] Returning static default team for user:", session.user.id);
-  return createDefaultTeam(session); // Will call the simplified createDefaultTeam
+  return createDefaultTeam(session);
 }
 
-// SIMPLIFIED: Returns a static default team object without database interaction.
 async function createDefaultTeam(session: Session): Promise<UserTeam> {
   console.log("[createDefaultTeam] Creating static default team object for user:", session.user.id);
   const teamName = session.user.user_metadata?.full_name
@@ -98,10 +97,8 @@ export function useAuth(setAuthDialog: (value: boolean) => void, setAuthView: (v
       return; // Exit useEffect if supabase is not available
     }
 
-    // From this point, activeSupabase is defined.
     const initializeAuth = async () => {
       try {
-        // The check for activeSupabase being undefined is now handled by the early return above.
         const { data: { session: initialSession }, error: initialError } = await activeSupabase.auth.getSession();
 
         if (initialError) {
@@ -136,10 +133,9 @@ export function useAuth(setAuthDialog: (value: boolean) => void, setAuthView: (v
             console.error(`[useAuth] Error during team setup (duration: ${teamSetupEndTime - teamSetupStartTime}ms, possibly timeout):`, error.message);
             if (error.message === 'Team setup timed out') {
               setAuthError("User team setup took too long. Using default settings. Please refresh if issues persist.");
-              // Ensure a fallback team is set if setupUserTeam hung and didn't set one.
-              // setupUserTeam is designed to set a fallback in its own catch, but this handles a complete hang.
+
               setUserTeam(currentTeam => {
-                if (currentTeam) return currentTeam; // Already set by a part of setupUserTeam or its internal fallback
+                if (currentTeam) return currentTeam;
                 console.warn("[useAuth] Timeout fallback: Setting a minimal team as setupUserTeam hung.");
                 return {
                   id: `timeout_fallback_${initialSession.user.id.replace(/-/g, "").substring(0, 16)}`,
@@ -149,14 +145,11 @@ export function useAuth(setAuthDialog: (value: boolean) => void, setAuthView: (v
                 };
               });
             } else {
-              // For other errors not caught by setupUserTeam's internal try/catch (should be rare)
               setAuthError("An unexpected error occurred during team setup.");
             }
           }
 
-          // Proceed with user metadata update and PostHog identification
           if (!initialSession.user.user_metadata?.is_fragments_user) {
-            // Add a small delay to allow session to fully settle after OAuth redirect
             await new Promise(resolve => setTimeout(resolve, 500)); 
             try {
               await activeSupabase.auth.updateUser({
@@ -185,7 +178,6 @@ export function useAuth(setAuthDialog: (value: boolean) => void, setAuthView: (v
 
     initializeAuth();
 
-    // Fallback timeout to ensure isLoading is eventually set to false
     const loadingFallbackTimeout = setTimeout(() => {
       setIsLoading(currentIsLoading => {
         if (currentIsLoading) {
@@ -194,7 +186,7 @@ export function useAuth(setAuthDialog: (value: boolean) => void, setAuthView: (v
         }
         return false;
       });
-    }, 20000); // Increased to 20 seconds
+    }, 20000);
 
     const {
       data: { subscription },
