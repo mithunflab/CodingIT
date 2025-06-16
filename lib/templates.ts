@@ -2,7 +2,6 @@ import templatesData from './templates.json';
 
 export type TemplatesDataObject = typeof templatesData;
 
-// Allow 'codinit-engineer' as a possible TemplateId even if not always in templates.json
 export type TemplateId = keyof TemplatesDataObject | 'codinit-engineer';
 
 export type BaseTemplateConfig = TemplatesDataObject[keyof TemplatesDataObject];

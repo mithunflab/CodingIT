@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { ChangeEvent, FormEvent, SetStateAction } from "react" // Added SetStateAction
 import { AuthDialog } from "@/components/auth-dialog"
 import { Chat } from "@/components/chat"
 import { EnhancedChatInput } from "@/components/enhanced-chat-input"
@@ -11,8 +11,8 @@ import { Preview } from "@/components/preview"
 import CommandPalette from "@/components/ui/command-palette"
 import { ProjectDialog } from "@/components/ui/project-dialog"
 import { useProjectDialog } from "@/hooks/use-project-dialog"
-import { useAuth } from "@/contexts/AuthContext" // Updated to use AuthContext
-import { type Message, toAISDKMessages, toMessageImage } from "@/lib/messages"
+import { useAuth } from "@/contexts/AuthContext"
+import { type Message, toAISDKMessages, toMessageImage } from "@/lib/messages" // Removed MessageContent
 import type { LLMModelConfig } from "@/lib/models"
 import modelsList from "@/lib/models.json"
 import { type FragmentSchema, fragmentSchema as schema } from "@/lib/schema"
@@ -27,8 +27,8 @@ import { usePostHog } from "posthog-js/react"
 import { useCallback, useEffect, useState } from "react"
 import { useLocalStorage } from "usehooks-ts"
 import { ViewType } from "@/components/auth/types"
-import { parseApiError, type ParsedApiError } from "@/lib/utils"
-import { SettingsDialog } from "@/components/chat-sidebar/settings-dialog" // Import SettingsDialog
+import { parseApiError } from "@/lib/utils"
+import { SettingsDialog } from "@/components/chat-sidebar/settings-dialog"
 
 interface ProjectAnalysis {
   structure: {
@@ -59,33 +59,33 @@ interface ProjectAnalysis {
 export default function Home() {
   const posthog = usePostHog()
 
-  // Auth and session state
   const [isAuthDialogOpen, setAuthDialog] = useState(false)
   const [authView, setAuthView] = useState<ViewType>("sign_in")
-  // const [authError, setAuthError] = useState<string | null>(null); // Local authError state. Context provides global authError.
-  const { session, isLoading, userTeam, authError: globalAuthError, signOut } = useAuth(); // Using global useAuth. Renamed context's authError to avoid conflict if local one is kept.
+  const { session, isLoading, userTeam, signOut } = useAuth()
 
   const {
     isOpen: isProjectDialogOpen,
     mode: projectDialogMode,
     editingProject,
     openCreateDialog,
-    openEditDialog,
     closeDialog: closeProjectDialog,
     handleSave: handleProjectSave,
   } = useProjectDialog()
 
-  // Chat and UI state
   const [messages, setMessages] = useState<Message[]>([])
   const [chatInput, setChatInput] = useState("")
   const [files, setFiles] = useState<File[]>([])
-  const [selectedTemplate, setSelectedTemplate] = useState<TemplateId>("nextjs-developer")
+  
+  const [selectedTemplate, setSelectedTemplate] = useLocalStorage<TemplateId>(
+    "selectedTemplate", 
+    "vue-developer"
+  )
+  
   const [languageModel, setLanguageModel] = useLocalStorage<LLMModelConfig>(
     "languageModel",
     modelsList.models[0] as LLMModelConfig
   )
   const [currentTab, setCurrentTab] = useState<"code" | "preview" | "editor">("code")
-  // const [currentPreview, setCurrentPreview] = useState<string | null>(null) // Removed currentPreview state
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const [isRateLimited, setIsRateLimited] = useState(false)
@@ -96,14 +96,26 @@ export default function Home() {
     analysis: ProjectAnalysis | null
   }>({ files: [], analysis: null })
 
-  // Safely get the current template configuration
+  // 🔧 FIXED: Add template change handler for better debugging
+  const handleTemplateChange = useCallback((newTemplate: TemplateId | 'auto') => {
+    console.log("[Template Change]", { from: selectedTemplate, to: newTemplate })
+    if (newTemplate !== 'auto') {
+      setSelectedTemplate(newTemplate as TemplateId)
+    }
+  }, [selectedTemplate, setSelectedTemplate])
+
+  useEffect(() => {
+    console.log("[Debug] Current template config:", {
+      selectedTemplate,
+      isDefaulting: selectedTemplate === "nextjs-developer",
+      persistenceWorking: !!selectedTemplate
+    })
+  }, [selectedTemplate])
+
   let currentTemplateConfig: (typeof templates)[keyof typeof templates] | Record<string, any>;
   if (selectedTemplate in templates) {
     currentTemplateConfig = templates[selectedTemplate as keyof typeof templates];
   } else if (selectedTemplate === 'codinit-engineer') {
-    // SPECIAL CASE: Provide a default for 'codinit-engineer' if it's not found in templates.json.
-    // This ensures 'providerId' is not present, allowing all models to be available for it.
-    // TODO: Verify if 'codinit-engineer' should be formally added to templates.json or if this special handling is intended.
     console.warn(`Template ID '${selectedTemplate}' not found in templates.json. Using special fallback configuration.`);
     currentTemplateConfig = { 
       name: "CodinIT Engineer (Fallback)", 
@@ -111,10 +123,8 @@ export default function Home() {
       files: {}, 
       instructions: "Default instructions for CodinIT Engineer (fallback). Please define this template in templates.json if it's a standard persona.", 
       port: null 
-      // No providerId, so all models are available
     };
   } else {
-    // Fallback for any other unexpected template ID
     console.warn(`Unknown template ID: '${selectedTemplate}'. Using a very basic default config. Consider adding this template to templates.json.`);
     currentTemplateConfig = {
       name: `Unknown Template (${selectedTemplate})`,
@@ -122,7 +132,6 @@ export default function Home() {
       files: {},
       instructions: `Configuration for template '${selectedTemplate}' not found.`,
       port: null
-      // No providerId, so all models are available
     };
   }
 
@@ -164,13 +173,13 @@ export default function Home() {
   }, [isSettingsDialogOpen, setIsSettingsDialogOpen])
 
   // Navigation and action handlers
-  const handleSocialClick = useCallback((platform: string) => {
+  const handleSocialClick = useCallback((platform: "github" | "discord" | "x") => { // Updated platform type
     const urls = {
-      twitter: "https://twitter.com/intent/tweet?text=Check%20out%20this%20amazing%20AI%20App%20Builder!",
-      github: "https://github.com/Gerome-Elassaad/CodinIT",
-      discord: "https://discord.gg/invite",
+      x: "https://twitter.com/intent/tweet?text=Check%20out%20this%20amazing%20AI%20App%20Builder!&url=https://codinit.dev", // Changed twitter to x
+      github: "https://github.com/codinit-dev/ai-app-builder",
+      discord: "https://discord.gg/codinit"
     }
-    window.open(urls[platform as keyof typeof urls], "_blank")
+    window.open(urls[platform], "_blank")
   }, [])
 
   const handleClearChat = useCallback(() => {
@@ -180,41 +189,44 @@ export default function Home() {
     setResult(undefined)
     setErrorMessage("")
     setFiles([])
-    // setCurrentPreview(null) // Removed currentPreview state update
     setProjectContext({ files: [], analysis: null })
+    setCurrentTab("code")
   }, [])
 
   const handleUndo = useCallback(() => {
-    if (messages.length > 1) {
-      const newMessages = messages.slice(0, -1)
+    if (messages.length > 0) {
+      const newMessages = messages.slice(0, -2) // Remove user and assistant message
       setMessages(newMessages)
-      
-      const lastMessage = newMessages[newMessages.length - 1]
-      if (!lastMessage || lastMessage.role !== "assistant") {
-        setFragment(null)
-        setResult(undefined)
+      const lastUserMessage = newMessages.findLast(m => m.role === 'user')
+      if (lastUserMessage && lastUserMessage.content) {
+        const textContent = lastUserMessage.content.find(c => c.type === 'text') as { type: "text"; text: string } | undefined; // Adjusted type assertion
+        if (textContent) {
+          setChatInput(textContent.text)
+        }
+      } else {
+        setChatInput("")
       }
+      setFragment(null)
+      setResult(undefined)
+      setErrorMessage("")
     }
   }, [messages])
 
-  const handleRetryAuth = useCallback(() => {
-    // If a local authError state was used for UI specific to this page, it could be cleared here.
-    // For now, assuming globalAuthError from context is primary.
-    // setAuthError(null); 
-    setAuthDialog(true);
-  }, [setAuthDialog]);
+  // const openSignUpDialog = useCallback(() => { // No longer directly used by NavBar
+  //   setAuthView("sign_up")
+  //   setAuthDialog(true)
+  // }, [setAuthDialog])
 
   const handlePreviewClose = useCallback(() => {
     setFragment(null)
     setResult(undefined)
-    // setCurrentPreview(null) // Removed currentPreview state update
   }, [])
 
-  const handleSaveInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleSaveInputChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => { // Changed React.ChangeEvent to ChangeEvent
     setChatInput(e.target.value)
   }, [])
 
-  const handleFileChange = useCallback((change: React.SetStateAction<File[]>) => {
+  const handleFileChange = useCallback((change: SetStateAction<File[]>) => { // Changed React.SetStateAction to SetStateAction
     setFiles(change)
   }, [])
 
@@ -224,7 +236,6 @@ export default function Home() {
 
   const retry = useCallback(() => {
     if (fragment) {
-      // Retry the last submission
       const form = document.querySelector("form") as HTMLFormElement
       if (form) {
         form.requestSubmit()
@@ -302,7 +313,6 @@ export default function Home() {
     ) {
       setFragment(object as FragmentSchema)
     } else {
-      // Optionally, handle the case where required fields are missing
       setFragment(null)
     }
 
@@ -351,11 +361,9 @@ export default function Home() {
     setHasMounted(true)
   }, [])
 
-
-
   // Main form submission handler
   const handleSubmitAuth = useCallback(async (
-    e: React.FormEvent<HTMLFormElement>, 
+    e: FormEvent<HTMLFormElement>, // Changed React.FormEvent to FormEvent
     projectFiles?: File[], 
     projectAnalysis?: ProjectAnalysis
   ) => {
@@ -397,7 +405,7 @@ export default function Home() {
 
     // Generate a unique request ID using a more robust method
     const requestId = `req_${Date.now()}_${crypto.randomUUID()}`
-    setCurrentRequestId(requestId)
+    // setCurrentRequestId(requestId) // Removed setCurrentRequestId
 
     const content: Message["content"] = [{ type: "text", text: chatInput }]
     const images = await toMessageImage(files)
@@ -422,7 +430,7 @@ export default function Home() {
       userID: session.user.id,
       teamID: userTeam.id,
       messages: toAISDKMessages(messagesForApi),
-      template: currentTemplateConfig, // Use the safely derived config
+      template: currentTemplateConfig,
       model: currentModel,
       config: languageModel,
       uploadedFiles: projectFiles,
@@ -468,39 +476,44 @@ export default function Home() {
           f.includes('package.json') || f.includes('.git')
         ) ? "detected" : "none",
       })
+
     } catch (error) {
-      console.error("[handleSubmitAuth] Submission error:", error)
+      console.error("[handleSubmitAuth] Submit error:", error)
       const parsedError = parseApiError(error)
-      
+      setErrorMessage(parsedError.message)
       if (parsedError.code === "RATE_LIMIT_ERROR") {
         setIsRateLimited(true)
       }
-      
-      setErrorMessage(parsedError.message)
     }
   }, [
     isLoading,
     session,
-    userTeam,
+    userTeam?.id,
     currentModel,
+    isSubmitting,
+    stop,
     chatInput,
     files,
-    selectedTemplate,
-    languageModel,
     messages,
+    currentTemplateConfig,
+    languageModel,
+    selectedTemplate,
     submit,
-    stop,
-    isSubmitting,
-    currentTemplateConfig, // Use the corrected variable name
-    posthog
+    posthog,
   ])
 
-  function logout(): void {
-    supabase.auth.signOut().then(() => {
-      window.location.reload()
-    }).catch((error) => {
-      console.error("Logout failed:", error)
-    })
+  const handleRetryAuth = useCallback(() => {
+    console.log("[handleRetryAuth] Retrying authentication")
+    setAuthView("sign_in")
+    setAuthDialog(true)
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
+      </div>
+    )
   }
 
   return (
@@ -530,8 +543,7 @@ export default function Home() {
               canClear={messages.length > 0}
               canUndo={messages.length > 1 && !isSubmitting}
               onUndo={handleUndo}
-              // authError={authError} // Provided by context via useAuth in NavBar
-              onRetryAuth={handleRetryAuth} // This page's specific retry logic for its auth dialog
+              onRetryAuth={handleRetryAuth}
             />
 
             {/* Chat Messages Area - Flexible, scrollable */}
@@ -540,9 +552,6 @@ export default function Home() {
                 messages={messages}
                 isLoading={isSubmitting}
                 onFragmentSelect={(selectedFragment, selectedResult) => {
-                  // Ensure selectedFragment is treated as FragmentSchema or null
-                  // The DeepPartial from Chat component needs to be cast or handled appropriately if setFragment expects full FragmentSchema
-                  // For now, assuming setFragment can handle DeepPartial or it's cast internally
                   setFragment(selectedFragment ? (selectedFragment as FragmentSchema) : null);
                   setResult(selectedResult);
                   if (selectedFragment?.files && selectedFragment.files.length > 0) {

@@ -1,11 +1,10 @@
 import type { Duration } from "@/lib/duration"
 import type { LLMModel, LLMModelConfig } from "@/lib/models"
-import { getModelClient } from "@/lib/models"
+import { getModelClient } from "@/lib/models" // Assuming getModelClient is a named export
 import { toEnhancedPrompt } from "@/lib/enhanced-prompt"
 import ratelimit from "@/lib/ratelimit"
 import { fragmentSchema as schema } from "@/lib/schema"
-import type { TemplatesDataObject, TemplateId } from "@/lib/templates" // Import TemplateId
-import templatesDataFromFile from "@/lib/templates" // Import the actual templates data
+import type { TemplatesDataObject } from "@/lib/templates"
 import { ProjectAnalyzer, type ProjectStructure } from "@/lib/project-analyzer"
 import { streamObject, type LanguageModel, type CoreMessage } from "ai"
 import { logError, generateRequestId, validateRequestData } from "@/lib/debug"
@@ -47,7 +46,7 @@ export async function POST(req: Request) {
       messages,
       userID,
       teamID,
-      selectedTemplateId, // Changed from 'template' to 'selectedTemplateId'
+      template,
       model,
       config,
       uploadedFiles,
@@ -56,7 +55,7 @@ export async function POST(req: Request) {
       messages: CoreMessage[]
       userID: string
       teamID: string
-      selectedTemplateId: TemplateId // Type is now TemplateId (string)
+      template: TemplatesDataObject
       model: LLMModel
       config: LLMModelConfig
       uploadedFiles?: File[]
@@ -127,14 +126,12 @@ export async function POST(req: Request) {
       }
     } catch (error) {
       logError("Rate limiting check failed", error, { requestId })
-      // Continue without rate limiting if it fails
     }
 
-    // Create model client with enhanced error handling
     let modelClient: LanguageModel
     try {
       console.log(`[Chat API ${requestId}] Creating model client for: ${model.providerId}/${model.id}`)
-      modelClient = getModelClient(model, config) as LanguageModel
+      modelClient = await getModelClient(model, config) as LanguageModel
       console.log(`[Chat API ${requestId}] Model client created successfully`)
     } catch (error: any) {
       logError("Model client creation failed", error, { requestId, provider: model.providerId, modelId: model.id })
@@ -168,12 +165,10 @@ export async function POST(req: Request) {
     try {
       if (projectStructure && userPrompt) {
         console.log(`[Chat API ${requestId}] Generating enhanced prompt with project context`)
-        // Pass the full templatesDataFromFile to toEnhancedPrompt
-        systemPrompt = toEnhancedPrompt(templatesDataFromFile, userPrompt, projectStructure)
+        systemPrompt = toEnhancedPrompt(template, userPrompt, projectStructure)
       } else {
         console.log(`[Chat API ${requestId}] Using standard prompt generation`)
-        // Pass the full templatesDataFromFile to generateFallbackPrompt
-        systemPrompt = generateFallbackPrompt(templatesDataFromFile)
+        systemPrompt = generateFallbackPrompt(template)
       }
       
       console.log(`[Chat API ${requestId}] System prompt generated`)
@@ -193,10 +188,8 @@ export async function POST(req: Request) {
       )
     }
 
-    // Prepare model parameters from config
     const { model: _modelFromConfig, apiKey: _apiKeyFromConfig, ...providerSpecificConfig } = config
 
-    // Clean up undefined values from provider-specific config
     const cleanProviderSpecificConfig = Object.fromEntries(
       Object.entries(providerSpecificConfig).filter(([_, value]) => value !== undefined),
     )
@@ -306,20 +299,18 @@ export async function POST(req: Request) {
 }
 
 function generateFallbackPrompt(template: TemplatesDataObject): string {
+  const validTemplates = Object.entries(template)
+    .filter(([_, t]) => typeof t === 'object' && t !== null && 'instructions' in t && 'lib' in t)
+    .map(([id, t], index) => {
+      const templateObject = t as { instructions: string; file?: string | null; lib: string[]; port?: number | null };
+      return `${index + 1}. ${id}: "${templateObject.instructions}". File: ${templateObject.file || 'none'}. Dependencies: ${templateObject.lib.join(', ')}. Port: ${templateObject.port || 'none'}.`;
+    });
+
   return `You are an expert software engineer with deep knowledge of modern web development, programming languages, frameworks, and best practices.
 
 Generate production-ready code based on the user's requirements using the following templates:
 
-${Object.entries(template).map(([id, t], index) => {
-  const instructions = "instructions" in t
-    ? t.instructions
-    : (t.files as any).instructions;
-  const port = "port" in t
-    ? t.port
-    : (t.files as any).port;
-  const fileNames = Object.keys(t.files).join(', ');
-  return `${index + 1}. ${id}: "${instructions}". Files: ${fileNames || 'none'}. Dependencies: ${t.lib.join(', ')}. Port: ${port ?? 'none'}.`;
-}).join('\n')}
+${validTemplates.join('\n')}
 
 IMPORTANT GUIDELINES:
 - Write clean, maintainable, and well-documented code

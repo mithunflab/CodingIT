@@ -65,25 +65,40 @@ DockIconButton.displayName = "DockIconButton"
 
 const Dock = React.forwardRef<HTMLDivElement, DockProps>(
   ({ items, className }, ref) => {
+    const constraintsRef = React.useRef<HTMLDivElement>(null);
+
+    // Default initial position if not overridden by className from parent
+    // This ensures the dock is visible and reasonably positioned if no specific classes are passed.
+    const defaultPositionClasses = "fixed bottom-24 left-1/2 -translate-x-1/2 z-50";
+
     return (
-      <div ref={ref} className={cn("w-full h-64 flex items-center justify-center p-2", className)}>
-        <div className="w-full max-w-4xl h-64 rounded-2xl flex items-center justify-center relative">
-          <motion.div
-            initial="initial"
-            animate="animate"
-            variants={floatingAnimation}
-            className={cn(
-              "flex items-center gap-1 p-2 rounded-2xl",
-              "backdrop-blur-lg border shadow-lg",
-              "bg-background/90 border-border",
-              "hover:shadow-xl transition-shadow duration-300"
-            )}
-          >
+      // This outer div defines the draggable area constraints.
+      // It's fixed to the viewport and allows pointer events through unless the dock itself is interacted with.
+      <div ref={constraintsRef} className="fixed inset-0 pointer-events-none">
+        <motion.div
+          ref={ref} // Forwarding ref to the draggable motion component
+          drag
+          dragConstraints={constraintsRef}
+          dragElastic={0.1}
+          dragMomentum={false}
+          initial="initial" // For floatingAnimation
+          animate="animate"   // For floatingAnimation
+          variants={floatingAnimation} // Apply the floating animation
+          className={cn(
+            "absolute cursor-grab p-2 rounded-2xl", // Absolute for dragging, cursor style
+            "backdrop-blur-lg border shadow-lg",
+            "bg-background/90 border-border",
+            "hover:shadow-xl transition-shadow duration-300",
+            "pointer-events-auto", // Enable pointer events for the dock itself
+            className ? className : defaultPositionClasses // Apply passed className or default for initial position
+          )}
+        >
+          <div className="flex items-center gap-1">
             {items.map((item) => (
               <DockIconButton key={item.label} {...item} />
             ))}
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       </div>
     )
   }

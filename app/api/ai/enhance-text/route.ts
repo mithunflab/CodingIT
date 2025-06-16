@@ -130,11 +130,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Create model client
     let modelClient: LanguageModel
     try {
       console.log(`[Enhance Text API ${requestId}] Creating model client: ${defaultModel.providerId}/${defaultModel.id}`)
-      modelClient = getModelClient(defaultModel, {}) as LanguageModel
+      modelClient = await getModelClient(defaultModel, {}) as LanguageModel
     } catch (error: any) {
       logError("Model client creation failed", error, { requestId, provider: defaultModel.providerId, modelId: defaultModel.id })
       return NextResponse.json(
@@ -148,7 +147,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Generate enhanced text using streamObject for compatibility
     try {
       console.log(`[Enhance Text API ${requestId}] Generating enhanced text`)
       
@@ -180,7 +178,6 @@ Make it more clear, engaging, and well-structured while keeping the same general
         temperature: 0.7,
       })
 
-      // Wait for the complete object
       const finalResult = await result.object
 
       console.log(`[Enhance Text API ${requestId}] Enhancement completed successfully`)

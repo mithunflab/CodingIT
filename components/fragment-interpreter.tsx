@@ -39,7 +39,6 @@ export function FragmentInterpreter({
 }) {
   const { cellResults, stdout, stderr, runtimeError } = result
 
-  // The AI-generated code experienced runtime error
   if (runtimeError) {
     const { name, value, traceback } = runtimeError
     return (

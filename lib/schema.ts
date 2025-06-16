@@ -1,3 +1,5 @@
+// File: lib/schema.ts
+
 import { z } from 'zod'
 import templatesData from './templates.json';
 
@@ -5,8 +7,25 @@ const templateIds = Object.keys(templatesData) as [keyof typeof templatesData, .
 
 export const fragmentSchema = z.object({
   commentary: z.string().describe('Describe what you are doing and the steps you are taking for generating the fragment in great detail.'),
-  template: z.enum(templateIds).describe('Name of the template used to generate the fragment. Must be one of the predefined valid template IDs.'),
+  
+  // Enhanced template selection with strict validation
+  template: z.enum(templateIds).describe(`
+    CRITICAL: Use the EXACT template specified by the user. Available templates:
+    - nextjs-developer: For React/Next.js applications
+    - vue-developer: For Vue.js/Nuxt applications  
+    - streamlit-developer: For Streamlit data applications
+    - gradio-developer: For Gradio ML demos
+    - code-interpreter-v1: For Python data analysis
+    - codinit-engineer: For advanced AI workflows
+    
+    DO NOT default to nextjs-developer unless explicitly requested.
+    RESPECT the user's template selection above all else.
+  `),
+  
   template_ready: z.boolean().describe('Detect if finished identifying the template.'),
+  
+  template_selection_reason: z.string().describe('Explain why this specific template was chosen based on user requirements.'),
+  
   title: z.string().describe('Short title of the fragment. Max 5 words.'),
   description: z.string().describe('Short description of the fragment. Max 2 sentences.'),
   additional_dependencies: z.array(z.string()).optional().describe('Additional dependencies required by the fragment that are not included in the template.'),
@@ -26,3 +45,13 @@ export const fragmentSchema = z.object({
 })
 
 export type FragmentSchema = z.infer<typeof fragmentSchema>
+
+export function validateTemplateSelection(userSelectedTemplate: string): { isValid: boolean; reason: string } {
+  if (!templateIds.includes(userSelectedTemplate as any)) {
+    return {
+      isValid: false,
+      reason: `Invalid template "${userSelectedTemplate}". Must be one of: ${templateIds.join(', ')}`
+    };
+  }
+  return { isValid: true, reason: 'Valid template selection' };
+}
