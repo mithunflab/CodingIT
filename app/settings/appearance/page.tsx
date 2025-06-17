@@ -1,162 +1,388 @@
-'use client'
+"use client";
 
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { useUserStore } from '@/lib/stores/user'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
-import { Monitor, Moon, Sun } from 'lucide-react'
+import * as React from "react";
+import { useState, useEffect } from "react";
+import { Monitor, Moon, Sun, Save, AlertCircle, CheckCircle, Palette, Volume2, VolumeX, Zap, ZapOff } from "lucide-react";
+import { getUserSettings, updateUserSettings, type UserSettings } from "@/app/actions/settings";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useTheme } from "next-themes";
 
-const appearanceSchema = z.object({
-  theme: z.enum(['light', 'dark', 'system']),
-  appearance_compact: z.boolean(),
-  appearance_animations: z.boolean(),
-  appearance_sound: z.boolean(),
-})
+const languages = [
+  { code: "en", name: "English" },
+  { code: "es", name: "Español" },
+  { code: "fr", name: "Français" },
+  { code: "de", name: "Deutsch" },
+  { code: "it", name: "Italiano" },
+  { code: "pt", name: "Português" },
+  { code: "ru", name: "Русский" },
+  { code: "ja", name: "日本語" },
+  { code: "ko", name: "한국어" },
+  { code: "zh", name: "中文" }
+];
 
-type AppearanceForm = z.infer<typeof appearanceSchema>
+const timezones = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago", 
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Toronto",
+  "America/Mexico_City",
+  "America/Sao_Paulo",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Europe/Rome",
+  "Europe/Madrid",
+  "Europe/Amsterdam",
+  "Asia/Tokyo",
+  "Asia/Shanghai",
+  "Asia/Seoul",
+  "Asia/Mumbai",
+  "Asia/Dubai",
+  "Australia/Sydney",
+  "Australia/Melbourne",
+  "Pacific/Auckland"
+];
 
 export default function AppearancePage() {
-  const { preferences, updatePreferences, isLoading } = useUserStore()
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
+  const { theme, setTheme } = useTheme();
 
-  const form = useForm<AppearanceForm>({
-    resolver: zodResolver(appearanceSchema),
-    defaultValues: {
-      theme: preferences.theme,
-      appearance_compact: preferences.appearance_compact,
-      appearance_animations: preferences.appearance_animations,
-      appearance_sound: preferences.appearance_sound,
-    },
-  })
+  // Load settings on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        setIsLoading(true);
+        const userSettings = await getUserSettings();
+        setSettings(userSettings);
+        setError(null);
+      } catch (err) {
+        setError("Failed to load appearance settings. Please try again.");
+        console.error("Error loading settings:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const onSubmit = async (data: AppearanceForm) => {
-    await updatePreferences(data)
+    loadSettings();
+  }, []);
+
+  // Auto-clear messages after 5 seconds
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+        setError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error]);
+
+  const handleSettingChange = (field: keyof UserSettings, value: string | boolean) => {
+    if (!settings) return;
+    
+    setSettings((prev: UserSettings | null) => prev ? { ...prev, [field]: value } : null);
+    setHasChanges(true);
+    setSuccess(null);
+    setError(null);
+
+    // Apply theme change immediately
+    if (field === "theme") {
+      setTheme(value as string);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!settings || !hasChanges) return;
+
+    try {
+      setIsSaving(true);
+      setError(null);
+      
+      const result = await updateUserSettings(settings);
+      
+      if (result.success) {
+        setSuccess("Appearance settings updated successfully!");
+        setHasChanges(false);
+      } else {
+        setError(result.error?.message || "Failed to update settings. Please try again.");
+      }
+    } catch (err) {
+      setError("An unexpected error occurred. Please try again.");
+      console.error("Error updating settings:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
-  const themeOptions = [
-    { id: 'light', label: 'Light', icon: Sun },
-    { id: 'dark', label: 'Dark', icon: Moon },
-    { id: 'system', label: 'System', icon: Monitor },
-  ]
+  if (!settings) {
+    return (
+      <Alert className="max-w-md mx-auto">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Unable to load appearance settings. Please refresh the page and try again.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Appearance
-        </h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Customize the look and feel of your application.
-        </p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Appearance</h2>
+          <p className="text-muted-foreground">
+            Customize the look and feel of your interface.
+          </p>
+        </div>
+        <Button 
+          onClick={handleSave}
+          disabled={!hasChanges || isSaving}
+          className="flex items-center gap-2"
+        >
+          {isSaving ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          ) : (
+            <Save className="h-4 w-4" />
+          )}
+          Save Changes
+        </Button>
       </div>
 
-      <Separator />
+      {/* Status Messages */}
+      {success && (
+        <Alert className="border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
+      )}
 
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Theme</CardTitle>
-            <CardDescription>
-              Choose your preferred theme for the application.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4">
-              {themeOptions.map((option) => {
-                const IconComponent = option.icon
-                const isSelected = form.watch('theme') === option.id
-                
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => form.setValue('theme', option.id as any)}
-                    className={`relative flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                      isSelected
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800'
-                    }`}
-                  >
-                    <IconComponent className="h-6 w-6" />
-                    <span className="text-sm font-medium">{option.label}</span>
-                    {isSelected && (
-                      <div className="absolute -top-2 -right-2 h-4 w-4 rounded-full bg-blue-500" />
-                    )}
-                  </button>
-                )
-              })}
+      {error && (
+        <Alert className="border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Theme Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Theme</CardTitle>
+          <CardDescription>
+            Choose how CodinIT.dev looks and feels.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RadioGroup
+            value={settings.theme}
+            onValueChange={(value) => handleSettingChange("theme", value)}
+            className="grid grid-cols-3 gap-4"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="light" id="light" />
+              <Label htmlFor="light" className="flex items-center gap-2 cursor-pointer">
+                <Sun className="h-4 w-4" />
+                Light
+              </Label>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Interface</CardTitle>
-            <CardDescription>
-              Adjust interface elements and behavior.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="compact">Compact Mode</Label>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Use a more compact layout with reduced spacing.
-                </p>
-              </div>
-              <Switch
-                id="compact"
-                checked={form.watch('appearance_compact')}
-                onCheckedChange={(checked) => 
-                  form.setValue('appearance_compact', checked)
-                }
-              />
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="dark" id="dark" />
+              <Label htmlFor="dark" className="flex items-center gap-2 cursor-pointer">
+                <Moon className="h-4 w-4" />
+                Dark
+              </Label>
             </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="system" id="system" />
+              <Label htmlFor="system" className="flex items-center gap-2 cursor-pointer">
+                <Monitor className="h-4 w-4" />
+                System
+              </Label>
+            </div>
+          </RadioGroup>
+        </CardContent>
+      </Card>
 
-            <div className="flex items-center justify-between">
+      {/* Language & Region */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Language & Region</CardTitle>
+          <CardDescription>
+            Set your preferred language and timezone.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="language">Language</Label>
+              <Select
+                value={settings.language}
+                onValueChange={(value) => handleSettingChange("language", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  {languages.map((lang) => (
+                    <SelectItem key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="timezone">Timezone</Label>
+              <Select
+                value={settings.timezone}
+                onValueChange={(value) => handleSettingChange("timezone", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timezones.map((tz) => (
+                    <SelectItem key={tz} value={tz}>
+                      {tz}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Interface Preferences */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Interface Preferences</CardTitle>
+          <CardDescription>
+            Customize how the interface behaves and appears.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="compactMode">Compact Mode</Label>
+              <p className="text-sm text-muted-foreground">
+                Reduce spacing and padding for a denser layout
+              </p>
+            </div>
+            <Switch
+              id="compactMode"
+              checked={settings.compact_mode}
+              onCheckedChange={(checked) => handleSettingChange("compact_mode", checked)}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5 flex items-center gap-2">
+              {settings.animations_enabled ? (
+                <Zap className="h-4 w-4 text-primary" />
+              ) : (
+                <ZapOff className="h-4 w-4 text-muted-foreground" />
+              )}
               <div>
                 <Label htmlFor="animations">Animations</Label>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Enable smooth animations and transitions.
+                <p className="text-sm text-muted-foreground">
+                  Enable smooth transitions and animations
                 </p>
               </div>
-              <Switch
-                id="animations"
-                checked={form.watch('appearance_animations')}
-                onCheckedChange={(checked) => 
-                  form.setValue('appearance_animations', checked)
-                }
-              />
             </div>
+            <Switch
+              id="animations"
+              checked={settings.animations_enabled}
+              onCheckedChange={(checked) => handleSettingChange("animations_enabled", checked)}
+            />
+          </div>
 
-            <div className="flex items-center justify-between">
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5 flex items-center gap-2">
+              {settings.sound_enabled ? (
+                <Volume2 className="h-4 w-4 text-primary" />
+              ) : (
+                <VolumeX className="h-4 w-4 text-muted-foreground" />
+              )}
               <div>
-                <Label htmlFor="sound">Sound Effects</Label>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Play sound effects for interface interactions.
+                <Label htmlFor="sounds">Sound Effects</Label>
+                <p className="text-sm text-muted-foreground">
+                  Play sounds for notifications and interactions
                 </p>
               </div>
-              <Switch
-                id="sound"
-                checked={form.watch('appearance_sound')}
-                onCheckedChange={(checked) => 
-                  form.setValue('appearance_sound', checked)
-                }
-              />
             </div>
-          </CardContent>
-        </Card>
+            <Switch
+              id="sounds"
+              checked={settings.sound_enabled}
+              onCheckedChange={(checked) => handleSettingChange("sound_enabled", checked)}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-        <div className="flex justify-end">
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </div>
-      </form>
+      {/* Preview Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Preview</CardTitle>
+          <CardDescription>
+            See how your interface will look with these settings.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className={`border rounded-lg p-4 space-y-3 ${settings.compact_mode ? 'p-2 space-y-1' : ''}`}>
+            <div className="flex items-center gap-2">
+              <Palette className="h-4 w-4 text-primary" />
+              <span className="font-medium">Sample Interface Element</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              This is how text and spacing will appear with your current settings.
+            </p>
+            <div className="flex gap-2">
+              <Button size={settings.compact_mode ? "sm" : "default"}>
+                Primary Button
+              </Button>
+              <Button variant="outline" size={settings.compact_mode ? "sm" : "default"}>
+                Secondary Button
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Accessibility Note */}
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Accessibility:</strong> These settings help customize the interface to your preferences. 
+          If you have specific accessibility needs, please contact our support team for additional assistance.
+        </AlertDescription>
+      </Alert>
     </div>
-  )
+  );
 }

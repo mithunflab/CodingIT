@@ -1,240 +1,386 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { useUserStore } from '@/lib/stores/user'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Camera, User, Mail, Calendar, Upload } from 'lucide-react'
+import * as React from "react";
+import { useState, useEffect } from "react";
+import { Camera, Save, AlertCircle, CheckCircle, User, Trash2 } from "lucide-react";
+import { getProfile, updateProfile, type ProfileData } from "@/app/actions/profile";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-const profileSchema = z.object({
-  full_name: z.string().min(1, 'Full name is required'),
-  username: z.string().min(3, 'Username must be at least 3 characters').optional(),
-  bio: z.string().max(500, 'Bio must be less than 500 characters').optional(),
-})
-
-type ProfileForm = z.infer<typeof profileSchema>
+const timezones = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago", 
+  "America/Denver",
+  "America/Los_Angeles",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Asia/Tokyo",
+  "Asia/Shanghai",
+  "Australia/Sydney"
+];
 
 export default function ProfilePage() {
-  const { user, updateUser, isLoading } = useUserStore()
-  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
 
-  const form = useForm<ProfileForm>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      full_name: user?.full_name || '',
-      username: user?.username || '',
-      bio: user?.bio || '',
-    },
-  })
+  // Load profile data on mount
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setIsLoading(true);
+        const profileData = await getProfile();
+        setProfile(profileData);
+        setError(null);
+      } catch (err) {
+        setError("Failed to load profile. Please try again.");
+        console.error("Error loading profile:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const onSubmit = async (data: ProfileForm) => {
-    await updateUser(data)
-  }
+    loadProfile();
+  }, []);
 
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      setAvatarFile(file)
+  // Auto-clear messages after 5 seconds
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+        setError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
     }
+  }, [success, error]);
+
+  const handleInputChange = (field: keyof ProfileData, value: string | boolean) => {
+    if (!profile) return;
+    
+    setProfile(prev => prev ? { ...prev, [field]: value } : null);
+    setHasChanges(true);
+    setSuccess(null);
+    setError(null);
+  };
+
+  const handleSave = async () => {
+    if (!profile || !hasChanges) return;
+
+    try {
+      setIsSaving(true);
+      setError(null);
+      
+      const result = await updateProfile(profile);
+      
+      if (result.success) {
+        setSuccess("Profile updated successfully!");
+        setHasChanges(false);
+      } else {
+        setError(result.error?.message || "Failed to update profile. Please try again.");
+      }
+    } catch (err) {
+      setError("An unexpected error occurred. Please try again.");
+      console.error("Error updating profile:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const getInitials = (firstName?: string | null, lastName?: string | null) => {
+    const first = firstName?.charAt(0) || "";
+    const last = lastName?.charAt(0) || "";
+    return `${first}${last}`.toUpperCase() || "U";
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
-  if (!user) {
+  if (!profile) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500 dark:text-gray-400">Loading profile...</p>
-      </div>
-    )
+      <Alert className="max-w-md mx-auto">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Unable to load profile data. Please refresh the page and try again.
+        </AlertDescription>
+      </Alert>
+    );
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Profile
-        </h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Manage your personal information and profile settings.
-        </p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Profile</h2>
+          <p className="text-muted-foreground">
+            Manage your personal information and preferences.
+          </p>
+        </div>
+        <Button 
+          onClick={handleSave}
+          disabled={!hasChanges || isSaving}
+          className="flex items-center gap-2"
+        >
+          {isSaving ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          ) : (
+            <Save className="h-4 w-4" />
+          )}
+          Save Changes
+        </Button>
       </div>
 
-      <Separator />
+      {/* Status Messages */}
+      {success && (
+        <Alert className="border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
+      )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Profile Photo
-            </CardTitle>
-            <CardDescription>
-              Update your profile picture and avatar.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col items-center space-y-4">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={user.avatar_url} alt={user.full_name} />
-                <AvatarFallback className="text-lg">
-                  {user.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              
-              <div className="flex flex-col items-center space-y-2">
-                <label htmlFor="avatar-upload" className="cursor-pointer">
-                  <Button variant="outline" size="sm" asChild>
-                    <span className="flex items-center gap-2">
-                      <Upload className="h-4 w-4" />
-                      Change Photo
-                    </span>
-                  </Button>
-                </label>
-                <input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  className="hidden"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                  JPG, PNG up to 2MB
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {error && (
+        <Alert className="border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
-            <CardDescription>
-              Update your personal details and profile information.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="full_name">Full Name</Label>
-                  <Input
-                    id="full_name"
-                    {...form.register('full_name')}
-                    className="mt-1"
-                  />
-                  {form.formState.errors.full_name && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {form.formState.errors.full_name.message}
-                    </p>
-                  )}
-                </div>
-                
-                <div>
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    {...form.register('username')}
-                    className="mt-1"
-                    placeholder="Optional"
-                  />
-                  {form.formState.errors.username && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {form.formState.errors.username.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  {...form.register('bio')}
-                  className="mt-1"
-                  placeholder="Tell us about yourself..."
-                  rows={4}
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {form.watch('bio')?.length || 0}/500 characters
-                </p>
-                {form.formState.errors.bio && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {form.formState.errors.bio.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex justify-end">
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-
+      {/* Profile Picture Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Account Details
-          </CardTitle>
+          <CardTitle>Profile Picture</CardTitle>
           <CardDescription>
-            Your account information and registration details.
+            Update your profile picture and display name.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Email Address</Label>
-              <Input
-                value={user.email}
-                disabled
-                className="mt-1 bg-gray-50 dark:bg-gray-800"
+        <CardContent className="space-y-6">
+          <div className="flex items-center gap-6">
+            <Avatar className="h-20 w-20">
+              <AvatarImage 
+                src={profile.avatar_url || ""} 
+                alt={`${profile.first_name} ${profile.last_name}`} 
               />
-            </div>
-            <div>
-              <Label>User ID</Label>
-              <Input
-                value={user.id}
-                disabled
-                className="mt-1 bg-gray-50 dark:bg-gray-800 font-mono text-xs"
-              />
-            </div>
-            <div>
-              <Label>Member Since</Label>
-              <Input
-                value={new Date(user.created_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-                disabled
-                className="mt-1 bg-gray-50 dark:bg-gray-800"
-              />
-            </div>
-            <div>
-              <Label>Last Updated</Label>
-              <Input
-                value={new Date(user.updated_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-                disabled
-                className="mt-1 bg-gray-50 dark:bg-gray-800"
-              />
+              <AvatarFallback className="text-lg">
+                {getInitials(profile.first_name, profile.last_name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="space-y-2">
+              <Button variant="outline" size="sm" className="flex items-center gap-2">
+                <Camera className="h-4 w-4" />
+                Change Picture
+              </Button>
+              <p className="text-sm text-muted-foreground">
+                JPG, GIF or PNG. Max size of 800K.
+              </p>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Personal Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Personal Information</CardTitle>
+          <CardDescription>
+            Update your personal details.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name</Label>
+              <Input
+                id="firstName"
+                value={profile.first_name || ""}
+                onChange={(e) => handleInputChange("first_name", e.target.value)}
+                placeholder="Enter your first name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                value={profile.last_name || ""}
+                onChange={(e) => handleInputChange("last_name", e.target.value)}
+                placeholder="Enter your last name"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="bio">Bio</Label>
+            <Textarea
+              id="bio"
+              value={profile.bio || ""}
+              onChange={(e) => handleInputChange("bio", e.target.value)}
+              placeholder="Tell us a little about yourself"
+              rows={3}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Professional Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Professional Information</CardTitle>
+          <CardDescription>
+            Share your professional background.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="company">Company</Label>
+              <Input
+                id="company"
+                value={profile.company || ""}
+                onChange={(e) => handleInputChange("company", e.target.value)}
+                placeholder="Your company name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="jobTitle">Job Title</Label>
+              <Input
+                id="jobTitle"
+                value={profile.job_title || ""}
+                onChange={(e) => handleInputChange("job_title", e.target.value)}
+                placeholder="Your job title"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="workDescription">Work Description</Label>
+            <Textarea
+              id="workDescription"
+              value={profile.work_description || ""}
+              onChange={(e) => handleInputChange("work_description", e.target.value)}
+              placeholder="Describe what you do at work"
+              rows={3}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Location & Timezone */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Location & Timezone</CardTitle>
+          <CardDescription>
+            Help us personalize your experience.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                value={profile.location || ""}
+                onChange={(e) => handleInputChange("location", e.target.value)}
+                placeholder="City, Country"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="timezone">Timezone</Label>
+              <Select
+                value={profile.timezone || "UTC"}
+                onValueChange={(value) => handleInputChange("timezone", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timezones.map((tz) => (
+                    <SelectItem key={tz} value={tz}>
+                      {tz}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Privacy Preferences */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Privacy Preferences</CardTitle>
+          <CardDescription>
+            Control how your information is shared and used.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="personalizedResponses">Personalized Responses</Label>
+              <p className="text-sm text-muted-foreground">
+                Allow AI to use your profile for more personalized responses
+              </p>
+            </div>
+            <Switch
+              id="personalizedResponses"
+              checked={profile.personalized_responses}
+              onCheckedChange={(checked) => handleInputChange("personalized_responses", checked)}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="activityStatus">Activity Status</Label>
+              <p className="text-sm text-muted-foreground">
+                Show when you are online and active
+              </p>
+            </div>
+            <Switch
+              id="activityStatus"
+              checked={profile.activity_status}
+              onCheckedChange={(checked) => handleInputChange("activity_status", checked)}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label htmlFor="profileVisibility">Profile Visibility</Label>
+            <Select
+              value={profile.profile_visibility}
+              onValueChange={(value) => handleInputChange("profile_visibility", value as "public" | "private" | "contacts")}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="public">Public - Anyone can see your profile</SelectItem>
+                <SelectItem value="contacts">Contacts - Only your contacts can see your profile</SelectItem>
+                <SelectItem value="private">Private - Your profile is hidden</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
     </div>
-  )
+  );
 }

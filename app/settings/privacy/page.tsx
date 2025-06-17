@@ -1,317 +1,442 @@
-// File: app/settings/privacy/page.tsx
-
 "use client";
 
 import * as React from "react";
-import { 
-  LockClosedIcon, 
-  EyeOpenIcon, 
-  EyeNoneIcon,
-  InfoCircledIcon,
-  DownloadIcon,
-  TrashIcon
-} from "@radix-ui/react-icons";
-
-interface PrivacySetting {
-  id: string;
-  title: string;
-  description: string;
-  enabled: boolean;
-  category: "data" | "visibility" | "communications" | "security";
-}
-
-const privacySettings: PrivacySetting[] = [
-  {
-    id: "profile-visibility",
-    title: "Public Profile",
-    description: "Make your profile visible to other users",
-    enabled: true,
-    category: "visibility"
-  },
-  {
-    id: "activity-visibility", 
-    title: "Activity Status",
-    description: "Show when you're online and active",
-    enabled: false,
-    category: "visibility"
-  },
-  {
-    id: "project-visibility",
-    title: "Public Projects",
-    description: "Allow others to discover your public projects",
-    enabled: true,
-    category: "visibility"
-  },
-  {
-    id: "analytics",
-    title: "Usage Analytics",
-    description: "Help improve our service by sharing anonymous usage data",
-    enabled: true,
-    category: "data"
-  },
-  {
-    id: "personalization",
-    title: "Data Personalization",
-    description: "Use your data to personalize your experience",
-    enabled: true,
-    category: "data"
-  },
-  {
-    id: "third-party-data",
-    title: "Third-party Data Sharing",
-    description: "Allow sharing data with trusted partners for enhanced features",
-    enabled: false,
-    category: "data"
-  },
-  {
-    id: "marketing-communications",
-    title: "Marketing Communications",
-    description: "Receive updates about new features and promotions",
-    enabled: false,
-    category: "communications"
-  },
-  {
-    id: "community-communications",
-    title: "Community Updates",
-    description: "Get notified about community events and discussions",
-    enabled: true,
-    category: "communications"
-  },
-  {
-    id: "security-alerts",
-    title: "Security Alerts",
-    description: "Receive important security-related notifications",
-    enabled: true,
-    category: "security"
-  }
-];
-
-const categories = {
-  visibility: {
-    title: "Visibility & Discovery",
-    description: "Control how others can find and interact with you"
-  },
-  data: {
-    title: "Data & Analytics", 
-    description: "Manage how your data is collected and used"
-  },
-  communications: {
-    title: "Communications",
-    description: "Choose what emails and notifications you receive"
-  },
-  security: {
-    title: "Security & Safety",
-    description: "Security-related privacy settings"
-  }
-};
+import { useState, useEffect } from "react";
+import { Shield, Eye, EyeOff, Users, Globe, Save, AlertCircle, CheckCircle, Download, Trash2, Lock } from "lucide-react";
+import { getUserSettings, updateUserSettings, type UserSettings } from "@/app/actions/settings";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 
 export default function PrivacyPage() {
-  const [settings, setSettings] = React.useState<Record<string, boolean>>(
-    Object.fromEntries(privacySettings.map(s => [s.id, s.enabled]))
-  );
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
 
-  const toggleSetting = (settingId: string) => {
-    setSettings(prev => ({
-      ...prev,
-      [settingId]: !prev[settingId]
-    }));
+  // Load settings on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        setIsLoading(true);
+        const userSettings = await getUserSettings();
+        setSettings(userSettings);
+        setError(null);
+      } catch (err) {
+        setError("Failed to load privacy settings. Please try again.");
+        console.error("Error loading settings:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
+  // Auto-clear messages after 5 seconds
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+        setError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error]);
+
+  const handleSettingChange = (field: keyof UserSettings, value: string | boolean) => {
+    if (!settings) return;
+    
+    setSettings((prev: UserSettings | null) => prev ? { ...prev, [field]: value } : null);
+    setHasChanges(true);
+    setSuccess(null);
+    setError(null);
   };
 
-  const groupedSettings = privacySettings.reduce((acc, setting) => {
-    if (!acc[setting.category]) {
-      acc[setting.category] = [];
+  const handleSave = async () => {
+    if (!settings || !hasChanges) return;
+
+    try {
+      setIsSaving(true);
+      setError(null);
+      
+      const result = await updateUserSettings(settings);
+      
+      if (result.success) {
+        setSuccess("Privacy settings updated successfully!");
+        setHasChanges(false);
+      } else {
+        setError(result.error?.message || "Failed to update settings. Please try again.");
+      }
+    } catch (err) {
+      setError("An unexpected error occurred. Please try again.");
+      console.error("Error updating settings:", err);
+    } finally {
+      setIsSaving(false);
     }
-    acc[setting.category].push(setting);
-    return acc;
-  }, {} as Record<string, PrivacySetting[]>);
+  };
+
+  const handleDataExport = () => {
+    setSuccess("Data export request submitted. You'll receive an email with your data within 24 hours.");
+  };
+
+  const handleAccountDeletion = () => {
+    if (confirm("Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your data.")) {
+      setError("Account deletion is not yet implemented. Please contact support for assistance.");
+    }
+  };
+
+  const getVisibilityIcon = (visibility: string) => {
+    switch (visibility) {
+      case "public":
+        return <Globe className="h-4 w-4" />;
+      case "contacts":
+        return <Users className="h-4 w-4" />;
+      default:
+        return <Lock className="h-4 w-4" />;
+    }
+  };
+
+  const getVisibilityColor = (visibility: string) => {
+    switch (visibility) {
+      case "public":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "contacts":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+      default:
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!settings) {
+    return (
+      <Alert className="max-w-md mx-auto">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Unable to load privacy settings. Please refresh the page and try again.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h3 className="text-lg font-medium">Privacy Settings</h3>
-        <p className="text-sm text-muted-foreground">
-          Control your privacy preferences and how your data is used.
-        </p>
-      </div>
-
-      {/* Privacy Overview */}
-      <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-950/20">
-        <div className="flex gap-3">
-          <InfoCircledIcon className="mt-0.5 h-5 w-5 text-blue-600 dark:text-blue-400" />
-          <div className="space-y-1">
-            <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100">
-              Your Privacy Matters
-            </h4>
-            <p className="text-sm text-blue-800 dark:text-blue-200">
-              Were committed to protecting your privacy. You have full control over your data and how it is used.
-              Review our{" "}
-              <button className="underline hover:no-underline">Privacy Policy</button>{" "}
-              for more details.
-            </p>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Privacy & Security</h2>
+          <p className="text-muted-foreground">
+            Control how your information is shared and used.
+          </p>
         </div>
+        <Button 
+          onClick={handleSave}
+          disabled={!hasChanges || isSaving}
+          className="flex items-center gap-2"
+        >
+          {isSaving ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          ) : (
+            <Save className="h-4 w-4" />
+          )}
+          Save Changes
+        </Button>
       </div>
 
-      {/* Privacy Settings by Category */}
-      {Object.entries(groupedSettings).map(([categoryKey, categorySettings]) => {
-        const category = categories[categoryKey as keyof typeof categories];
-        
-        return (
-          <div key={categoryKey} className="space-y-4">
+      {/* Status Messages */}
+      {success && (
+        <Alert className="border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
+      )}
+
+      {error && (
+        <Alert className="border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Visibility & Discovery */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Visibility & Discovery</CardTitle>
+          <CardDescription>
+            Control how others can find and interact with you.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="profileVisibility">Profile Visibility</Label>
+            <Select
+              value={settings.profile_visibility}
+              onValueChange={(value) => handleSettingChange("profile_visibility", value as "public" | "private" | "contacts")}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="public">
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    Public - Anyone can see your profile
+                  </div>
+                </SelectItem>
+                <SelectItem value="contacts">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Contacts - Only your contacts can see your profile
+                  </div>
+                </SelectItem>
+                <SelectItem value="private">
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-4 w-4" />
+                    Private - Your profile is hidden
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <Badge className={getVisibilityColor(settings.profile_visibility)}>
+              {getVisibilityIcon(settings.profile_visibility)}
+              <span className="ml-1">
+                {settings.profile_visibility === "public" ? "Public" : 
+                 settings.profile_visibility === "contacts" ? "Contacts Only" : "Private"}
+              </span>
+            </Badge>
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="activityStatus">Activity Status</Label>
+              <p className="text-sm text-muted-foreground">
+                Show when you are online and active
+              </p>
+            </div>
+            <Switch
+              id="activityStatus"
+              checked={settings.activity_status}
+              onCheckedChange={(checked) => handleSettingChange("activity_status", checked)}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label htmlFor="projectVisibility">Project Visibility</Label>
+            <Select
+              value={settings.project_visibility}
+              onValueChange={(value) => handleSettingChange("project_visibility", value as "public" | "private" | "contacts")}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="public">Public - Anyone can discover your projects</SelectItem>
+                <SelectItem value="contacts">Contacts - Only your contacts can see your projects</SelectItem>
+                <SelectItem value="private">Private - Your projects are hidden</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Data & Analytics */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Data & Analytics</CardTitle>
+          <CardDescription>
+            Control how your data is used to improve our services.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="analytics">Usage Analytics</Label>
+              <p className="text-sm text-muted-foreground">
+                Help improve our service by sharing anonymous usage data
+              </p>
+            </div>
+            <Switch
+              id="analytics"
+              checked={settings.analytics_enabled}
+              onCheckedChange={(checked) => handleSettingChange("analytics_enabled", checked)}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="personalization">Data Personalization</Label>
+              <p className="text-sm text-muted-foreground">
+                Use your data to personalize your experience and provide better recommendations
+              </p>
+            </div>
+            <Switch
+              id="personalization"
+              checked={settings.personalization_enabled}
+              onCheckedChange={(checked) => handleSettingChange("personalization_enabled", checked)}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="thirdPartySharing">Third-party Data Sharing</Label>
+              <p className="text-sm text-muted-foreground">
+                Allow sharing anonymized data with trusted partners for enhanced features
+              </p>
+            </div>
+            <Switch
+              id="thirdPartySharing"
+              checked={settings.third_party_sharing}
+              onCheckedChange={(checked) => handleSettingChange("third_party_sharing", checked)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Communications */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Communications</CardTitle>
+          <CardDescription>
+            Choose what types of communications you want to receive.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="emailNotifications">Email Notifications</Label>
+              <p className="text-sm text-muted-foreground">
+                Receive email notifications for important account activities
+              </p>
+            </div>
+            <Switch
+              id="emailNotifications"
+              checked={settings.email_notifications}
+              onCheckedChange={(checked) => handleSettingChange("email_notifications", checked)}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="marketingCommunications">Marketing Communications</Label>
+              <p className="text-sm text-muted-foreground">
+                Receive updates about new features, tips, and special offers
+              </p>
+            </div>
+            <Switch
+              id="marketingCommunications"
+              checked={settings.marketing_communications}
+              onCheckedChange={(checked) => handleSettingChange("marketing_communications", checked)}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="communityCommunications">Community Updates</Label>
+              <p className="text-sm text-muted-foreground">
+                Get notified about community events, discussions, and updates
+              </p>
+            </div>
+            <Switch
+              id="communityCommunications"
+              checked={settings.community_communications}
+              onCheckedChange={(checked) => handleSettingChange("community_communications", checked)}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="securityAlerts">Security Alerts</Label>
+              <p className="text-sm text-muted-foreground">
+                Receive important security-related notifications (always recommended)
+              </p>
+            </div>
+            <Switch
+              id="securityAlerts"
+              checked={settings.security_alerts}
+              onCheckedChange={(checked) => handleSettingChange("security_alerts", checked)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Data Export & Deletion */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Data Rights</CardTitle>
+          <CardDescription>
+            Export or delete your personal data.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 border rounded-lg">
             <div>
-              <h4 className="text-base font-medium">{category.title}</h4>
-              <p className="text-sm text-muted-foreground">{category.description}</p>
-            </div>
-            
-            <div className="space-y-4">
-              {categorySettings.map((setting) => (
-                <div
-                  key={setting.id}
-                  className="flex items-center justify-between rounded-lg border p-4"
-                >
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <h5 className="text-sm font-medium">{setting.title}</h5>
-                      {setting.category === "security" && (
-                        <LockClosedIcon className="h-3 w-3 text-muted-foreground" />
-                      )}
-                      {setting.category === "visibility" && (
-                        settings[setting.id] ? (
-                          <EyeOpenIcon className="h-3 w-3 text-muted-foreground" />
-                        ) : (
-                          <EyeNoneIcon className="h-3 w-3 text-muted-foreground" />
-                        )
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{setting.description}</p>
-                  </div>
-                  
-                  <button
-                    onClick={() => toggleSetting(setting.id)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      settings[setting.id] ? "bg-primary" : "bg-muted"
-                    }`}
-                    disabled={setting.id === "security-alerts"} // Security alerts should always be enabled
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        settings[setting.id] ? "translate-x-6" : "translate-x-1"
-                      }`}
-                    />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Data Management */}
-      <div className="space-y-4">
-        <h4 className="text-base font-medium">Data Management</h4>
-        
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-lg border p-4">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <DownloadIcon className="h-4 w-4 text-muted-foreground" />
-                <h5 className="text-sm font-medium">Export Your Data</h5>
-              </div>
+              <h4 className="font-medium">Export Your Data</h4>
               <p className="text-sm text-muted-foreground">
-                Download a copy of all your data including projects, settings, and activity history.
+                Download a copy of all your personal data and activity.
               </p>
-              <button className="rounded-md border px-3 py-2 text-sm hover:bg-accent">
-                Request data export
-              </button>
             </div>
+            <Button variant="outline" onClick={handleDataExport} className="flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              Request Export
+            </Button>
           </div>
-          
-          <div className="rounded-lg border p-4">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <TrashIcon className="h-4 w-4 text-destructive" />
-                <h5 className="text-sm font-medium">Delete Your Data</h5>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Permanently delete your account and all associated data. This action cannot be undone.
+
+          <div className="flex items-center justify-between p-4 border rounded-lg border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
+            <div>
+              <h4 className="font-medium text-red-800 dark:text-red-200">Delete Account</h4>
+              <p className="text-sm text-red-600 dark:text-red-300">
+                Permanently delete your account and all associated data.
               </p>
-              <button className="rounded-md bg-destructive px-3 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90">
-                Delete account
-              </button>
             </div>
+            <Button 
+              variant="outline" 
+              onClick={handleAccountDeletion}
+              className="text-red-600 border-red-200 hover:bg-red-100 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900 flex items-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Account
+            </Button>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Cookie Preferences */}
-      <div className="space-y-4">
-        <h4 className="text-base font-medium">Cookie Preferences</h4>
-        <div className="rounded-lg border p-4">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <h5 className="text-sm font-medium">Cookie Categories</h5>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm">Essential Cookies</div>
-                    <div className="text-xs text-muted-foreground">Required for basic functionality</div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">Always active</div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm">Analytics Cookies</div>
-                    <div className="text-xs text-muted-foreground">Help us improve our service</div>
-                  </div>
-                  <button
-                    onClick={() => toggleSetting("analytics")}
-                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                      settings["analytics"] ? "bg-primary" : "bg-muted"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                        settings["analytics"] ? "translate-x-5" : "translate-x-1"
-                      }`}
-                    />
-                  </button>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm">Marketing Cookies</div>
-                    <div className="text-xs text-muted-foreground">Personalized content and ads</div>
-                  </div>
-                  <button
-                    onClick={() => toggleSetting("marketing-communications")}
-                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                      settings["marketing-communications"] ? "bg-primary" : "bg-muted"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                        settings["marketing-communications"] ? "translate-x-5" : "translate-x-1"
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            <button className="rounded-md border px-4 py-2 text-sm hover:bg-accent">
-              Manage cookie preferences
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <button className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-          Save privacy settings
-        </button>
-      </div>
+      {/* Privacy Notice */}
+      <Alert>
+        <Shield className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Your Privacy Matters:</strong> We are committed to protecting your privacy and giving you control 
+          over your data. For more details, review our Privacy Policy and Terms of Service.
+        </AlertDescription>
+      </Alert>
     </div>
   );
 }

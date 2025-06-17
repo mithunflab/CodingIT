@@ -5,6 +5,7 @@ import { cookies } from "next/headers"
 import { revalidatePath } from "next/cache"
 
 export interface ProfileData {
+  email: string
   id?: string
   first_name: string | null
   last_name: string | null
@@ -75,6 +76,7 @@ export async function getProfile(): Promise<ProfileData | null> {
           id: user.id,
           first_name: "",
           last_name: "",
+          email: user.email || "",
           company: null,
           job_title: null,
           location: null,
