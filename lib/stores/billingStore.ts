@@ -9,7 +9,7 @@ export interface Subscription {
   stripe_customer_id?: string
   plan_id: string
   plan_name: string
-  price_amount: number // in cents
+  price_amount: number
   price_currency: string
   interval_type: 'month' | 'year'
   status: 'active' | 'canceled' | 'past_due' | 'incomplete' | 'trialing' | 'unpaid'
