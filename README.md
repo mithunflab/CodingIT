@@ -19,7 +19,7 @@
   - 🔸 Vue.js
   - 🔸 Streamlit
   - 🔸 Gradio
-  - 🔸 CodinIT Engineer
+  - 🔸 CodinIT.dev Engineer
   - Supported LLM Providers ([add your own](#adding-custom-llm-models)):
   - 🔸 OpenAI
   - 🔸 Anthropic

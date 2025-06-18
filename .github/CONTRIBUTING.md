@@ -2,7 +2,7 @@
 
 First off, thank you for considering contributing to CodinIT! 🎉 
 
-CodinIT is an open-source AI-powered code generator, and we welcome contributions from developers of all skill levels. Whether you're fixing a bug, adding a feature, improving documentation, or just asking questions, your contribution matters.
+CodinIT.dev is an open-source AI-powered code generator, and we welcome contributions from developers of all skill levels. Whether you're fixing a bug, adding a feature, improving documentation, or just asking questions, your contribution matters.
 
 ## 📋 Table of Contents
 
@@ -54,7 +54,7 @@ Ready to code? Here's how:
 
 ### 📚 Documentation
 
-Help make CodinIT more accessible:
+Help make CodinIT.dev more accessible:
 
 - Fix typos or unclear instructions
 - Add examples and tutorials
@@ -522,7 +522,7 @@ We believe in recognizing our contributors:
 - **Contributors list** - All contributors listed in README
 - **Release notes** - Major contributors mentioned in releases
 - **Special thanks** - Outstanding contributions highlighted
-- **Swag** - Contributors may receive CodinIT swag (when available)
+- **Swag** - Contributors may receive CodinIT.dev swag (when available)
 
 ### Types of Contributions We Recognize
 
@@ -583,7 +583,7 @@ By contributing to CodinIT, you agree that your contributions will be licensed u
 
 ## 🙏 Thank You!
 
-Your contributions help make CodinIT better for everyone. Whether you're fixing a typo, adding a feature, or helping other users, every contribution matters.
+Your contributions help make CodinIT.dev better for everyone. Whether you're fixing a typo, adding a feature, or helping other users, every contribution matters.
 
 **Happy coding!** 🚀
 

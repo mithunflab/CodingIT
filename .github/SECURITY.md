@@ -8,7 +8,7 @@
 
 ## Reporting a Vulnerability
 
-We take the security of CodinIT seriously. If you discover a security vulnerability, please follow these steps:
+We take the security of CodinIT.dev seriously. If you discover a security vulnerability, please follow these steps:
 
 ### 🔒 Responsible Disclosure
 

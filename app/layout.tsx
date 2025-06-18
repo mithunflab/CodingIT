@@ -33,11 +33,11 @@ export const metadata: Metadata = {
   ],
   manifest: "/site.webmanifest",
   openGraph: {
-    title: "CodinIT - #1 Open Source AI App Builder",
+    title: "CodinIT.dev - #1 Open Source AI App Builder",
     description: "Open-source alternative to lovable.dev, bolt.new & v0.dev. AI software engineer — live code execution, file uploads, & real-time chat blazing-fast.",
     images: ["/opengraph.png"],
     url: "https://codingit.vercel.app",
-    siteName: "CodinIT",
+    siteName: "CodinIT.dev",
     type: "website",
     locale: "en_US",
   }

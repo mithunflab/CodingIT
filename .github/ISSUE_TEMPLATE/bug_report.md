@@ -32,7 +32,7 @@ body:
     id: component
     attributes:
       label: Component
-      description: Which part of CodinIT is affected?
+      description: Which part of CodinIT.dev is affected?
       options:
         - File Upload
         - Code Generation
@@ -73,7 +73,7 @@ body:
         - Streamlit Developer
         - Gradio Developer
         - Code Interpreter
-        - CodinIT Engineer
+        - CodinIT.dev Engineer
         - Custom Template
         - Not applicable
 

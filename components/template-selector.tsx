@@ -77,19 +77,9 @@ const TemplateSelector: React.FC = () => {
       logoLight: '/thirdparty/logos/python-icon.svg',
       logoDark: '/thirdparty/logos/python-icon.svg',
     },
-    // Add more items as needed, ensuring IDs match templates.json
-    // And that you have the corresponding logo files.
-    // For example, if you had a React template:
-    // {
-    //   id: 'react-developer',
-    //   name: 'React',
-    //   logoLight: '/thirdparty/logos/react-icon.svg',
-    //   logoDark: '/thirdparty/logos/react-icon.svg',
-    // },
   ];
 
-  // Placeholder logos if specific ones are missing
-  const placeholderLogo = '/public/placeholder-logo.svg'; // Make sure this exists
+  const placeholderLogo = '/logo.png'; // Make sure this exists
 
   return (
     <div className="bg-gray-900 text-white p-8 rounded-lg w-full max-w-3xl mx-auto">

@@ -292,7 +292,7 @@ export default function ProjectsListingPage() {
           <div className="flex-1">
             <h1 className="text-3xl font-bold">Projects</h1>
             <p className="text-muted-foreground">
-              Manage and organize your CodinIT projects
+              Manage and organize your CodinIT.dev projects
             </p>
           </div>
           <Button onClick={() => setShowUploadModal(true)}>

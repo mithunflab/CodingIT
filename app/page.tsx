@@ -8,6 +8,7 @@ import { ChatPicker } from "@/components/chat-picker"
 import { ChatSettings } from "@/components/chat-settings"
 import { NavBar } from "@/components/navbar"
 import { Preview } from "@/components/preview"
+import { E2BToolsPanel } from "@/components/e2b-tools/E2BToolsPanel"
 import CommandPalette from "@/components/ui/command-palette"
 import { ProjectDialog } from "@/components/ui/project-dialog"
 import { useProjectDialog } from "@/hooks/use-project-dialog"
@@ -29,6 +30,7 @@ import { useLocalStorage } from "usehooks-ts"
 import { ViewType } from "@/components/auth/types"
 import { parseApiError } from "@/lib/utils"
 import { SettingsDialog } from "@/components/chat-sidebar/settings-dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 interface ProjectAnalysis {
   structure: {
@@ -95,7 +97,17 @@ export default function Home() {
     files: File[]
     analysis: ProjectAnalysis | null
   }>({ files: [], analysis: null })
+  const [isE2BToolsModalOpen, setIsE2BToolsModalOpen] = useState(false)
 
+  const handleToggleE2BToolsModal = () => {
+    if (session && currentModel) { // Ensure user is authenticated and model is loaded
+      setIsE2BToolsModalOpen(!isE2BToolsModalOpen);
+    } else if (!session) {
+      setAuthDialog(true); // Prompt login if not authenticated
+    }
+    // If model is not loaded, we might want to show a toast or disable the button,
+    // but for now, opening the modal relies on the check within its render.
+  };
   
   const handleTemplateChange = useCallback((newTemplate: TemplateId | 'auto') => {
     console.log("[Template Change]", { from: selectedTemplate, to: newTemplate })
@@ -118,10 +130,10 @@ export default function Home() {
   } else if (selectedTemplate === 'codinit-engineer') {
     console.warn(`Template ID '${selectedTemplate}' not found in templates.json. Using special fallback configuration.`);
     currentTemplateConfig = { 
-      name: "CodinIT Engineer (Fallback)", 
+      name: "CodinIT.dev Engineer (Fallback)", 
       lib: [], 
       files: {}, 
-      instructions: "Default instructions for CodinIT Engineer (fallback). Please define this template in templates.json if it's a standard persona.", 
+      instructions: "Default instructions for CodinIT.dev Engineer (fallback). Please define this template in templates.json if it's a standard persona.", 
       port: null 
     };
   } else {
@@ -505,6 +517,15 @@ export default function Home() {
     setAuthDialog(true)
   }, [])
 
+  const showPreviewPanel = fragment && hasMounted;
+
+  let gridLayoutClass = "flex w-full"; 
+
+  if (showPreviewPanel) {
+    gridLayoutClass = "flex w-full md:grid md:grid-cols-2";
+  }
+  // If preview is not shown, it's a single column layout.
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -516,9 +537,7 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <div className="flex flex-1 overflow-hidden">
-        <div className={`flex w-full ${
-          fragment ? "md:grid md:grid-cols-2" : ""
-        }`}>
+        <div className={gridLayoutClass}>
           {supabase && (
             <AuthDialog 
               open={isAuthDialogOpen} 
@@ -539,6 +558,7 @@ export default function Home() {
               canUndo={messages.length > 1 && !isSubmitting}
               onUndo={handleUndo}
               onRetryAuth={handleRetryAuth}
+              onOpenToolsModal={handleToggleE2BToolsModal}
             />
 
             
@@ -607,9 +627,9 @@ export default function Home() {
               )}
             </div>
           </div>
-
           
-          {fragment && hasMounted && ( 
+          {/* Preview Area (conditionally rendered) */}
+          {showPreviewPanel && ( 
             <div className="hidden md:flex md:flex-col border-l border-border">
               <Preview
                 teamID={userTeam?.id}
@@ -626,6 +646,25 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      {session && session.user && userTeam && currentModel && hasMounted && (
+        <Dialog open={isE2BToolsModalOpen} onOpenChange={setIsE2BToolsModalOpen}>
+          <DialogContent className="max-w-3xl h-[80vh] flex flex-col p-0">
+            <DialogHeader className="p-6 pb-0">
+              <DialogTitle>E2B Tools Panel</DialogTitle>
+            </DialogHeader>
+            <div className="flex-grow overflow-auto p-6 pt-0">
+              <E2BToolsPanel
+                userID={session.user.id}
+                teamID={userTeam.id}
+                model={currentModel}
+                config={languageModel}
+                className="border-none shadow-none p-0"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       
       <AnimatePresence>

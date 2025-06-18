@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { KeyRound, Loader2 } from 'lucide-react';
 import { UpdatePasswordFormProps } from './types';
 import { AuthInput } from './AuthInput';
-import { SupabaseClient } from '@supabase/supabase-js';
 import { AUTH_TEXT } from './constants';
 
 export function UpdatePasswordForm({

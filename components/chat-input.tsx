@@ -325,7 +325,7 @@ export function ChatInput({
         </div>
       </div>
       <p className="text-xs text-muted-foreground mt-2 text-center">
-        CodinIT Powered By{" "}
+        CodinIT.dev Powered By{" "}
         <a href="https://e2b.dev" target="_blank" className="text-[#ff8800]" rel="noreferrer">
           ✶ E2B
         </a>

@@ -15,7 +15,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { DiscordLogoIcon, GitHubLogoIcon, TwitterLogoIcon } from "@radix-ui/react-icons"
-import { ArrowRight, LogOut, Trash, Undo, AlertCircle, User, Settings, RefreshCw } from "lucide-react"
+import { ArrowRight, LogOut, Trash, Undo, AlertCircle, User, Settings, RefreshCw, Wrench, FileBoxIcon } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/contexts/AuthContext"
 
@@ -27,6 +27,7 @@ export function NavBar({
   onUndo,
   canUndo,
   onRetryAuth,
+  onOpenToolsModal,
 }: {
   showLogin: () => void
   onClear: () => void
@@ -36,6 +37,7 @@ export function NavBar({
   canUndo: boolean
   authError?: string | null // Removed
   onRetryAuth?: () => void
+  onOpenToolsModal?: () => void
 }) {
   const { session, user, signOut, authError, isLoading } = useAuth();
 
@@ -65,19 +67,19 @@ export function NavBar({
   }
   
   // Optional: Add a loading state indicator if desired
-  // if (isLoading) {
-  //   return (
-  //     <nav className="w-full flex bg-background py-4 items-center">
-  //       <div className="flex flex-1 items-center">
-  //         {/* Simplified Logo area for loading state */}
-  //       </div>
-  //       <div className="flex items-center gap-1 md:gap-4">
-  //         <div className="h-8 w-8 bg-muted rounded-full animate-pulse"></div>
-  //         <div className="h-8 w-24 bg-muted rounded animate-pulse"></div>
-  //       </div>
-  //     </nav>
-  //   );
-  // }
+  if (isLoading) {
+  return (
+  <nav className="w-full flex bg-background py-4 items-center">
+   <div className="flex flex-1 items-center">
+     {/* Simplified Logo area for loading state */}
+     </div>
+        <div className="flex items-center gap-1 md:gap-4">
+          <div className="h-8 w-8 bg-muted rounded-full animate-pulse"></div>
+             <div className="h-8 w-24 bg-muted rounded animate-pulse"></div>
+           </div>
+        </nav>
+      );
+    }
 
   return (
     <nav className="w-full flex bg-background py-4">
@@ -93,7 +95,7 @@ export function NavBar({
           className="font-bold text-xl bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent hover:from-primary/80 hover:to-primary transition-all duration-200 font-mono tracking-tight"
           target="_blank"
         >
-          CodinIT
+          CodinIT.dev
         </Link>
       </div>
 
@@ -146,6 +148,19 @@ export function NavBar({
           </Tooltip>
         </TooltipProvider>
 
+        {session && onOpenToolsModal && (
+          <TooltipProvider>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={onOpenToolsModal}>
+                  <Wrench className="h-4 w-4 md:h-5 md:w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Open Tools</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
         {session ? (
           <DropdownMenu>
             <TooltipProvider>
@@ -186,6 +201,13 @@ export function NavBar({
                   <span>Profile</span>
                 </Link>
                 </DropdownMenuItem>
+
+              <Link href="/projects">
+              <DropdownMenuItem className="cursor-pointer">
+                <FileBoxIcon className="mr-2 h-4 w-4" />
+                <span>Projects</span>
+              </DropdownMenuItem>
+              </Link>
                 
               <Link href="/settings">
               <DropdownMenuItem className="cursor-pointer">
