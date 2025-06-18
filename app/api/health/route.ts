@@ -12,7 +12,7 @@ export async function GET() {
     const metrics = apiClient.getMetrics()
     const recentRequests = apiClient.getRecentRequests(10)
 
-    // Check system resources
+    
     const systemHealth = {
       uptime: process.uptime(),
       memory: process.memoryUsage(),
@@ -20,7 +20,7 @@ export async function GET() {
       timestamp: new Date().toISOString(),
     }
 
-    // Determine overall system status
+    
     let overallStatus = "healthy"
     if (healthStatus.status === "unhealthy") {
       overallStatus = "unhealthy"

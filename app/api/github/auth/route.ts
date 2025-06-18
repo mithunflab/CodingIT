@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Exchange code for access token
+    
     const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
       headers: {
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Store GitHub token in user metadata
+    
     const { error: updateError } = await supabase.auth.updateUser({
       data: { 
         github_access_token: tokenData.access_token,

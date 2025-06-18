@@ -42,26 +42,26 @@ interface Project {
 }
 export default function ProjectsListingPage() {
   const router = useRouter();
-  const { user, isLoading: authIsLoading, authError } = useAuth(); // Destructure isLoading and authError
-  const { projects, loading: projectsLoading, fetchProjects, deleteProject, error: projectError } = useProjectStore(); // Rename loading to projectsLoading
+  const { user, isLoading: authIsLoading, authError } = useAuth(); 
+  const { projects, loading: projectsLoading, fetchProjects, deleteProject, error: projectError } = useProjectStore(); 
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("last_edited");
   const [filterBy, setFilterBy] = useState("all_creators");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [, setShowUploadModal] = useState(false);
-  const userId = user?.id; // Extract userId for stable dependency
+  const userId = user?.id; 
 
   useEffect(() => {
     console.log('[ProjectsListingPage] AuthContext values - userId:', userId, 'authIsLoading:', authIsLoading, 'authError:', authError);
-    if (userId && !authIsLoading) { // Ensure auth is not loading before fetching and user exists
+    if (userId && !authIsLoading) { 
       console.log('[ProjectsListingPage] User ID found and auth not loading, calling fetchProjects.');
       fetchProjects();
     } else if (authIsLoading) {
       console.log('[ProjectsListingPage] Waiting for auth to complete...');
-    } else if (!userId) { // Check userId instead of user object
+    } else if (!userId) { 
       console.log('[ProjectsListingPage] No user ID found, not calling fetchProjects.');
     }
-  }, [userId, authIsLoading, authError, fetchProjects]); // Use userId in dependency array
+  }, [userId, authIsLoading, authError, fetchProjects]); 
 
   useEffect(() => {
     console.log('[ProjectsListingPage] ProjectStore values - projectsLoading:', projectsLoading, 'projectError:', projectError, 'projectsCount:', projects.length);
@@ -134,13 +134,13 @@ export default function ProjectsListingPage() {
   const ProjectCard = ({ project }: { project: Project }) => (
     <Card className="group hover:shadow-lg transition-all duration-200 border-border/50 hover:border-border">
       <CardContent className="p-4">
-        {/* Project Preview */}
+        
         <div className="h-32 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-800 dark:to-purple-900/20 rounded-md mb-4 flex items-center justify-center text-4xl group-hover:scale-105 transition-transform cursor-pointer"
              onClick={() => router.push(`/project/${project.id}`)}>
           {getProjectIcon(project.template)}
         </div>
         
-        {/* Project Info */}
+        
         <div className="space-y-3">
           <div className="flex items-start justify-between gap-2">
             <h3 className="font-semibold truncate flex-1 cursor-pointer hover:text-primary"
@@ -275,13 +275,13 @@ export default function ProjectsListingPage() {
     </TableRow>
   );
 
-  // Determine overall loading state
+  
   const pageIsLoading = authIsLoading || projectsLoading;
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
+        
         <div className="flex items-center gap-4 mb-8">
           <Link href="/">
             <Button variant="ghost" size="sm">
@@ -301,7 +301,7 @@ export default function ProjectsListingPage() {
           </Button>
         </div>
 
-        {/* Controls */}
+        
         <div className="flex flex-col lg:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -358,7 +358,7 @@ export default function ProjectsListingPage() {
           </div>
         </div>
 
-        {/* Content */}
+        
         {pageIsLoading ? (
           <div className="space-y-4">
             {viewMode === "grid" ? (

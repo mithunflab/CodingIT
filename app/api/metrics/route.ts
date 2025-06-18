@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     const healthStatus = apiClient.getHealthStatus()
     const providerHealth = healthMonitor.getAllProviderHealth()
 
-    // Filter recent requests based on timeframe
+    
     const timeframeMs = parseTimeframe(timeframe)
     const cutoffTime = Date.now() - timeframeMs
     const recentRequests = apiClient
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
       .filter((req) => req.timestamp >= cutoffTime)
       .filter((req) => !provider || req.provider === provider)
 
-    // Calculate timeframe-specific metrics
+    
     const timeframeMetrics = calculateTimeframeMetrics(recentRequests)
 
     const response = {
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
 
     return Response.json(response, {
       headers: {
-        "Cache-Control": "public, max-age=60", // Cache for 1 minute
+        "Cache-Control": "public, max-age=60", 
         "X-Total-Requests": metrics.totalRequests.toString(),
         "X-Success-Rate": ((metrics.successfulRequests / metrics.totalRequests) * 100).toFixed(2),
       },
@@ -133,7 +133,7 @@ function calculateRequestDistribution(requests: any[]) {
 
   return Object.entries(distribution)
     .sort(([, a], [, b]) => b - a)
-    .slice(0, 10) // Top 10
+    .slice(0, 10) 
     .map(([key, count]) => ({ model: key, requests: count }))
 }
 
@@ -143,7 +143,7 @@ function calculateErrorAnalysis(requests: any[]) {
   requests
     .filter((req) => !req.success && req.error)
     .forEach((req) => {
-      const errorType = req.error.split(":")[0] // Get error type
+      const errorType = req.error.split(":")[0] 
       errors[errorType] = (errors[errorType] || 0) + 1
     })
 
@@ -153,7 +153,7 @@ function calculateErrorAnalysis(requests: any[]) {
 }
 
 function calculatePerformanceTrends(requests: any[]) {
-  // Group requests by 5-minute intervals
+  
   const intervals: Record<string, { total: number; successful: number; totalTime: number }> = {}
 
   requests.forEach((req) => {

@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { GitHubIntegration } from '@/lib/github-integration'
 
-// Handler for creating or updating a file
+
 export async function PUT(req: NextRequest) {
   try {
-    const cookieStore = await cookies() // Added await
+    const cookieStore = await cookies() 
     const githubToken = cookieStore.get('github_token')?.value
 
     if (!githubToken) {
@@ -32,10 +32,10 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-// Handler for deleting a file
+
 export async function DELETE(req: NextRequest) {
   try {
-    const cookieStore = await cookies() // Added await
+    const cookieStore = await cookies() 
     const githubToken = cookieStore.get('github_token')?.value
 
     if (!githubToken) {

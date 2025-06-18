@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { figmaUrl } = body
 
-    // Enhanced validation
+    
     if (!figmaUrl || typeof figmaUrl !== 'string') {
       return NextResponse.json(
         {
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if API key is available
+    
     if (!process.env.FIGMA_API_KEY) {
       return NextResponse.json(
         {
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     const analysis = figmaIntegration.analyzeDesign(figmaFile)
     const designTokens = figmaIntegration.extractDesignTokens(figmaFile)
 
-    // Get main frame IDs for potential image export
+    
     const mainFrames =
       figmaFile.document.children
         ?.filter((child) => child.type === "FRAME" && child.name !== "Cover")
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error(`[Figma Analysis API ${requestId}] Analysis failed:`, error)
 
-    // Enhanced error handling with specific status codes
+    
     let errorMessage = "Failed to analyze Figma design"
     let statusCode = 500
     let errorCode = "ANALYSIS_ERROR"

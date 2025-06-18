@@ -1,6 +1,6 @@
 "use client"
 
-import React, { ChangeEvent, FormEvent, SetStateAction } from "react" // Added SetStateAction
+import React, { ChangeEvent, FormEvent, SetStateAction } from "react" 
 import { AuthDialog } from "@/components/auth-dialog"
 import { Chat } from "@/components/chat"
 import { EnhancedChatInput } from "@/components/enhanced-chat-input"
@@ -12,7 +12,7 @@ import CommandPalette from "@/components/ui/command-palette"
 import { ProjectDialog } from "@/components/ui/project-dialog"
 import { useProjectDialog } from "@/hooks/use-project-dialog"
 import { useAuth } from "@/contexts/AuthContext"
-import { type Message, toAISDKMessages, toMessageImage } from "@/lib/messages" // Removed MessageContent
+import { type Message, toAISDKMessages, toMessageImage } from "@/lib/messages" 
 import type { LLMModelConfig } from "@/lib/models"
 import modelsList from "@/lib/models.json"
 import { type FragmentSchema, fragmentSchema as schema } from "@/lib/schema"
@@ -96,7 +96,7 @@ export default function Home() {
     analysis: ProjectAnalysis | null
   }>({ files: [], analysis: null })
 
-  // 🔧 FIXED: Add template change handler for better debugging
+  
   const handleTemplateChange = useCallback((newTemplate: TemplateId | 'auto') => {
     console.log("[Template Change]", { from: selectedTemplate, to: newTemplate })
     if (newTemplate !== 'auto') {
@@ -140,7 +140,7 @@ export default function Home() {
   )
   const currentModel = availableModels.find((model) => model.id === languageModel.model)
 
-  // Object streaming for fragment generation
+  
   const { object, submit, isLoading: isSubmitting, stop, error } = useObject({
     api: "/api/chat",
     schema,
@@ -163,7 +163,7 @@ export default function Home() {
     }, []),
   })
 
-  // Fragment state management
+  
   const [fragment, setFragment] = useState<FragmentSchema | null>(null)
   const [result, setResult] = useState<ExecutionResult | undefined>()
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false)
@@ -172,10 +172,10 @@ export default function Home() {
     console.log("Settings dialog state:", isSettingsDialogOpen)
   }, [isSettingsDialogOpen, setIsSettingsDialogOpen])
 
-  // Navigation and action handlers
-  const handleSocialClick = useCallback((platform: "github" | "discord" | "x") => { // Updated platform type
+  
+  const handleSocialClick = useCallback((platform: "github" | "discord" | "x") => { 
     const urls = {
-      x: "https://twitter.com/intent/tweet?text=Check%20out%20this%20amazing%20AI%20App%20Builder!&url=https://codinit.dev", // Changed twitter to x
+      x: "https://twitter.com/intent/tweet?text=Check%20out%20this%20amazing%20AI%20App%20Builder!&url=https://codinit.dev", 
       github: "https://github.com/codinit-dev/ai-app-builder",
       discord: "https://discord.gg/codinit"
     }
@@ -195,11 +195,11 @@ export default function Home() {
 
   const handleUndo = useCallback(() => {
     if (messages.length > 0) {
-      const newMessages = messages.slice(0, -2) // Remove user and assistant message
+      const newMessages = messages.slice(0, -2) 
       setMessages(newMessages)
       const lastUserMessage = newMessages.findLast(m => m.role === 'user')
       if (lastUserMessage && lastUserMessage.content) {
-        const textContent = lastUserMessage.content.find(c => c.type === 'text') as { type: "text"; text: string } | undefined; // Adjusted type assertion
+        const textContent = lastUserMessage.content.find(c => c.type === 'text') as { type: "text"; text: string } | undefined; 
         if (textContent) {
           setChatInput(textContent.text)
         }
@@ -212,21 +212,21 @@ export default function Home() {
     }
   }, [messages])
 
-  // const openSignUpDialog = useCallback(() => { // No longer directly used by NavBar
-  //   setAuthView("sign_up")
-  //   setAuthDialog(true)
-  // }, [setAuthDialog])
+  const openSignUpDialog = useCallback(() => { 
+  setAuthView("sign_up")
+  setAuthDialog(true)
+  }, [setAuthDialog])
 
   const handlePreviewClose = useCallback(() => {
     setFragment(null)
     setResult(undefined)
   }, [])
 
-  const handleSaveInputChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => { // Changed React.ChangeEvent to ChangeEvent
+  const handleSaveInputChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => { 
     setChatInput(e.target.value)
   }, [])
 
-  const handleFileChange = useCallback((change: SetStateAction<File[]>) => { // Changed React.SetStateAction to SetStateAction
+  const handleFileChange = useCallback((change: SetStateAction<File[]>) => { 
     setFiles(change)
   }, [])
 
@@ -243,7 +243,7 @@ export default function Home() {
     }
   }, [fragment])
 
-  // Fragment execution effect
+  
   useEffect(() => {
     if (!fragment || !session?.access_token || !userTeam?.id) return
 
@@ -290,7 +290,7 @@ export default function Home() {
     executeFragment()
   }, [fragment, session?.access_token, session?.user?.id, userTeam?.id])
 
-  // Object update effect
+  
   useEffect(() => {
     if (!object) return
 
@@ -348,7 +348,6 @@ export default function Home() {
     })
   }, [object])
 
-  // Error handling effect
   useEffect(() => {
     if (error) {
       console.error("[useObject] Stopping due to error:", error)
@@ -356,14 +355,12 @@ export default function Home() {
     }
   }, [error, stop])
 
-  // Effect to track component mounting for client-side only logic
   useEffect(() => {
     setHasMounted(true)
   }, [])
 
-  // Main form submission handler
   const handleSubmitAuth = useCallback(async (
-    e: FormEvent<HTMLFormElement>, // Changed React.FormEvent to FormEvent
+    e: FormEvent<HTMLFormElement>, 
     projectFiles?: File[], 
     projectAnalysis?: ProjectAnalysis
   ) => {
@@ -403,9 +400,9 @@ export default function Home() {
       return
     }
 
-    // Generate a unique request ID using a more robust method
+    
     const requestId = `req_${Date.now()}_${crypto.randomUUID()}`
-    // setCurrentRequestId(requestId) // Removed setCurrentRequestId
+    
 
     const content: Message["content"] = [{ type: "text", text: chatInput }]
     const images = await toMessageImage(files)
@@ -531,13 +528,11 @@ export default function Home() {
             />
           )}
 
-          {/* Main Chat Area */}
+          
           <div className="flex flex-col w-full max-w-4xl mx-auto px-4 min-h-0">
-            {/* Navigation Bar */}
+            
             <NavBar
-              // session={session} // Provided by context via useAuth in NavBar
               showLogin={() => setAuthDialog(true)}
-              // signOut={logout} // Provided by context via useAuth in NavBar. This page's logout has a page reload.
               onSocialClick={handleSocialClick}
               onClear={handleClearChat}
               canClear={messages.length > 0}
@@ -546,7 +541,7 @@ export default function Home() {
               onRetryAuth={handleRetryAuth}
             />
 
-            {/* Chat Messages Area - Flexible, scrollable */}
+            
             <div className="flex-1 min-h-0 overflow-y-auto">
               <Chat
                 messages={messages}
@@ -555,15 +550,15 @@ export default function Home() {
                   setFragment(selectedFragment ? (selectedFragment as FragmentSchema) : null);
                   setResult(selectedResult);
                   if (selectedFragment?.files && selectedFragment.files.length > 0) {
-                    setCurrentTab("preview"); // Switch to preview if the fragment has files
+                    setCurrentTab("preview");
                   } else {
-                    setCurrentTab("code"); // Default to code tab otherwise
+                    setCurrentTab("code");
                   }
                 }}
               />
             </div>
 
-            {/* Chat Input - Fixed at bottom */}
+            
             <div className="flex-shrink-0 border-t bg-background">
               {hasMounted ? (
                 <EnhancedChatInput
@@ -579,9 +574,9 @@ export default function Home() {
                   isMultiModal={currentModel?.multiModal || false}
                   files={files}
                   handleFileChange={handleFileChange}
-                  onRateLimit={() => setIsRateLimited(true)} // Pass the handler
+                  onRateLimit={() => setIsRateLimited(true)}
                 >
-                  {/* ChatPicker is already using hasMounted internally or via its props */}
+                  
                    <ChatPicker
                       templates={templates}
                       selectedTemplate={selectedTemplate}
@@ -613,8 +608,8 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Preview Panel */}
-          {fragment && hasMounted && ( // Also ensure preview panel respects hasMounted if its content could cause issues
+          
+          {fragment && hasMounted && ( 
             <div className="hidden md:flex md:flex-col border-l border-border">
               <Preview
                 teamID={userTeam?.id}
@@ -632,7 +627,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Floating Action Button for New Project */}
+      
       <AnimatePresence>
         {session && hasMounted && (
           <motion.button
@@ -656,7 +651,7 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* Command Palette Integration */}
+      
       <CommandPalette 
         onCreateFragment={() => {
           setChatInput("Create a new Next.js React component with modern best practices including TypeScript, responsive design, and accessibility features.")
@@ -670,18 +665,18 @@ export default function Home() {
           }, 100)
         }}
         onClearChat={handleClearChat}
-        onOpenSettings={() => setIsSettingsDialogOpen(true)} // Updated to toggle dialog
+        onOpenSettings={() => setIsSettingsDialogOpen(true)}
       />
 
-      {/* Settings Dialog from Sidebar */}
-      {hasMounted && ( // Ensure dialog doesn't mismatch on hydration
+      
+      {hasMounted && (
         <SettingsDialog
           open={isSettingsDialogOpen}
           onOpenChange={setIsSettingsDialogOpen}
         />
       )}
 
-      {/* Project Dialog */}
+      
       <ProjectDialog
         open={isProjectDialogOpen}
         onOpenChange={closeProjectDialog}

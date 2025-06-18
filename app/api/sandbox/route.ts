@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     accessToken: string
   } = requestBody
 
-  // Enhanced validation
+  
   const validationResult = validateSandboxRequest({ fragment, userID, teamID, accessToken })
   if (!validationResult.valid) {
     return new Response(
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
   let sbx: Sandbox | null = null
 
   try {
-    // Create sandbox with enhanced error handling
+    
     console.log(`[Sandbox API ${requestId}] Creating sandbox with template:`, fragment.template)
 
     const sandboxConfig = {
@@ -109,12 +109,12 @@ export async function POST(req: Request) {
     sbx = await Sandbox.create(fragment.template, sandboxConfig)
     console.log(`[Sandbox API ${requestId}] Sandbox created successfully:`, sbx.sandboxId)
 
-    // Install dependencies with enhanced error handling
+    
     if (fragment.has_additional_dependencies && fragment.install_dependencies_command) {
       try {
         console.log(`[Sandbox API ${requestId}] Installing dependencies:`, fragment.additional_dependencies)
         const installResult = await sbx.commands.run(fragment.install_dependencies_command, {
-          timeoutMs: 120000, // 2 minutes timeout for installation
+          timeoutMs: 120000, 
         })
 
         if (installResult.exitCode !== 0) {
@@ -123,17 +123,17 @@ export async function POST(req: Request) {
             stderr: installResult.stderr,
             stdout: installResult.stdout,
           })
-          // Continue anyway, some dependencies might be optional
+          
         } else {
           console.log(`[Sandbox API ${requestId}] Dependencies installed successfully`)
         }
       } catch (installError) {
         console.warn(`[Sandbox API ${requestId}] Failed to install dependencies:`, installError)
-        // Continue without dependencies
+        
       }
     }
 
-    // Enhanced file copying with better error handling
+    
     if (fragment.files && Array.isArray(fragment.files) && fragment.files.length > 0) {
       console.log(`[Sandbox API ${requestId}] Copying ${fragment.files.length} file(s)`)
       
@@ -143,7 +143,7 @@ export async function POST(req: Request) {
             throw new Error(`File ${index}: Missing path or content is not a string`)
           }
 
-          // Validate file path for security
+          
           if (!isValidFilePath(file.file_path)) {
             throw new Error(`File ${index}: Invalid file path: ${file.file_path}`)
           }
@@ -154,7 +154,7 @@ export async function POST(req: Request) {
         })
       )
 
-      // Check for failed file copies
+      
       const failedCopies = copyResults.filter(result => result.status === 'rejected')
       if (failedCopies.length > 0) {
         const errors = failedCopies.map(result => (result as PromiseRejectedResult).reason.message)
@@ -163,7 +163,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // Execute based on template type
+    
     if (fragment.template === "code-interpreter-v1") {
       return await handleCodeInterpreter(sbx, fragment, requestId)
     } else {
@@ -191,14 +191,14 @@ export async function POST(req: Request) {
       },
     )
   } finally {
-    // Note: E2B handles cleanup automatically via timeouts
+    
     if (sbx) {
       console.log(`[Sandbox API ${requestId}] Sandbox ${sbx.sandboxId} operations completed`)
     }
   }
 }
 
-// Enhanced validation function
+
 function validateSandboxRequest(request: any): { valid: boolean; error?: string; code?: string } {
   if (!request.fragment) {
     return { valid: false, error: "Fragment is required", code: "MISSING_FRAGMENT" }
@@ -218,12 +218,12 @@ function validateSandboxRequest(request: any): { valid: boolean; error?: string;
     return { valid: false, error: "Valid template is required", code: "INVALID_TEMPLATE" }
   }
 
-  // Validate template ID against known templates
+  
   if (!Object.keys(templatesData).includes(fragment.template)) {
     return { valid: false, error: `Template '${fragment.template}' is not a valid template.`, code: "UNKNOWN_TEMPLATE" }
   }
 
-  // Validate files if present
+  
   if (fragment.files && Array.isArray(fragment.files)) {
     for (let i = 0; i < fragment.files.length; i++) {
       const file = fragment.files[i]
@@ -239,14 +239,14 @@ function validateSandboxRequest(request: any): { valid: boolean; error?: string;
   return { valid: true }
 }
 
-// Security: Validate file paths
+
 function isValidFilePath(filePath: string): boolean {
-  // Prevent directory traversal attacks
+  
   if (filePath.includes('..') || filePath.includes('~') || filePath.startsWith('/')) {
     return false
   }
 
-  // Only allow reasonable file extensions
+  
   const allowedExtensions = [
     '.js', '.ts', '.jsx', '.tsx', '.html', '.css', '.json', '.md', '.txt',
     '.py', '.java', '.php', '.rb', '.go', '.rs', '.sql', '.yml', '.yaml'
@@ -257,7 +257,7 @@ function isValidFilePath(filePath: string): boolean {
     return false
   }
 
-  // Reasonable path length
+  
   if (filePath.length > 200) {
     return false
   }
@@ -265,7 +265,7 @@ function isValidFilePath(filePath: string): boolean {
   return true
 }
 
-// Handle code interpreter execution
+
 async function handleCodeInterpreter(
   sbx: Sandbox, 
   fragment: FragmentSchema, 
@@ -309,7 +309,7 @@ async function handleCodeInterpreter(
   }
 }
 
-// Handle web-based sandbox
+
 async function handleWebSandbox(
   sbx: Sandbox, 
   fragment: FragmentSchema, 
@@ -332,7 +332,7 @@ async function handleWebSandbox(
   })
 }
 
-// Enhanced error handling
+
 function getErrorCode(error: any): string {
   const message = error.message || ""
   

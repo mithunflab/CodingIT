@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       })
     )
 
-    // Build project structure
+    
     const projectStructure = buildProjectStructure(processedFiles)
     
     console.log(`[Upload API ${requestId}] Successfully processed ${files.length} files`)

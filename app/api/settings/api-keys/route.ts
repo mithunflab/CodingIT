@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid request data" }, { status: 400 });
     }
 
-    // Generate a unique API key
+    
     const keyPrefix = permissions.includes('write') ? 'ak_live' : 'ak_test';
     const keyBody = Array.from(crypto.getRandomValues(new Uint8Array(32)))
       .map(b => b.toString(16).padStart(2, '0'))
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to create API key" }, { status: 500 });
     }
 
-    // Return the data with the full key for display (one time only)
+    
     const result = { ...data, full_key: fullKey };
     return NextResponse.json(result);
   } catch (error) {

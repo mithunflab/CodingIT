@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       includeDotFolders,
       maxFileSizeMB
     }
-    // Filter out undefined options so defaults in downloadRepository apply
+    
     const definedImportOptions = Object.fromEntries(
       Object.entries(importOptions).filter(([_, v]) => v !== undefined)
     );
@@ -94,17 +94,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Convert to File objects for analysis
+    
     const fileObjects = files.map(file => {
       const blob = new Blob([file.content], { type: 'text/plain' })
       return new File([blob], file.name)
     })
 
-    // Analyze the project
+    
     const analyzer = new ProjectAnalyzer()
     const result = await analyzer.analyzeProject(fileObjects)
 
-    // Enhance the analysis structure with file contents for easier access
+    
     const enhancedStructure = {
       ...result.structure,
       files: result.structure.files.map(file => {

@@ -1,6 +1,6 @@
 import type { Duration } from "@/lib/duration"
 import type { LLMModel, LLMModelConfig } from "@/lib/models"
-import { getModelClient } from "@/lib/models" // Assuming getModelClient is a named export
+import { getModelClient } from "@/lib/models" 
 import { toEnhancedPrompt } from "@/lib/enhanced-prompt"
 import ratelimit from "@/lib/ratelimit"
 import { fragmentSchema as schema } from "@/lib/schema"
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   try {
     console.log(`[Chat API ${requestId}] Processing request`)
 
-    // Parse request body with enhanced error handling
+    
     let body: any
     try {
       body = await req.json()
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
       analysisInstructions?: string
     } = body
 
-    // Enhanced validation with better error messages
+    
     const validation = validateRequestData(body)
     if (!validation.valid) {
       logError("Request validation failed", new Error(validation.errors.join(", ")), { requestId, errors: validation.errors })
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // Rate limiting check
+    
     try {
       const limit = !config.apiKey
         ? await ratelimit(req.headers.get("x-forwarded-for"), rateLimitMaxRequests, ratelimitWindow)
@@ -150,7 +150,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // Extract user prompt from the last message
+    
     const lastMessage = messages[messages.length - 1]
     let userPrompt = ''
     if (Array.isArray(lastMessage?.content)) {
@@ -216,7 +216,7 @@ export async function POST(req: Request) {
         hasProjectContext: !!projectStructure 
       })
 
-      // Enhanced error categorization
+      
       const errorMessage = error.message || "Unknown error"
 
       if (errorMessage.includes("API key") || errorMessage.includes("authentication") || error.status === 401) {

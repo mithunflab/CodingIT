@@ -48,7 +48,7 @@ export async function GET() {
 
     if (error) {
       if (error.code === 'PGRST116') {
-        // No settings found, return defaults
+        
         const defaultSettings = {
           user_id: user.id,
           theme: "system",
@@ -71,7 +71,7 @@ export async function GET() {
           session_timeout: 30
         };
 
-        // Create default settings
+        
         const { data: newSettings, error: createError } = await supabase
           .from("user_settings")
           .insert(defaultSettings)

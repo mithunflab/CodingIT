@@ -32,7 +32,7 @@ async function getUserFromAuth(request: NextRequest) {
   }
 
   const token = authHeader.substring(7)
-  // console.log('[api/projects/route.ts] getUserFromAuth - Extracted token:', token); // Be careful logging tokens
+  
   const { data: { user }, error } = await supabase.auth.getUser(token)
   console.log('[api/projects/route.ts] getUserFromAuth - supabase.auth.getUser result - user ID:', user?.id, 'error:', error);
   

@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   try {
     console.log(`[Enhance Text API ${requestId}] Processing request`)
 
-    // Parse and validate request body
+    
     let body: any
     try {
       body = await req.json()
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     const { textToEnhance } = body
 
-    // Get user authentication
+    
     const cookieStore = cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Apply rate limiting
+    
     try {
       const limit = rateLimitMaxRequests
         ? await ratelimit(req.headers.get("x-forwarded-for"), rateLimitMaxRequests, ratelimitWindow)
@@ -115,10 +115,10 @@ export async function POST(req: NextRequest) {
       }
     } catch (error) {
       logError("Rate limiting check failed", error, { requestId })
-      // Continue without rate limiting if it fails
+      
     }
 
-    // Get default model for enhancement
+    
     const defaultModel = modelsList.models.find(m => m.providerId === "openai" && m.id === "gpt-4o") || 
                          modelsList.models.find(m => m.providerId === "anthropic" && m.id === "claude-3-5-sonnet-20241022") ||
                          modelsList.models[0]

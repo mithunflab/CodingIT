@@ -1,4 +1,3 @@
-// app/api/e2b/tools/route.ts
 import { Sandbox } from "@e2b/code-interpreter"
 import { getModelClient, type LLMModel, type LLMModelConfig } from '../../../lib/models'
 import { E2B_TOOL_REGISTRY, type E2BToolType, type ToolPromptContext } from '../../../lib/e2b/toolPrompts'
@@ -59,7 +58,7 @@ export async function POST(req: Request): Promise<Response> {
   try {
     console.log(`[E2B Tools API ${requestId}] Processing tool execution request`)
 
-    // Parse and validate request
+    
     try {
       requestBody = await req.json() as E2BToolRequest;
     } catch (error) {
@@ -77,7 +76,7 @@ export async function POST(req: Request): Promise<Response> {
       )
     }
 
-    // Ensure requestBody is defined before proceeding
+    
     if (!requestBody) {
       return new Response(
         JSON.stringify({
@@ -94,7 +93,7 @@ export async function POST(req: Request): Promise<Response> {
 
     const { toolType, userInput, model, config, userID, teamID, sessionId, projectFiles } = requestBody
 
-    // Validate required fields
+    
     if (!toolType || !E2B_TOOL_REGISTRY[toolType]) {
       return new Response(
         JSON.stringify({
@@ -138,7 +137,7 @@ export async function POST(req: Request): Promise<Response> {
       )
     }
 
-    // Rate limiting using existing pattern
+    
     try {
       const limit = !config.apiKey
         ? await ratelimit(req.headers.get("x-forwarded-for"), rateLimitMaxRequests, ratelimitWindow)
@@ -164,17 +163,17 @@ export async function POST(req: Request): Promise<Response> {
       }
     } catch (error) {
       console.warn(`[E2B Tools API ${requestId}] Rate limiting check failed:`, error)
-      // Continue without rate limiting if service unavailable
+      
     }
 
     console.log(`[E2B Tools API ${requestId}] Executing tool: ${toolType} for user: ${userID.substring(0, 8)}...`)
 
-    // Analyze project context if files provided
+    
     let projectContext: ProjectStructure | undefined
     if (projectFiles && projectFiles.length > 0) {
       try {
         const analyzer = new ProjectAnalyzer()
-        // Convert to File objects for analyzer
+        
         const fileObjects = projectFiles.map(file => {
           const blob = new Blob([file.content], { type: file.type || 'text/plain' })
           const fileObj = new File([blob], file.name, { type: file.type || 'text/plain' })
@@ -186,11 +185,11 @@ export async function POST(req: Request): Promise<Response> {
         console.log(`[E2B Tools API ${requestId}] Project context analyzed: ${projectFiles.length} files`)
       } catch (error) {
         console.warn(`[E2B Tools API ${requestId}] Project analysis failed:`, error)
-        // Continue without project context
+        
       }
     }
 
-    // Generate tool prompt
+    
     const toolRegistry = E2B_TOOL_REGISTRY[toolType]
     const promptContext: ToolPromptContext = {
       userInput,
@@ -231,7 +230,7 @@ export async function POST(req: Request): Promise<Response> {
       )
     }
 
-    // Execute in E2B sandbox
+    
     const apiKey = process.env.E2B_API_KEY
     if (!apiKey) {
       console.error(`[E2B Tools API ${requestId}] E2B API key not configured`)
@@ -268,7 +267,7 @@ export async function POST(req: Request): Promise<Response> {
 
       console.log(`[E2B Tools API ${requestId}] Sandbox created: ${sandbox.sandboxId}`)
 
-      // Execute AI tool with generated prompt
+      
       const messages = [
         {
           role: "user" as const,
@@ -309,9 +308,9 @@ export async function POST(req: Request): Promise<Response> {
       });
       console.log(`[E2B Tools API ${requestId}] AI response received, executing in sandbox`)
 
-      // Execute the generated code/content in sandbox
+      
       if (finalObject && finalObject.files && finalObject.files.length > 0) {
-        // Write files to sandbox
+        
         for (const file of finalObject.files) {
           if (file.file_path && file.file_content) {
             await sandbox.files.write(file.file_path, file.file_content)
@@ -319,7 +318,7 @@ export async function POST(req: Request): Promise<Response> {
           }
         }
 
-        // Execute any shell commands if specified
+        
         if (finalObject.execution && Array.isArray(finalObject.execution)) {
           for (const command of finalObject.execution) {
             const _result = await sandbox.commands.run(command)
@@ -418,7 +417,7 @@ export async function POST(req: Request): Promise<Response> {
   }
 }
 
-// GET endpoint for tool registry information
+
 export async function GET(): Promise<Response> {
   const requestId = generateRequestId()
 

@@ -11,7 +11,7 @@ async function main() {
 
     const codeToRun = 'print("hello world")';
     console.log(`Executing code: ${codeToRun}`);
-    const execution = await sbx.runCode(codeToRun); // Execute Python inside the sandbox
+    const execution = await sbx.runCode(codeToRun); 
 
     console.log('Execution logs:');
     execution.logs.stdout.forEach(log => console.log(`[STDOUT] ${log}`));
@@ -29,16 +29,16 @@ async function main() {
 
   } catch (error) {
     console.error('An error occurred:', error);
-    // Depending on the application, you might want to exit or handle the error differently
-    // process.exit(1); 
+    
+    
   } finally {
     if (sbx) {
       console.log('Closing preview...');
       try {
         await (sbx as any).close();
         console.log('Sandbox closed successfully.');
-      } catch (closeError) { // Updated variable name
-        console.error('Error closing sandbox:', closeError); // Updated log message
+      } catch (closeError) { 
+        console.error('Error closing sandbox:', closeError); 
       }
     }
   }

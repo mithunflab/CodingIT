@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   const code = url.searchParams.get('code')
   const error = url.searchParams.get('error')
   const errorDescription = url.searchParams.get('error_description')
-  const state = url.searchParams.get('state') // GitHub returns state here
+  const state = url.searchParams.get('state') 
   
   const html = `
     <!DOCTYPE html>
@@ -16,21 +16,21 @@ export async function GET(request: NextRequest) {
       <body>
         <script>
           if (window.opener) {
-            if (${error ? `true` : `false`}) { // Check if error exists
+            if (${error ? `true` : `false`}) { 
               window.opener.postMessage({ 
                 type: 'GITHUB_AUTH_ERROR', 
                 error: '${error}',
                 errorDescription: '${errorDescription}' 
               }, '*');
-            } else if (${code ? `true` : `false`}) { // Check if code exists
-              // Send code and state to parent window
+            } else if (${code ? `true` : `false`}) { 
+              
               window.opener.postMessage({ 
-                type: 'GITHUB_AUTH_CALLBACK', // New message type
+                type: 'GITHUB_AUTH_CALLBACK', 
                 code: '${code}',
                 state: '${state}' 
               }, '*');
             } else {
-              // Fallback error if neither code nor error is present
+              
               window.opener.postMessage({
                 type: 'GITHUB_AUTH_ERROR',
                 error: 'unknown_error',
@@ -38,8 +38,8 @@ export async function GET(request: NextRequest) {
               }, '*');
             }
           }
-          // Always close the window after attempting to post message
-          // Give a slight delay for the message to be potentially processed
+          
+          
           setTimeout(() => { window.close(); }, 500);
         </script>
         <p>Processing GitHub authentication...</p>

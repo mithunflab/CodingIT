@@ -503,7 +503,6 @@ export async function getModelClient(model: LLMModel, config: LLMModelConfig = {
       )
     }
 
-    // Fallback for unknown errors
     throw new APIError(
       `Failed to create ${providerId} client: ${error.message || 'Unknown error'}`, 
       500, 
@@ -514,20 +513,16 @@ export async function getModelClient(model: LLMModel, config: LLMModelConfig = {
   }
 }
 
-// Synchronous version for backward compatibility
 export function getModelClientSync(model: LLMModel, config: LLMModelConfig = {}) {
   const { id: modelId, providerId } = model
 
   try {
     console.log(`[getModelClientSync] Creating client for ${providerId}/${modelId}`)
 
-    // Validate input parameters
     validateModelConfiguration(model, config)
     
-    // Validate environment variables
     validateEnvironmentVariables(providerId, config.apiKey)
     
-    // Create the provider client
     const client = createProviderClient(providerId, modelId, config)
     
     console.log(`[getModelClientSync] Successfully created client for ${providerId}/${modelId}`)
@@ -539,13 +534,11 @@ export function getModelClientSync(model: LLMModel, config: LLMModelConfig = {})
   }
 }
 
-// Utility functions for error handling
 export function isRetryableError(error: Error): boolean {
   return error instanceof APIError && error.retryable
 }
 
 export function getRetryDelay(attempt: number, baseDelay: number = 1000): number {
-  // Exponential backoff with jitter
   const delay = Math.min(baseDelay * Math.pow(2, attempt), 30000)
   const jitter = Math.random() * 0.1 * delay
   return delay + jitter
@@ -559,7 +552,6 @@ export function getSupportedProviders(): string[] {
   return Object.keys(PROVIDER_CONFIGS)
 }
 
-// Health check function for monitoring
 export async function checkProviderHealth(providerId: string, config: LLMModelConfig = {}): Promise<boolean> {
   try {
     const dummyModel: LLMModel = {
