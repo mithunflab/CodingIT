@@ -1,12 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, ReactNode } from "react";
+import React, { createContext, useContext, ReactNode, useEffect } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { useAuth as useAppAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import type { ViewType } from "@/components/auth/types"; // Added for setAuthView
 
-// Copied from lib/auth.ts
 type UserTeam = {
   email: string;
   id: string;
@@ -21,6 +20,7 @@ interface AuthContextType {
   isLoading: boolean;
   authError: string | null;
   signOut: () => Promise<void>;
+  openAuthDialog: () => void; // Added to open the auth dialog
   // Consider if setAuthDialog and setAuthView are needed globally
   // For now, they are not part of the context value but handled by useAppAuth
 }
@@ -44,6 +44,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAuthView
   );
   const user = session?.user ?? null;
+  // openAuthDialog is now part of the return from useAppAuth
+  const { openAuthDialog } = useAppAuth(setAuthDialog, setAuthView);
+
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -54,10 +57,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // onAuthStateChange in useAppAuth should handle resetting session, userTeam etc.
   };
 
+  const contextValue = { session, user, userTeam, isLoading, authError, signOut, openAuthDialog };
+
+  useEffect(() => {
+    console.log('[AuthContext.tsx] Context values updated:', {
+      session: session?.user?.id,
+      user: user?.id,
+      userTeam: userTeam?.id,
+      isLoading,
+      authError,
+    });
+  }, [session, user, userTeam, isLoading, authError]);
+
   return (
-    <AuthContext.Provider
-      value={{ session, user, userTeam, isLoading, authError, signOut }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

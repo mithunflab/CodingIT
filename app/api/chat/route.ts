@@ -82,7 +82,6 @@ export async function POST(req: Request) {
 
     console.log(`[Chat API ${requestId}] Validation passed for model: ${model.id} (${model.providerId})`)
 
-    // Analyze uploaded files if present
     let projectStructure: ProjectStructure | undefined
     if (uploadedFiles && uploadedFiles.length > 0) {
       try {

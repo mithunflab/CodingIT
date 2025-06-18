@@ -45,7 +45,13 @@ export function useAuth(setAuthDialog: (value: boolean) => void, setAuthView: (v
   const [userTeam, setUserTeam] = useState<UserTeam | undefined>(undefined)
   const [recovery, setRecovery] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  useEffect(() => {
+    console.log('[lib/auth.ts] isLoading state changed:', isLoading);
+  }, [isLoading]);
   const [authError, setAuthError] = useState<string | null>(null)
+  useEffect(() => {
+    if (authError) console.error('[lib/auth.ts] authError state changed:', authError);
+  }, [authError]);
   const posthog = usePostHog()
 
   const setupUserTeam = useCallback(
@@ -98,8 +104,10 @@ export function useAuth(setAuthDialog: (value: boolean) => void, setAuthView: (v
     }
 
     const initializeAuth = async () => {
+      console.log('[lib/auth.ts] initializeAuth started');
       try {
         const { data: { session: initialSession }, error: initialError } = await activeSupabase.auth.getSession();
+        console.log('[lib/auth.ts] getSession result - initialSession:', initialSession?.user?.id, 'initialError:', initialError);
 
         if (initialError) {
           console.error("[useAuth] Error getting initial session:", initialError);
@@ -109,7 +117,7 @@ export function useAuth(setAuthDialog: (value: boolean) => void, setAuthView: (v
           return;
         }
 
-        console.log("[useAuth] Initial session:", initialSession?.user?.id);
+        console.log("[useAuth] Initial session (user ID):", initialSession?.user?.id);
         setSession(initialSession);
 
         if (initialSession) {
@@ -191,7 +199,7 @@ export function useAuth(setAuthDialog: (value: boolean) => void, setAuthView: (v
     const {
       data: { subscription },
     } = activeSupabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log("[useAuth] Auth state change:", _event, session?.user?.id);
+      console.log("[lib/auth.ts] onAuthStateChange - event:", _event, "session user ID:", session?.user?.id);
       setSession(session)
 
       if (session) {
@@ -251,10 +259,16 @@ export function useAuth(setAuthDialog: (value: boolean) => void, setAuthView: (v
     }
   }, [recovery, setAuthDialog, setAuthView, posthog, setupUserTeam])
 
+  const openAuthDialog = () => {
+    setAuthDialog(true);
+    setAuthView("sign_in"); // Or your default view
+  };
+
   return {
     session,
     userTeam,
     isLoading,
     authError,
+    openAuthDialog, // Expose the function
   }
 }

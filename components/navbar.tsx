@@ -15,37 +15,30 @@ import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { DiscordLogoIcon, GitHubLogoIcon, TwitterLogoIcon } from "@radix-ui/react-icons"
-// import type { Session } from "@supabase/supabase-js" // No longer directly needed
 import { ArrowRight, LogOut, Trash, Undo, AlertCircle, User, Settings, RefreshCw } from "lucide-react"
 import Link from "next/link"
-import { useAuth } from "@/contexts/AuthContext" // Adjust path if needed
+import { useAuth } from "@/contexts/AuthContext"
 
 export function NavBar({
-  // session, // Removed
   showLogin,
-  // signOut, // Removed
   onClear,
   canClear,
   onSocialClick,
   onUndo,
   canUndo,
-  // authError, // Removed, will come from useAuth
-  onRetryAuth, // Keep if retry logic is specific to NavBar's parent
+  onRetryAuth,
 }: {
-  // session: Session | null // Removed
   showLogin: () => void
-  // signOut: () => void // Removed
   onClear: () => void
   canClear: boolean
   onSocialClick: (target: "github" | "x" | "discord") => void
   onUndo: () => void
   canUndo: boolean
-  // authError?: string | null // Removed
+  authError?: string | null // Removed
   onRetryAuth?: () => void
 }) {
-  const { session, user, signOut, authError, isLoading } = useAuth(); // Get session and signOut from context
+  const { session, user, signOut, authError, isLoading } = useAuth();
 
-  // Get user display name and avatar
   const getUserDisplayName = () => {
     if (!user) return "User"
 
@@ -68,7 +61,7 @@ export function NavBar({
   }
 
   const getAvatarUrl = () => {
-    return user?.user_metadata?.avatar_url // Fallback can be handled by Avatar component or a default image
+    return user?.user_metadata?.avatar_url
   }
   
   // Optional: Add a loading state indicator if desired
@@ -104,7 +97,6 @@ export function NavBar({
         </Link>
       </div>
 
-      {/* Auth Error Alert - now uses authError from context */}
       {authError && (
         <div className="flex items-center mr-4">
           <Alert className="border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive">
@@ -163,12 +155,10 @@ export function NavBar({
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
                         <AvatarImage
-                          src={getAvatarUrl() || ""} // Let AvatarFallback handle missing src
+                          src={getAvatarUrl() || ""}
                           alt={getUserDisplayName()}
                           onError={(e) => {
-                            // Fallback to initials if image fails to load
-                            // This specific onError might not be needed if AvatarFallback handles it well
-                            // e.currentTarget.style.display = "none" 
+                            e.currentTarget.src = "/avatar.png"
                           }}
                         />
                         <AvatarFallback className="text-xs">{getUserInitials()}</AvatarFallback>

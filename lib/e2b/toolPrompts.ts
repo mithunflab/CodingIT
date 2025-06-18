@@ -27,15 +27,8 @@ export interface ToolPromptResponse {
   }
 }
 
-/**
- * Universal E2B Tool Prompt Generator
- * Creates production-ready prompts for E2B sandbox execution
- */
 export class E2BToolPromptGenerator {
   
-  /**
-   * Generate new task tool prompt for complex development tasks
-   */
   static generateNewTaskPrompt(context: ToolPromptContext): ToolPromptResponse {
     const { userInput, template, projectContext } = context
 

@@ -1,4 +1,3 @@
-// components/e2b-tools/E2BToolsPanel.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
