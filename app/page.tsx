@@ -651,7 +651,7 @@ export default function Home() {
         <Dialog open={isE2BToolsModalOpen} onOpenChange={setIsE2BToolsModalOpen}>
           <DialogContent className="max-w-3xl h-[80vh] flex flex-col p-0">
             <DialogHeader className="p-6 pb-0">
-              <DialogTitle>E2B Tools Panel</DialogTitle>
+              <DialogTitle>Tools Panel</DialogTitle>
             </DialogHeader>
             <div className="flex-grow overflow-auto p-6 pt-0">
               <E2BToolsPanel

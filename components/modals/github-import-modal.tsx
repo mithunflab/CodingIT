@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -76,13 +76,14 @@ interface ProjectAnalysis {
 }
 
 interface GitHubImportModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
   onImport: (files: File[], analysis: ProjectAnalysis, repositoryInfo: { owner: string; repo: string }) => void
   isLoading?: boolean
 }
 
-export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportModalProps) {
+export function GitHubImportModal({ open, onOpenChange, onImport, isLoading = false }: GitHubImportModalProps) {
   const { toast } = useToast()
-  const [open, setOpen] = useState(false)
   const [repositories, setRepositories] = useState<GitHubRepository[]>([])
   const [githubUser, setGithubUser] = useState<GitHubUser | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
@@ -96,7 +97,7 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
   // Advanced settings state
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [advMaxFiles, setAdvMaxFiles] = useState<string>("50")
-  const [advAllowedExtensions, setAdvAllowedExtensions] = useState<string>(".js,.ts,.jsx,.tsx,.py,.md,.json,.html,.css") // Comma-separated
+  const [advAllowedExtensions, setAdvAllowedExtensions] = useState<string>(".js,.ts,.jsx,.tsx,.py,.md,.json,.html,.css") 
   const [advMaxDepth, setAdvMaxDepth] = useState<string>("5")
   const [advIncludeDotFolders, setAdvIncludeDotFolders] = useState<boolean>(false)
   const [advMaxFileSizeMB, setAdvMaxFileSizeMB] = useState<string>("1")
@@ -277,7 +278,7 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
       )
       
       onImport(files, data.analysis, { owner, repo })
-      setOpen(false)
+      onOpenChange(false)
       setSelectedRepo(null)
       
       toast({
@@ -290,13 +291,13 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
       setError(error instanceof Error ? error.message : 'Failed to import repository')
       toast({
         title: "Import Failed",
-        description: error instanceof Error ? error.message : 'Failed to import repository',
+        description: error instanceof Error ? error.message : "Failed to import repository",
         variant: "destructive"
       })
     } finally {
       setIsImporting(false)
     }
-  }, [selectedRepo, onImport, toast, advMaxFiles, advAllowedExtensions, advMaxDepth, advIncludeDotFolders, advMaxFileSizeMB])
+  }, [selectedRepo, advMaxFiles, advMaxDepth, advMaxFileSizeMB, advAllowedExtensions, advIncludeDotFolders, onImport, onOpenChange, toast])
 
   useEffect(() => {
     if (open && !connectionChecked) {
@@ -304,263 +305,208 @@ export function GitHubImportModal({ onImport, isLoading = false }: GitHubImportM
     }
   }, [open, connectionChecked, checkConnection])
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric'
-    })
-  }
-
-  const getLanguageColor = (language: string | null) => {
-    const colors: Record<string, string> = {
-      'JavaScript': 'bg-yellow-500',
-      'TypeScript': 'bg-blue-500',
-      'Python': 'bg-green-500',
-      'Java': 'bg-red-500',
-      'Go': 'bg-cyan-500',
-      'Rust': 'bg-orange-500',
-      'PHP': 'bg-purple-500',
-      'Ruby': 'bg-red-600',
-    }
-    return colors[language || ''] || 'bg-gray-500'
-  }
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          disabled={isLoading}
-          type="button"
-          variant="outline"
-          size="icon"
-          className="rounded-xl h-10 w-10"
-        >
-          <Github className="h-5 w-5" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Github className="w-5 h-5" />
-            Import from GitHub
+            <Github className="h-5 w-5" />
+            Import GitHub Repository
           </DialogTitle>
         </DialogHeader>
 
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+        <div className="flex-1 overflow-hidden">
+          {error && (
+            <Alert className="mb-4" variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        {!process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              GitHub integration is not configured. Please set NEXT_PUBLIC_GITHUB_CLIENT_ID environment variable.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {!isConnected && process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID ? (
-          <div className="text-center py-8">
-            <Github className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">Connect GitHub Repository Access</h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              Connect GitHub to import and analyze your repositories.
-              <br />
-              <span className="text-xs text-muted-foreground">
-                This is separate from your account login and grants repository access only.
-              </span>
-            </p>
-            <Button onClick={connectGitHub} className="gap-2">
-              <Github className="w-4 h-4" />
-              Connect GitHub for Repository Access
-            </Button>
-          </div>
-        ) : isConnected ? (
-          <div className="space-y-4">
-            {githubUser && (
-              <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={githubUser.avatar_url} alt={githubUser.login} />
-                  <AvatarFallback>{githubUser.login.charAt(0).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="font-medium text-sm">{githubUser.name || githubUser.login}</div>
-                  <div className="text-xs text-muted-foreground">@{githubUser.login}</div>
-                </div>
-                <Badge variant="secondary" className="text-xs">
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                  Connected
-                </Badge>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="repo-search" className="text-sm">Search repositories</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="repo-search"
-                  placeholder="Search your repositories..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+          {!isConnected ? (
+            <div className="text-center py-8">
+              <Github className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-semibold mb-2">Connect GitHub Account</h3>
+              <p className="text-sm text-muted-foreground mb-6">
+                Connect your GitHub account to import repositories as projects.
+              </p>
+              <Button onClick={connectGitHub} className="gap-2">
+                <Github className="w-4 h-4" />
+                Connect GitHub
+              </Button>
             </div>
-
-            <ScrollArea className="h-60 border rounded-md">
-              <div className="p-3 space-y-2">
-                {isLoadingRepos ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                    <span className="text-sm">Loading repositories...</span>
+          ) : (
+            <div className="space-y-4">
+              {githubUser && (
+                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={githubUser.avatar_url} alt={githubUser.login} />
+                    <AvatarFallback>{githubUser.login.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{githubUser.name || githubUser.login}</div>
+                    <div className="text-xs text-muted-foreground">@{githubUser.login}</div>
                   </div>
-                ) : filteredRepositories.length > 0 ? (
-                  filteredRepositories.map((repo) => (
-                    <div
-                      key={repo.id}
-                      className={cn(
-                        "p-3 border rounded-lg cursor-pointer transition-all hover:bg-accent/50",
-                        selectedRepo?.id === repo.id && "border-primary bg-accent"
-                      )}
-                      onClick={() => setSelectedRepo(selectedRepo?.id === repo.id ? null : repo)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="font-medium text-sm truncate">{repo.name}</div>
-                            {repo.private && <Lock className="w-3 h-3 text-muted-foreground" />}
-                            {repo.fork && <GitFork className="w-3 h-3 text-muted-foreground" />}
-                          </div>
-                          {repo.description && (
-                            <p className="text-xs text-muted-foreground mb-2 line-clamp-1">
-                              {repo.description}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            {repo.language && (
-                              <div className="flex items-center gap-1">
-                                <div className={cn("w-2 h-2 rounded-full", getLanguageColor(repo.language))} />
-                                {repo.language}
-                              </div>
-                            )}
-                            <div className="flex items-center gap-1">
-                              <Star className="w-3 h-3" />
-                              {repo.stargazers_count}
+                  <Badge variant="secondary" className="text-xs">
+                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                    Connected
+                  </Badge>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="repo-search" className="text-sm">Search repositories</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="repo-search"
+                    placeholder="Search your repositories..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <ScrollArea className="h-60 border rounded-md">
+                <div className="p-3 space-y-2">
+                  {isLoadingRepos ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      <span className="text-sm">Loading repositories...</span>
+                    </div>
+                  ) : filteredRepositories.length > 0 ? (
+                    filteredRepositories.map((repo) => (
+                      <div
+                        key={repo.id}
+                        className={cn(
+                          "p-3 border rounded-lg cursor-pointer transition-colors",
+                          selectedRepo?.id === repo.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:bg-muted/50"
+                        )}
+                        onClick={() => setSelectedRepo(repo)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-medium text-sm truncate">{repo.name}</h4>
+                              {repo.private && <Lock className="w-3 h-3 text-muted-foreground" />}
+                              {repo.fork && <GitFork className="w-3 h-3 text-muted-foreground" />}
                             </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {formatDate(repo.updated_at)}
+                            {repo.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                                {repo.description}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              {repo.language && (
+                                <span className="flex items-center gap-1">
+                                  <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                  {repo.language}
+                                </span>
+                              )}
+                              <span className="flex items-center gap-1">
+                                <Star className="w-3 h-3" />
+                                {repo.stargazers_count}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {new Date(repo.updated_at).toLocaleDateString()}
+                              </span>
                             </div>
                           </div>
                         </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-sm text-muted-foreground">No repositories found</p>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <div className="text-sm">
-                      {searchQuery ? 'No repositories match your search' : 'No repositories found'}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
+                  )}
+                </div>
+              </ScrollArea>
 
-            {selectedRepo && (
-              <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <div className="flex items-center gap-2 text-sm">
-                  <Github className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <span className="font-medium text-blue-900 dark:text-blue-100">
-                    {selectedRepo.full_name}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 ml-auto"
-                    asChild
-                  >
-                    <a 
-                      href={`https://github.com/${selectedRepo.full_name}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
+              {/* Advanced Settings */}
+              <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-between">
+                    <span className="flex items-center gap-2">
+                      <Settings2 className="w-4 h-4" />
+                      Advanced Settings
+                    </span>
+                    <ChevronDown className={cn("w-4 h-4 transition-transform", showAdvanced && "rotate-180")} />
                   </Button>
-                </div>
-              </div>
-            )}
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 pt-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="max-files" className="text-xs">Max Files</Label>
+                      <Input
+                        id="max-files"
+                        value={advMaxFiles}
+                        onChange={(e) => setAdvMaxFiles(e.target.value)}
+                        placeholder="50"
+                        className="text-xs h-8"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="max-depth" className="text-xs">Max Depth</Label>
+                      <Input
+                        id="max-depth"
+                        value={advMaxDepth}
+                        onChange={(e) => setAdvMaxDepth(e.target.value)}
+                        placeholder="5"
+                        className="text-xs h-8"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="allowed-extensions" className="text-xs">Allowed Extensions</Label>
+                    <Input
+                      id="allowed-extensions"
+                      value={advAllowedExtensions}
+                      onChange={(e) => setAdvAllowedExtensions(e.target.value)}
+                      placeholder=".js,.ts,.jsx,.tsx,.py,.md"
+                      className="text-xs h-8"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="include-dot-folders"
+                      checked={advIncludeDotFolders}
+                      onCheckedChange={(checked) => setAdvIncludeDotFolders(checked as boolean)}
+                    />
+                    <Label htmlFor="include-dot-folders" className="text-xs">Include dot folders (.git, .vscode, etc.)</Label>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
 
-            <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced} className="pt-2">
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start gap-2 px-2 text-sm text-muted-foreground hover:text-foreground">
-                  <Settings2 className="w-4 h-4" />
-                  Advanced Settings
-                  <ChevronDown className={cn("w-4 h-4 ml-auto transition-transform", showAdvanced && "rotate-180")} />
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
                 </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-3 px-1 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="advMaxFiles" className="text-xs">Max Files</Label>
-                    <Input id="advMaxFiles" type="number" value={advMaxFiles} onChange={(e) => setAdvMaxFiles(e.target.value)} placeholder="e.g., 100" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="advMaxDepth" className="text-xs">Max Depth</Label>
-                    <Input id="advMaxDepth" type="number" value={advMaxDepth} onChange={(e) => setAdvMaxDepth(e.target.value)} placeholder="e.g., 10" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="advAllowedExtensions" className="text-xs">Allowed Extensions (comma-separated, e.g. .js,.ts)</Label>
-                  <Input 
-                    id="advAllowedExtensions" 
-                    value={advAllowedExtensions} 
-                    onChange={(e) => setAdvAllowedExtensions(e.target.value)} 
-                    placeholder=".js,.ts,.py,.md" 
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="advMaxFileSizeMB" className="text-xs">Max File Size (MB)</Label>
-                    <Input id="advMaxFileSizeMB" type="number" value={advMaxFileSizeMB} onChange={(e) => setAdvMaxFileSizeMB(e.target.value)} placeholder="e.g., 5" />
-                  </div>
-                  <div className="flex items-center space-x-2 pt-5">
-                    <Checkbox id="advIncludeDotFolders" checked={advIncludeDotFolders} onCheckedChange={(checked) => setAdvIncludeDotFolders(checked as boolean)} />
-                    <Label htmlFor="advIncludeDotFolders" className="text-xs font-normal">
-                      Include dot-folders (e.g. .github)
-                    </Label>
-                  </div>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setOpen(false)} disabled={isImporting}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleImport} 
-                disabled={!selectedRepo || isImporting}
-                className="gap-2"
-              >
-                {isImporting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Importing...
-                  </>
-                ) : (
-                  <>
-                    Import Repository
-                  </>
-                )}
-              </Button>
+                <Button 
+                  onClick={handleImport} 
+                  disabled={!selectedRepo || isImporting || isLoading}
+                  className="gap-2"
+                >
+                  {(isImporting || isLoading) ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Creating Project...
+                    </>
+                  ) : (
+                    <>
+                      <Github className="w-4 h-4" />
+                      Import as Project
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
-        ) : null}
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   )

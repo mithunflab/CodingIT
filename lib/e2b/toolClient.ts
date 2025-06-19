@@ -1,4 +1,3 @@
-// lib/e2b/toolClient.ts
 import type { E2BToolType } from "@/lib/e2b/toolPrompts"
 import type { LLMModel, LLMModelConfig } from "@/lib/models"
 
@@ -59,20 +58,14 @@ export interface E2BToolResult {
   requestId: string
 }
 
-/**
- * E2B Tool Client for seamless integration with CodinIT.dev
- */
 export class E2BToolClient {
   private baseUrl: string
   private abortController: AbortController | null = null
 
-  constructor(baseUrl = '/api/e2b/tools') {
+  constructor(baseUrl = '/api/tools') {  // Fixed: changed from '/api/e2b/tools' to '/api/tools'
     this.baseUrl = baseUrl
   }
 
-  /**
-   * Execute an E2B tool with real-time progress updates
-   */
   async execute(options: E2BToolExecutionOptions): Promise<E2BToolResult> {
     const {
       toolType,
@@ -88,11 +81,9 @@ export class E2BToolClient {
       onError
     } = options
 
-    // Initialize abort controller for cancellation support
     this.abortController = new AbortController()
 
     try {
-      // Report initialization phase
       onProgress?.({
         phase: 'initializing',
         message: `Initializing ${toolType} execution...`,
@@ -191,18 +182,12 @@ export class E2BToolClient {
     }
   }
 
-  /**
-   * Cancel ongoing tool execution
-   */
   cancel(): void {
     if (this.abortController) {
       this.abortController.abort()
     }
   }
 
-  /**
-   * Get available E2B tools
-   */
   async getAvailableTools(): Promise<Array<{ id: string; name: string; description: string }>> {
     try {
       const response = await fetch(this.baseUrl, {
@@ -224,9 +209,6 @@ export class E2BToolClient {
     }
   }
 
-  /**
-   * Validate tool input before execution
-   */
   validateToolInput(toolType: E2BToolType, userInput: string): { valid: boolean; error?: string } {
     if (!userInput?.trim()) {
       return { valid: false, error: 'User input is required' }
@@ -236,7 +218,6 @@ export class E2BToolClient {
       return { valid: false, error: 'User input exceeds maximum length (50,000 characters)' }
     }
 
-    // Tool-specific validation
     switch (toolType) {
       case 'new_task':
         if (userInput.length < 10) {
@@ -261,7 +242,6 @@ export class E2BToolClient {
   }
 }
 
-// React Hook for E2B Tool Integration
 import { useState, useCallback, useRef, useEffect } from 'react'
 
 export interface UseE2BToolsOptions {
@@ -275,7 +255,12 @@ export interface UseE2BToolsOptions {
 }
 
 export interface UseE2BToolsReturn {
-  executeE2BTool: (toolType: E2BToolType, userInput: string, projectFiles?: any[]) => Promise<void>
+  executeE2BTool: (toolType: E2BToolType, userInput: string, projectFiles?: Array<{
+    name: string
+    content: string
+    path: string
+    type: string
+  }>) => Promise<void>
   isExecuting: boolean
   progress: E2BToolProgress | null
   lastResult: E2BToolResult | null
@@ -294,43 +279,39 @@ export function useE2BTools(options: UseE2BToolsOptions): UseE2BToolsReturn {
   const [error, setError] = useState<E2BToolError | null>(null)
   const [availableTools, setAvailableTools] = useState<Array<{ id: string; name: string; description: string }>>([])
   
-  const clientRef = useRef<E2BToolClient>(new E2BToolClient())
+  const clientRef = useRef(new E2BToolClient())
 
-  // Load available tools on mount
   useEffect(() => {
-    clientRef.current.getAvailableTools().then(tools => {
-      setAvailableTools(tools)
-    }).catch(err => {
-      console.warn('Failed to load available E2B tools:', err)
-    })
+    const loadTools = async () => {
+      try {
+        const tools = await clientRef.current.getAvailableTools()
+        setAvailableTools(tools)
+      } catch (err) {
+        console.warn('Failed to load available tools:', err)
+      }
+    }
+    
+    loadTools()
   }, [])
 
   const executeE2BTool = useCallback(async (
-    toolType: E2BToolType,
-    userInput: string,
-    projectFiles?: any[]
+    toolType: E2BToolType, 
+    userInput: string, 
+    projectFiles?: Array<{
+      name: string
+      content: string
+      path: string
+      type: string
+    }>
   ) => {
     if (isExecuting) {
-      console.warn('E2B tool execution already in progress')
-      return
-    }
-
-    // Validate input
-    const validation = clientRef.current.validateToolInput(toolType, userInput)
-    if (!validation.valid) {
-      const validationError: E2BToolError = {
-        code: 'VALIDATION_ERROR',
-        message: validation.error || 'Invalid input'
-      }
-      setError(validationError)
-      onError?.(validationError)
+      console.warn('Tools execution already in progress')
       return
     }
 
     setIsExecuting(true)
-    setProgress(null)
     setError(null)
-    setLastResult(null)
+    setProgress(null)
 
     try {
       const result = await clientRef.current.execute({
@@ -342,12 +323,11 @@ export function useE2BTools(options: UseE2BToolsOptions): UseE2BToolsReturn {
         teamID,
         sessionId,
         projectFiles,
-        onProgress: (prog) => {
-          setProgress(prog)
+        onProgress: (progress) => {
+          setProgress(progress)
         },
         onError: (err) => {
           setError(err)
-          onError?.(err)
         }
       })
 
@@ -390,5 +370,4 @@ export function useE2BTools(options: UseE2BToolsOptions): UseE2BToolsReturn {
   }
 }
 
-// Export singleton instance for direct usage
 export const e2bToolClient = new E2BToolClient()

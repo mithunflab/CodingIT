@@ -175,7 +175,7 @@ export function E2BToolsPanel({
               <Zap className="w-5 h-5 text-white" />
             </div>
             <div>
-              <CardTitle className="text-xl font-semibold">E2B Tools</CardTitle>
+              <CardTitle className="text-xl font-semibold">Tools</CardTitle>
               <p className="text-sm text-muted-foreground">
                 Production-grade AI tools for development workflow
               </p>

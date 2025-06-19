@@ -6,7 +6,7 @@ import { RepoBanner } from "./repo-banner"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { isFileInArray } from "@/lib/utils"
-import { ArrowUp, Paperclip, Square, X, AlertTriangle, RefreshCw, Sparkles, Loader2 } from "lucide-react"
+import { ArrowUp, Paperclip, Square, X, AlertTriangle, RefreshCw, Sparkles, Loader2, Github } from "lucide-react"
 import { type SetStateAction, useEffect, useMemo, useState, useCallback } from "react"
 import TextareaAutosize from "react-textarea-autosize"
 import { GitHubImportModal } from "./modals/github-import-modal"
@@ -71,6 +71,7 @@ export function EnhancedChatInput({
   const [dragActive, setDragActive] = useState(false)
   const [isEnhancing, setIsEnhancing] = useState(false)
   const [enhanceError, setEnhanceError] = useState<string | null>(null)
+  const [showGitHubImport, setShowGitHubImport] = useState(false)
 
   function handleFileInput(e: React.ChangeEvent<HTMLInputElement>) {
     handleFileChange((prev) => {
@@ -413,7 +414,26 @@ export function EnhancedChatInput({
               </div>
 
               <div className="relative">
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        disabled={isErrored}
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="rounded-xl h-10 w-10"
+                        onClick={() => setShowGitHubImport(true)}
+                      >
+                        <Github className="h-5 w-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Import from GitHub</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                   <GitHubImportModal
+                    open={showGitHubImport}
+                    onOpenChange={setShowGitHubImport}
                     onImport={handleGitHubImport}
                     isLoading={isLoading}
                   />

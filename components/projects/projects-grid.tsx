@@ -228,7 +228,7 @@ export function ProjectsGrid({
         {onCreateProject && (
           <Button onClick={onCreateProject}>
             <Plus className="h-4 w-4 mr-2" />
-            Create Project
+            Quick Project Setup
           </Button>
         )}
       </div>
