@@ -121,41 +121,7 @@ export function useAuth(setAuthDialog: (value: boolean) => void, setAuthView: (v
         setSession(initialSession);
 
         if (initialSession) {
-          console.log("[useAuth] Starting team setup for initial session...");
-          const teamSetupStartTime = Date.now();
-          const teamSetupPromise = setupUserTeam(initialSession);
-          const TEAM_SETUP_TIMEOUT = 15000; // Increased to 15 seconds timeout
-
-          try {
-            await Promise.race([
-              teamSetupPromise,
-              new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Team setup timed out')), TEAM_SETUP_TIMEOUT)
-              )
-            ]);
-            const teamSetupEndTime = Date.now();
-            console.log(`[useAuth] Team setup completed in ${teamSetupEndTime - teamSetupStartTime}ms.`);
-            // If teamSetupPromise resolved, it would have set userTeam via its internal state updates.
-          } catch (error: any) {
-            const teamSetupEndTime = Date.now();
-            console.error(`[useAuth] Error during team setup (duration: ${teamSetupEndTime - teamSetupStartTime}ms, possibly timeout):`, error.message);
-            if (error.message === 'Team setup timed out') {
-              setAuthError("User team setup took too long. Using default settings. Please refresh if issues persist.");
-
-              setUserTeam(currentTeam => {
-                if (currentTeam) return currentTeam;
-                console.warn("[useAuth] Timeout fallback: Setting a minimal team as setupUserTeam hung.");
-                return {
-                  id: `timeout_fallback_${initialSession.user.id.replace(/-/g, "").substring(0, 16)}`,
-                  name: "Default Team (Timeout)",
-                  tier: "free",
-                  email: initialSession.user.email || "unknown@user.com",
-                };
-              });
-            } else {
-              setAuthError("An unexpected error occurred during team setup.");
-            }
-          }
+          await setupUserTeam(initialSession);
 
           if (!initialSession.user.user_metadata?.is_fragments_user) {
             await new Promise(resolve => setTimeout(resolve, 500)); 
@@ -189,12 +155,12 @@ export function useAuth(setAuthDialog: (value: boolean) => void, setAuthView: (v
     const loadingFallbackTimeout = setTimeout(() => {
       setIsLoading(currentIsLoading => {
         if (currentIsLoading) {
-          console.warn("[useAuth] Fallback: Forcing isLoading to false after 20s timeout. Auth process might have hung or is very slow.");
+          console.warn("[useAuth] Fallback: Forcing isLoading to false after 60s timeout. Auth process might have hung or is very slow.");
           setAuthError(prevError => prevError || "Authentication is taking longer than expected. Displaying page with potentially incomplete auth state.");
         }
         return false;
       });
-    }, 20000);
+    }, 60000);
 
     const {
       data: { subscription },

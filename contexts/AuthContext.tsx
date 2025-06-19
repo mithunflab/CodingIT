@@ -16,22 +16,16 @@ type UserTeam = {
 interface AuthContextType {
   session: Session | null;
   user: User | null;
-  userTeam: UserTeam | undefined; // Use the defined UserTeam type
+  userTeam: UserTeam | undefined; 
   isLoading: boolean;
   authError: string | null;
   signOut: () => Promise<void>;
-  openAuthDialog: () => void; // Added to open the auth dialog
-  // Consider if setAuthDialog and setAuthView are needed globally
-  // For now, they are not part of the context value but handled by useAppAuth
+  openAuthDialog: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  // Dummy functions for setAuthDialog and setAuthView as per plan.
-  // If these need to be globally accessible or modifiable,
-  // their state and setters would need to be part of this context
-  // or another global state management solution.
   const setAuthDialog = (value: boolean) => {
     console.log("AuthDialog state changed (globally, placeholder):", value);
   };
@@ -52,9 +46,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error("Error signing out:", error.message);
-      // Optionally, update authError state here if it's part of the context
     }
-    // onAuthStateChange in useAppAuth should handle resetting session, userTeam etc.
   };
 
   const contextValue = { session, user, userTeam, isLoading, authError, signOut, openAuthDialog };

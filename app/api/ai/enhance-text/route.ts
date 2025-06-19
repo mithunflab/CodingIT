@@ -35,7 +35,6 @@ export async function POST(req: NextRequest) {
     let body: any
     try {
       body = await req.json()
-      const validatedBody = enhanceRequestSchema.parse(body)
       console.log(`[Enhance Text API ${requestId}] Request validated successfully`)
     } catch (error: any) {
       logError("Request validation failed", error, { requestId })

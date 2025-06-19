@@ -1,9 +1,14 @@
 import './globals.css'
 import { PostHogProvider, ThemeProvider } from './providers'
-import { AuthProvider } from '@/contexts/AuthContext' // Adjust path if needed
 import { Toaster } from '@/components/ui/toaster'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import dynamic from 'next/dynamic'
+
+const AuthProvider = dynamic(
+  () => import('@/contexts/AuthContext').then(mod => ({ default: mod.AuthProvider })),
+  { ssr: true }
+)
 
 const inter = Inter({ subsets: ['latin'] })
 

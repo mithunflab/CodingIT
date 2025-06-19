@@ -9,7 +9,8 @@ import { ChatSettings } from "@/components/chat-settings"
 import { NavBar } from "@/components/navbar"
 import { Preview } from "@/components/preview"
 import { E2BToolsPanel } from "@/components/e2b-tools/E2BToolsPanel"
-import CommandPalette from "@/components/ui/command-palette"
+import { CommandPalette } from "@/components/ui/command-palette"
+import { EditorCommandPalette } from "@/components/ui/editor-command-palette"
 import { ProjectDialog } from "@/components/ui/project-dialog"
 import { useProjectDialog } from "@/hooks/use-project-dialog"
 import { useAuth } from "@/contexts/AuthContext"
@@ -537,191 +538,199 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <div className="flex flex-1 overflow-hidden">
-        <div className={gridLayoutClass}>
-          {supabase && (
-            <AuthDialog 
-              open={isAuthDialogOpen} 
-              setOpen={setAuthDialog} 
-              view={authView} 
-              supabase={supabase} 
+      <div className={gridLayoutClass}>
+        {supabase && (
+        <AuthDialog 
+          open={isAuthDialogOpen} 
+          setOpen={setAuthDialog} 
+          view={authView} 
+          supabase={supabase} 
+        />
+        )}
+
+        {/* Main Chat Area */}
+        <div className="flex flex-col w-full max-w-4xl mx-auto px-4 min-h-0">
+        
+        <NavBar
+          showLogin={() => setAuthDialog(true)}
+          onSocialClick={handleSocialClick}
+          onClear={handleClearChat}
+          canClear={messages.length > 0}
+          canUndo={messages.length > 1 && !isSubmitting}
+          onUndo={handleUndo}
+          onRetryAuth={handleRetryAuth}
+          onOpenToolsModal={handleToggleE2BToolsModal}
+        />
+
+        {/* Chat Messages */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <Chat
+          messages={messages}
+          isLoading={isSubmitting}
+          onFragmentSelect={(selectedFragment, selectedResult) => {
+            setFragment(selectedFragment ? (selectedFragment as FragmentSchema) : null);
+            setResult(selectedResult);
+            if (selectedFragment?.files && selectedFragment.files.length > 0) {
+            setCurrentTab("preview");
+            } else {
+            setCurrentTab("code");
+            }
+          }}
+          />
+        </div>
+
+        {/* Chat Input */}
+        <div className="flex-shrink-0 border-t bg-background">
+          {hasMounted ? (
+          <EnhancedChatInput
+            input={chatInput}
+            handleInputChange={handleSaveInputChange}
+            handleSubmit={handleSubmitAuth}
+            isLoading={isSubmitting}
+            isErrored={error !== undefined}
+            errorMessage={errorMessage}
+            isRateLimited={isRateLimited}
+            retry={retry}
+            stop={stop}
+            isMultiModal={currentModel?.multiModal || false}
+            files={files}
+            handleFileChange={handleFileChange}
+            onRateLimit={() => setIsRateLimited(true)}
+          >
+            <ChatPicker
+            templates={templates}
+            selectedTemplate={selectedTemplate}
+            onSelectedTemplateChange={(template) => {
+              if (template !== "auto") {
+              setSelectedTemplate(template)
+              }
+            }}
+            models={availableModels}
+            languageModel={languageModel}
+            onLanguageModelChange={handleLanguageModelChange}
+            hasMounted={hasMounted}
             />
-          )}
-
-          
-          <div className="flex flex-col w-full max-w-4xl mx-auto px-4 min-h-0">
-            
-            <NavBar
-              showLogin={() => setAuthDialog(true)}
-              onSocialClick={handleSocialClick}
-              onClear={handleClearChat}
-              canClear={messages.length > 0}
-              canUndo={messages.length > 1 && !isSubmitting}
-              onUndo={handleUndo}
-              onRetryAuth={handleRetryAuth}
-              onOpenToolsModal={handleToggleE2BToolsModal}
+            <ChatSettings
+            apiKeyConfigurable={process.env.NEXT_PUBLIC_NO_API_KEY_INPUT !== 'true'}
+            baseURLConfigurable={process.env.NEXT_PUBLIC_NO_BASE_URL_INPUT !== 'true'}
+            languageModel={languageModel}
+            onLanguageModelChange={handleLanguageModelChange}
             />
-
-            
-            <div className="flex-1 min-h-0 overflow-y-auto">
-              <Chat
-                messages={messages}
-                isLoading={isSubmitting}
-                onFragmentSelect={(selectedFragment, selectedResult) => {
-                  setFragment(selectedFragment ? (selectedFragment as FragmentSchema) : null);
-                  setResult(selectedResult);
-                  if (selectedFragment?.files && selectedFragment.files.length > 0) {
-                    setCurrentTab("preview");
-                  } else {
-                    setCurrentTab("code");
-                  }
-                }}
-              />
-            </div>
-
-            
-            <div className="flex-shrink-0 border-t bg-background">
-              {hasMounted ? (
-                <EnhancedChatInput
-                  input={chatInput}
-                  handleInputChange={handleSaveInputChange}
-                  handleSubmit={handleSubmitAuth}
-                  isLoading={isSubmitting}
-                  isErrored={error !== undefined}
-                  errorMessage={errorMessage}
-                  isRateLimited={isRateLimited}
-                  retry={retry}
-                  stop={stop}
-                  isMultiModal={currentModel?.multiModal || false}
-                  files={files}
-                  handleFileChange={handleFileChange}
-                  onRateLimit={() => setIsRateLimited(true)}
-                >
-                  
-                   <ChatPicker
-                      templates={templates}
-                      selectedTemplate={selectedTemplate}
-                      onSelectedTemplateChange={(template) => {
-                        if (template !== "auto") {
-                          setSelectedTemplate(template)
-                        }
-                      }}
-                      models={availableModels}
-                      languageModel={languageModel}
-                      onLanguageModelChange={handleLanguageModelChange}
-                      hasMounted={hasMounted}
-                    />
-                  <ChatSettings
-                    apiKeyConfigurable={process.env.NEXT_PUBLIC_NO_API_KEY_INPUT !== 'true'}
-                    baseURLConfigurable={process.env.NEXT_PUBLIC_NO_BASE_URL_INPUT !== 'true'}
-                    languageModel={languageModel}
-                    onLanguageModelChange={handleLanguageModelChange}
-                  />
-                </EnhancedChatInput>
-              ) : (
-                <div className="p-4 space-y-3">
-                  <div className="h-10 bg-muted rounded-lg animate-pulse" />
-                  <div className="h-20 bg-muted rounded-2xl animate-pulse" />
-                  <div className="h-10 bg-muted rounded-lg animate-pulse" />
-                  <div className="h-4 w-1/2 mx-auto bg-muted rounded animate-pulse mt-1" />
-                  </div>
-              )}
-            </div>
+          </EnhancedChatInput>
+          ) : (
+          <div className="p-4 space-y-3">
+            <div className="h-10 bg-muted rounded-lg animate-pulse" />
+            <div className="h-20 bg-muted rounded-2xl animate-pulse" />
+            <div className="h-10 bg-muted rounded-lg animate-pulse" />
+            <div className="h-4 w-1/2 mx-auto bg-muted rounded animate-pulse mt-1" />
           </div>
-          
-          {/* Preview Area (conditionally rendered) */}
-          {showPreviewPanel && ( 
-            <div className="hidden md:flex md:flex-col border-l border-border">
-              <Preview
-                teamID={userTeam?.id}
-                accessToken={session?.access_token}
-                selectedTab={currentTab}
-                onSelectedTabChange={setCurrentTab}
-                isChatLoading={isSubmitting}
-                isPreviewLoading={isPreviewLoading}
-                fragment={fragment}
-                result={result as ExecutionResult}
-                onClose={handlePreviewClose}
-              />
-            </div>
           )}
         </div>
+        </div>
+        
+        {/* Preview Area (conditionally rendered) */}
+        {showPreviewPanel && ( 
+        <div className="hidden md:flex md:flex-col border-l border-border">
+          <Preview
+          teamID={userTeam?.id}
+          accessToken={session?.access_token}
+          selectedTab={currentTab}
+          onSelectedTabChange={setCurrentTab}
+          isChatLoading={isSubmitting}
+          isPreviewLoading={isPreviewLoading}
+          fragment={fragment}
+          result={result as ExecutionResult}
+          onClose={handlePreviewClose}
+          />
+        </div>
+        )}
+      </div>
       </div>
 
+      {/* E2B Tools Modal */}
       {session && session.user && userTeam && currentModel && hasMounted && (
-        <Dialog open={isE2BToolsModalOpen} onOpenChange={setIsE2BToolsModalOpen}>
-          <DialogContent className="max-w-3xl h-[80vh] flex flex-col p-0">
-            <DialogHeader className="p-6 pb-0">
-              <DialogTitle>Tools Panel</DialogTitle>
-            </DialogHeader>
-            <div className="flex-grow overflow-auto p-6 pt-0">
-              <E2BToolsPanel
-                userID={session.user.id}
-                teamID={userTeam.id}
-                model={currentModel}
-                config={languageModel}
-                className="border-none shadow-none p-0"
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
+      <Dialog open={isE2BToolsModalOpen} onOpenChange={setIsE2BToolsModalOpen}>
+        <DialogContent className="max-w-3xl h-[80vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-0">
+          <DialogTitle>Tools Panel</DialogTitle>
+        </DialogHeader>
+        <div className="flex-grow overflow-auto p-6 pt-0">
+          <E2BToolsPanel
+          userID={session.user.id}
+          teamID={userTeam.id}
+          model={currentModel}
+          config={languageModel}
+          className="border-none shadow-none p-0"
+          />
+        </div>
+        </DialogContent>
+      </Dialog>
       )}
 
-      
+      {/* Floating Action Button */}
       <AnimatePresence>
-        {session && hasMounted && (
-          <motion.button
-            onClick={openCreateDialog}
-            className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            initial={{ opacity: 0, scale: 0, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0, y: 20 }}
-            transition={{
-              type: "spring",
-              damping: 25,
-              stiffness: 300,
-              duration: 0.3,
-            }}
-            title="Create New Project"
-          >
-            <FolderPlus className="h-6 w-6" />
-          </motion.button>
-        )}
+      {session && hasMounted && (
+        <motion.button
+        onClick={openCreateDialog}
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0, y: 20 }}
+        transition={{
+          type: "spring",
+          damping: 25,
+          stiffness: 300,
+          duration: 0.3,
+        }}
+        title="Create New Project"
+        >
+        <FolderPlus className="h-6 w-6" />
+        </motion.button>
+      )}
       </AnimatePresence>
 
-      
+      {/* Command Palette */}
       <CommandPalette 
-        onCreateFragment={() => {
-          setChatInput("Create a new Next.js React component with modern best practices including TypeScript, responsive design, and accessibility features.")
-          setSelectedTemplate("nextjs-developer")
-          
-          setTimeout(() => {
-            const form = document.querySelector("form") as HTMLFormElement
-            if (form) {
-              form.requestSubmit()
-            }
-          }, 100)
-        }}
-        onClearChat={handleClearChat}
-        onOpenSettings={() => setIsSettingsDialogOpen(true)}
+      onCreateFragment={() => {
+        setChatInput("Create a new Next.js React component with modern best practices including TypeScript, responsive design, and accessibility features.")
+        setSelectedTemplate("nextjs-developer")
+        
+        setTimeout(() => {
+        const form = document.querySelector("form") as HTMLFormElement
+        if (form) {
+          form.requestSubmit()
+        }
+        }, 100)
+      }}
+      onClearChat={handleClearChat}
+      onOpenSettings={() => setIsSettingsDialogOpen(true)}
       />
 
-      
+      {/* Settings Dialog */}
       {hasMounted && (
-        <SettingsDialog
-          open={isSettingsDialogOpen}
-          onOpenChange={setIsSettingsDialogOpen}
-        />
+      <SettingsDialog
+        open={isSettingsDialogOpen}
+        onOpenChange={setIsSettingsDialogOpen}
+      />
       )}
 
+      <EditorCommandPalette 
+      isOpen={false} 
+      onOpenChange={(open: boolean) => {
+        // Implement the editor command palette logic here
+        console.log("Editor command palette state changed:", open);
+      }} 
+      files={[]} 
+      />
       
       <ProjectDialog
-        open={isProjectDialogOpen}
-        onOpenChange={closeProjectDialog}
-        mode={projectDialogMode}
-        project={editingProject}
-        onSave={handleProjectSave}
+      open={isProjectDialogOpen}
+      onOpenChange={closeProjectDialog}
+      mode={projectDialogMode}
+      project={editingProject}
+      onSave={handleProjectSave}
       />
     </div>
   )

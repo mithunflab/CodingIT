@@ -57,7 +57,11 @@ export class GitHubIntegration {
     }
   }
 
-  async getRepositories(page = 1, per_page = 30): Promise<GitHubRepository[]> {
+  async getRepositories(
+    user: GitHubUser,
+    page = 1,
+    per_page = 30
+  ): Promise<{ repositories: GitHubRepository[], total: number }> {
     try {
       const response = await fetch(
         `https://api.github.com/user/repos?page=${page}&per_page=${per_page}&sort=updated&direction=desc`,
@@ -73,10 +77,17 @@ export class GitHubIntegration {
         throw new Error(`GitHub API error: ${response.status}`)
       }
 
-      return await response.json()
+      const repositories = await response.json()
+      return {
+        repositories,
+        total: user.public_repos
+      }
     } catch (error) {
       console.error('Failed to fetch repositories:', error)
-      return []
+      return {
+        repositories: [],
+        total: 0
+      }
     }
   }
 

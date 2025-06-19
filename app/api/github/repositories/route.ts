@@ -20,20 +20,18 @@ export async function GET(request: NextRequest) {
             try {
               cookieStore.set(name, value, options)
             } catch (error) {
-              
-              
-              
-              
+              // The `set` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
             }
           },
           remove(name: string, options: CookieOptions) {
             try {
               cookieStore.set({ name, value: '', ...options })
             } catch (error) {
-              
-              
-              
-              
+              // The `set` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
             }
           },
         },
@@ -63,8 +61,16 @@ export async function GET(request: NextRequest) {
     const per_page = parseInt(url.searchParams.get('per_page') || '30')
 
     const github = new GitHubIntegration(githubToken)
-    const repositories = await github.getRepositories(page, per_page)
     const githubUser = await github.getUser()
+
+    if (!githubUser) {
+      return NextResponse.json(
+        { error: "Failed to fetch GitHub user" },
+        { status: 500 }
+      )
+    }
+
+    const { repositories, total } = await github.getRepositories(githubUser, page, per_page)
 
     return NextResponse.json({
       repositories,
@@ -72,7 +78,7 @@ export async function GET(request: NextRequest) {
       pagination: {
         page,
         per_page,
-        total: repositories.length
+        total
       },
       requestId
     })

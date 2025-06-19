@@ -3,9 +3,12 @@
 import { DeployDialog } from './deploy-dialog'
 import { FragmentCode } from './fragment-code'
 import { FragmentWeb } from './fragment-web'
-import { LiveCodeEditor } from './live-code-editor'
+import { CursorLikeEditor } from './live-code-editor'
+import { AICodeAssistant } from './ai-code-assistant'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
 import {
   Tooltip,
   TooltipContent,
@@ -15,8 +18,26 @@ import {
 import { FragmentSchema } from '@/lib/schema'
 import { ExecutionResult, ExecutionResultWeb } from '@/lib/types'
 import { DeepPartial } from 'ai'
-import { ChevronsRight, LoaderCircle, Code, Globe, Edit3 } from 'lucide-react'
-import { Dispatch, SetStateAction, useState, useCallback } from 'react'
+import { 
+  ChevronsRight, 
+  LoaderCircle, 
+  Code, 
+  Globe, 
+  Edit3,
+  Bot,
+  Sparkles,
+  Zap,
+  Terminal,
+  Settings,
+  Eye,
+  EyeOff,
+  Maximize2,
+  Minimize2,
+  Split,
+  PanelLeftClose,
+  PanelLeftOpen
+} from 'lucide-react'
+import { Dispatch, SetStateAction, useState, useCallback, useMemo } from 'react'
 
 export function Preview({
   teamID,
@@ -40,6 +61,10 @@ export function Preview({
   onClose: () => void
 }) {
   const [isLiveEditorEnabled, setIsLiveEditorEnabled] = useState(false)
+  const [showAIAssistant, setShowAIAssistant] = useState(false)
+  const [editorLayout, setEditorLayout] = useState<'full' | 'split'>('full')
+  const [showSidebar, setShowSidebar] = useState(true)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   const handleFileUpdate = useCallback((filePath: string, content: string) => {
     console.log(`File updated: ${filePath}`)
@@ -50,6 +75,37 @@ export function Preview({
       }
     }
   }, [result])
+
+  const handleAICodeRequest = useCallback(async (request: string, context?: any) => {
+    // Handle AI code generation requests
+    console.log('AI Code Request:', request, context)
+    // This would integrate with the AI completion API
+  }, [])
+
+  // Enhanced tab configuration
+  const tabConfig = useMemo(() => [
+    {
+      id: 'code' as const,
+      label: 'Code View',
+      icon: <Code className="w-4 h-4" />,
+      description: 'View generated code structure'
+    },
+    {
+      id: 'preview' as const,
+      label: 'Live Preview',
+      icon: <Globe className="w-4 h-4" />,
+      description: 'See your app running live'
+    },
+    {
+      id: 'editor' as const,
+      label: 'Cursor Editor',
+      icon: <Edit3 className="w-4 h-4" />,
+      description: 'AI-powered code editing experience',
+      badge: 'AI Enhanced'
+    }
+  ], [])
+
+  const activeTabConfig = tabConfig.find(tab => tab.id === selectedTab)
 
   if (!fragment) {
     return null
@@ -64,140 +120,281 @@ export function Preview({
       content: file.file_content || '',
       path: file.file_path || file.file_name || 'untitled'
     }
-  }).filter((file): file is { name: string; content: string; path: string } => !!file && !!file.content && !!file.name) || []
+  }).filter((file): file is { name: string; content: string; path: string } => !!file && !!file.content && !file.content.includes('__pycache__'))
+
+  const sandboxId = result && 'sbxId' in result ? result.sbxId : undefined
 
   return (
-    <div className="absolute md:relative z-10 top-0 left-0 shadow-2xl md:rounded-tl-3xl md:rounded-bl-3xl md:border-l md:border-y bg-popover h-full w-full overflow-auto">
-      <Tabs
-        value={selectedTab}
-        onValueChange={(value) =>
-          onSelectedTabChange(value as 'code' | 'preview' | 'editor')
-        }
-        className="h-full flex flex-col items-start justify-start"
-      >
-        <div className="w-full p-2 grid grid-cols-3 items-center border-b">
+    <div className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-background' : ''}`}>
+      {/* Enhanced Header */}
+      <div className="flex items-center justify-between p-4 border-b bg-muted/30">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <ChevronsRight 
+              className="w-5 h-5 cursor-pointer hover:text-primary transition-colors"
+              onClick={onClose}
+            />
+            <h3 className="text-lg font-semibold">Code Preview</h3>
+          </div>
+          
+          {activeTabConfig && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-accent rounded-full">
+              {activeTabConfig.icon}
+              <span className="text-sm font-medium">{activeTabConfig.label}</span>
+              {activeTabConfig.badge && (
+                <Badge variant="secondary" className="text-xs">
+                  {activeTabConfig.badge}
+                </Badge>
+              )}
+            </div>
+          )}
+
+          {(isChatLoading || isPreviewLoading) && (
+            <div className="flex items-center gap-2">
+              <LoaderCircle className="w-4 h-4 animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground">
+                {isChatLoading ? 'Generating...' : 'Loading preview...'}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Editor-specific controls */}
+          {selectedTab === 'editor' && (
+            <>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={showSidebar ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setShowSidebar(!showSidebar)}
+                    >
+                      {showSidebar ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Toggle Sidebar</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={editorLayout === 'split' ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setEditorLayout(editorLayout === 'full' ? 'split' : 'full')}
+                    >
+                      <Split className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Split View</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={showAIAssistant ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setShowAIAssistant(!showAIAssistant)}
+                      className="gap-1"
+                    >
+                      <Bot className="w-4 h-4" />
+                      AI
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Toggle AI Assistant</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </>
+          )}
+
+          {/* Universal controls */}
           <TooltipProvider>
-            <Tooltip delayDuration={0}>
+            <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground"
-                  onClick={onClose}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsFullscreen(!isFullscreen)}
                 >
-                  <ChevronsRight className="h-5 w-5" />
+                  {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Close sidebar</TooltipContent>
+              <TooltipContent>{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          
-          <div className="flex justify-center">
-            <TabsList className="px-1 py-0 border h-8">
+
+          {isLinkAvailable && result && 'url' in result && 'sbxId' in result && (
+            <DeployDialog
+              teamID={teamID}
+              accessToken={accessToken}
+              url={result.url}
+              sbxId={result.sbxId}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Enhanced Tab Navigation */}
+      <Tabs
+        value={selectedTab}
+        onValueChange={(value) => onSelectedTabChange(value as 'code' | 'preview' | 'editor')}
+        className="flex-1 flex flex-col"
+      >
+        <div className="border-b bg-muted/10">
+          <TabsList className="grid w-full grid-cols-3 bg-transparent h-auto p-0">
+            {tabConfig.map((tab) => (
               <TabsTrigger
-                className="font-normal text-xs py-1 px-2 gap-1 flex items-center"
-                value="code"
+                key={tab.id}
+                value={tab.id}
+                className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
               >
-                {isChatLoading && (
-                  <LoaderCircle
-                    strokeWidth={3}
-                    className="h-3 w-3 animate-spin"
-                  />
+                {tab.icon}
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">{tab.label}</span>
+                  <span className="text-xs text-muted-foreground hidden sm:block">
+                    {tab.description}
+                  </span>
+                </div>
+                {tab.badge && (
+                  <Badge variant="outline" className="text-xs ml-2">
+                    {tab.badge}
+                  </Badge>
                 )}
-                <Code className="h-3 w-3" />
-                Code
               </TabsTrigger>
-              
-              <TabsTrigger
-                className="font-normal text-xs py-1 px-2 gap-1 flex items-center"
-                value="editor"
-                disabled={fragmentFiles.length === 0}
-              >
-                <Edit3 className="h-3 w-3" />
-                Editor
-              </TabsTrigger>
-              
-              <TabsTrigger
-                disabled={!isLinkAvailable}
-                className="font-normal text-xs py-1 px-2 gap-1 flex items-center"
-                value="preview"
-              >
-                <Globe className="h-3 w-3" />
-                Preview
-                {isPreviewLoading && isLinkAvailable && (
-                  <LoaderCircle
-                    strokeWidth={3}
-                    className="h-3 w-3 animate-spin"
+            ))}
+          </TabsList>
+        </div>
+
+        {/* Tab Content */}
+        <div className="flex-1 overflow-hidden">
+          <TabsContent value="code" className="h-full m-0">
+            <FragmentCode files={fragmentFiles || []} />
+          </TabsContent>
+
+          <TabsContent value="preview" className="h-full m-0">
+            <FragmentWeb
+              result={result as ExecutionResultWeb}
+            />
+          </TabsContent>
+
+          <TabsContent value="editor" className="h-full m-0">
+            <div className="h-full flex">
+              {/* Enhanced Editor Layout */}
+              {editorLayout === 'split' ? (
+                <div className="flex w-full h-full">
+                  <div className="flex-1 border-r">
+                    <CursorLikeEditor
+                      files={fragmentFiles || []}
+                      sandboxId={sandboxId}
+                      onFileUpdate={handleFileUpdate}
+                      className="h-full"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <FragmentWeb
+                      result={result as ExecutionResultWeb}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full h-full">
+                  <CursorLikeEditor
+                    files={fragmentFiles || []}
+                    sandboxId={sandboxId}
+                    onFileUpdate={handleFileUpdate}
+                    className="h-full"
                   />
-                )}
-              </TabsTrigger>
-            </TabsList>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </div>
+      </Tabs>
+
+      {/* AI Assistant Overlay */}
+      <Dialog open={showAIAssistant} onOpenChange={setShowAIAssistant}>
+        <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bot className="w-5 h-5" />
+              AI Code Assistant
+              <Badge variant="secondary">Cursor-like</Badge>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            <AICodeAssistant
+              files={fragmentFiles || []}
+              activeFile={fragmentFiles?.[0]?.name || ''}
+              sandboxId={sandboxId}
+              onCodeRequest={handleAICodeRequest}
+              onFileUpdate={handleFileUpdate}
+            />
           </div>
-          
-          <div className="flex items-center justify-end gap-2">
-            {result && isLinkAvailable && (
-              <DeployDialog
-                url={result.url!}
-                sbxId={result.sbxId!}
-                teamID={teamID}
-                accessToken={accessToken}
-              />
-            )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Floating Action Buttons for Editor Mode */}
+      {selectedTab === 'editor' && !isFullscreen && (
+        <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-40">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  onClick={() => setShowAIAssistant(true)}
+                  className="rounded-full w-12 h-12 shadow-lg hover:shadow-xl transition-all"
+                >
+                  <Sparkles className="w-5 h-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">AI Assistant (Ctrl+K)</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditorLayout(editorLayout === 'full' ? 'split' : 'full')}
+                  className="rounded-full w-12 h-12 shadow-lg hover:shadow-xl transition-all"
+                >
+                  {editorLayout === 'full' ? <Split className="w-4 h-4" /> : <Code className="w-4 h-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                {editorLayout === 'full' ? 'Split View' : 'Code Only'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
+
+      {/* Performance Indicators */}
+      {selectedTab === 'editor' && (
+        <div className="absolute top-20 right-4 z-30">
+          <div className="bg-background/90 backdrop-blur border rounded-lg p-2 shadow-lg">
+            <div className="flex items-center gap-2 text-xs">
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span>Live</span>
+              </div>
+              {sandboxId && (
+                <div className="flex items-center gap-1">
+                  <Terminal className="w-3 h-3" />
+                  <span className="font-mono">{sandboxId.slice(0, 6)}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-        
-        {fragment && (
-          <div className="overflow-y-auto w-full h-full">
-            <TabsContent value="code" className="h-full">
-              {fragmentFiles.length > 0 ? (
-                <div className="flex h-full">
-                  <div className="flex-1">
-                    <FragmentCode files={fragmentFiles} />
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  <div className="text-center space-y-2">
-                    <Code className="h-8 w-8 mx-auto opacity-50" />
-                    <p>No code files available</p>
-                  </div>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="editor" className="h-full">
-              {fragmentFiles.length > 0 ? (
-                <LiveCodeEditor
-                  files={fragmentFiles}
-                  sandboxId={result?.sbxId}
-                  onFileUpdate={handleFileUpdate}
-                  className="h-full"
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  <div className="text-center space-y-2">
-                    <Edit3 className="h-8 w-8 mx-auto opacity-50" />
-                    <p>No files available for editing</p>
-                  </div>
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="preview" className="h-full">
-              {result && isLinkAvailable ? (
-                <FragmentWeb result={result as ExecutionResultWeb} />
-              ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  <div className="text-center space-y-2">
-                    <Globe className="h-8 w-8 mx-auto opacity-50" />
-                    <p>Live preview not available for this execution type.</p>
-                  </div>
-                </div>
-              )}
-            </TabsContent>
-          </div>
-        )}
-      </Tabs>
+      )}
     </div>
   )
 }
