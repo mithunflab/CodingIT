@@ -11,7 +11,6 @@ import { Preview } from "@/components/preview"
 import { E2BToolsPanel } from "@/components/e2b-tools/E2BToolsPanel"
 import { CommandPalette } from "@/components/ui/command-palette"
 import { EditorCommandPalette } from "@/components/ui/editor-command-palette"
-import { ProjectDialog } from "@/components/ui/project-dialog"
 import { useProjectDialog } from "@/hooks/use-project-dialog"
 import { useAuth } from "@/contexts/AuthContext"
 import { type Message, toAISDKMessages, toMessageImage } from "@/lib/messages" 
@@ -88,7 +87,7 @@ export default function Home() {
     "languageModel",
     modelsList.models[0] as LLMModelConfig
   )
-  const [currentTab, setCurrentTab] = useState<"code" | "preview" | "editor">("code")
+  const [currentTab, setCurrentTab] = useState<"preview" | "editor">("preview")
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const [isRateLimited, setIsRateLimited] = useState(false)
@@ -99,6 +98,7 @@ export default function Home() {
     analysis: ProjectAnalysis | null
   }>({ files: [], analysis: null })
   const [isE2BToolsModalOpen, setIsE2BToolsModalOpen] = useState(false)
+  const [isEditorCommandPaletteOpen, setEditorCommandPaletteOpen] = useState(false)
 
   const handleToggleE2BToolsModal = () => {
     if (session && currentModel) { // Ensure user is authenticated and model is loaded
@@ -172,7 +172,7 @@ export default function Home() {
       }
       
       setErrorMessage(parsedError.message)
-      setCurrentTab("code")
+      setCurrentTab("preview")
     }, []),
   })
 
@@ -203,7 +203,7 @@ export default function Home() {
     setErrorMessage("")
     setFiles([])
     setProjectContext({ files: [], analysis: null })
-    setCurrentTab("code")
+    setCurrentTab("preview")
   }, [])
 
   const handleUndo = useCallback(() => {
@@ -294,7 +294,7 @@ export default function Home() {
           setIsRateLimited(true)
         }
         setResult(undefined)
-        setCurrentTab("code")
+        setCurrentTab("preview")
       } finally {
         setIsPreviewLoading(false)
       }
@@ -370,6 +370,18 @@ export default function Home() {
 
   useEffect(() => {
     setHasMounted(true)
+  }, [])
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setEditorCommandPaletteOpen((open) => !open)
+      }
+    }
+
+    document.addEventListener("keydown", down)
+    return () => document.removeEventListener("keydown", down)
   }, [])
 
   const handleSubmitAuth = useCallback(async (
@@ -465,7 +477,7 @@ export default function Home() {
 
       setChatInput("")
       setFiles([])
-      setCurrentTab("code")
+      setCurrentTab("preview")
       setErrorMessage("")
       setIsRateLimited(false)
 
@@ -517,6 +529,15 @@ export default function Home() {
     setAuthView("sign_in")
     setAuthDialog(true)
   }, [])
+
+  const fragmentFiles = fragment?.files?.map(file => {
+    if (!file) return undefined
+    return {
+      name: file.file_name || file.file_path?.split('/').pop() || 'untitled',
+      content: file.file_content || '',
+      path: file.file_path || file.file_name || 'untitled'
+    }
+  }).filter((file): file is { name: string; content: string; path: string } => !!file && !!file.content && !file.content.includes('__pycache__'))
 
   const showPreviewPanel = fragment && hasMounted;
 
@@ -573,7 +594,7 @@ export default function Home() {
             if (selectedFragment?.files && selectedFragment.files.length > 0) {
             setCurrentTab("preview");
             } else {
-            setCurrentTab("code");
+            setCurrentTab("preview");
             }
           }}
           />
@@ -666,31 +687,7 @@ export default function Home() {
         </DialogContent>
       </Dialog>
       )}
-
-      {/* Floating Action Button */}
-      <AnimatePresence>
-      {session && hasMounted && (
-        <motion.button
-        onClick={openCreateDialog}
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        initial={{ opacity: 0, scale: 0, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0, y: 20 }}
-        transition={{
-          type: "spring",
-          damping: 25,
-          stiffness: 300,
-          duration: 0.3,
-        }}
-        title="Create New Project"
-        >
-        <FolderPlus className="h-6 w-6" />
-        </motion.button>
-      )}
-      </AnimatePresence>
-
+      
       {/* Command Palette */}
       <CommandPalette 
       onCreateFragment={() => {
@@ -716,21 +713,10 @@ export default function Home() {
       />
       )}
 
-      <EditorCommandPalette 
-      isOpen={false} 
-      onOpenChange={(open: boolean) => {
-        // Implement the editor command palette logic here
-        console.log("Editor command palette state changed:", open);
-      }} 
-      files={[]} 
-      />
-      
-      <ProjectDialog
-      open={isProjectDialogOpen}
-      onOpenChange={closeProjectDialog}
-      mode={projectDialogMode}
-      project={editingProject}
-      onSave={handleProjectSave}
+      <EditorCommandPalette
+        isOpen={isEditorCommandPaletteOpen}
+        onOpenChange={setEditorCommandPaletteOpen}
+        files={fragmentFiles || []}
       />
     </div>
   )

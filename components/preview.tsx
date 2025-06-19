@@ -4,10 +4,8 @@ import { DeployDialog } from './deploy-dialog'
 import { FragmentCode } from './fragment-code'
 import { FragmentWeb } from './fragment-web'
 import { CursorLikeEditor } from './live-code-editor'
-import { AICodeAssistant } from './ai-code-assistant'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import {
   Tooltip,
@@ -52,8 +50,8 @@ export function Preview({
 }: {
   teamID: string | undefined
   accessToken: string | undefined
-  selectedTab: 'code' | 'preview' | 'editor'
-  onSelectedTabChange: Dispatch<SetStateAction<'code' | 'preview' | 'editor'>>
+  selectedTab: 'preview' | 'editor'
+  onSelectedTabChange: Dispatch<SetStateAction<'preview' | 'editor'>>
   isChatLoading: boolean
   isPreviewLoading: boolean
   fragment?: DeepPartial<FragmentSchema>
@@ -84,12 +82,6 @@ export function Preview({
 
   // Enhanced tab configuration
   const tabConfig = useMemo(() => [
-    {
-      id: 'code' as const,
-      label: 'Code View',
-      icon: <Code className="w-4 h-4" />,
-      description: 'View generated code structure'
-    },
     {
       id: 'preview' as const,
       label: 'Live Preview',
@@ -242,11 +234,11 @@ export function Preview({
       {/* Enhanced Tab Navigation */}
       <Tabs
         value={selectedTab}
-        onValueChange={(value) => onSelectedTabChange(value as 'code' | 'preview' | 'editor')}
+        onValueChange={(value) => onSelectedTabChange(value as 'preview' | 'editor')}
         className="flex-1 flex flex-col"
       >
         <div className="border-b bg-muted/10">
-          <TabsList className="grid w-full grid-cols-3 bg-transparent h-auto p-0">
+          <TabsList className="grid w-full grid-cols-2 bg-transparent h-auto p-0">
             {tabConfig.map((tab) => (
               <TabsTrigger
                 key={tab.id}
@@ -272,10 +264,6 @@ export function Preview({
 
         {/* Tab Content */}
         <div className="flex-1 overflow-hidden">
-          <TabsContent value="code" className="h-full m-0">
-            <FragmentCode files={fragmentFiles || []} />
-          </TabsContent>
-
           <TabsContent value="preview" className="h-full m-0">
             <FragmentWeb
               result={result as ExecutionResultWeb}
@@ -287,14 +275,6 @@ export function Preview({
               {/* Enhanced Editor Layout */}
               {editorLayout === 'split' ? (
                 <div className="flex w-full h-full">
-                  <div className="flex-1 border-r">
-                    <CursorLikeEditor
-                      files={fragmentFiles || []}
-                      sandboxId={sandboxId}
-                      onFileUpdate={handleFileUpdate}
-                      className="h-full"
-                    />
-                  </div>
                   <div className="flex-1">
                     <FragmentWeb
                       result={result as ExecutionResultWeb}
@@ -315,28 +295,6 @@ export function Preview({
           </TabsContent>
         </div>
       </Tabs>
-
-      {/* AI Assistant Overlay */}
-      <Dialog open={showAIAssistant} onOpenChange={setShowAIAssistant}>
-        <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Bot className="w-5 h-5" />
-              AI Code Assistant
-              <Badge variant="secondary">Cursor-like</Badge>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-hidden">
-            <AICodeAssistant
-              files={fragmentFiles || []}
-              activeFile={fragmentFiles?.[0]?.name || ''}
-              sandboxId={sandboxId}
-              onCodeRequest={handleAICodeRequest}
-              onFileUpdate={handleFileUpdate}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Floating Action Buttons for Editor Mode */}
       {selectedTab === 'editor' && !isFullscreen && (

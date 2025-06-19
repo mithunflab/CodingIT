@@ -1,4 +1,3 @@
-import { CodeView } from './code-view'
 import { Button } from './ui/button'
 import { CopyButton } from './ui/copy-button'
 import {
@@ -80,12 +79,6 @@ export function FragmentCode({
             </Tooltip>
           </TooltipProvider>
         </div>
-      </div>
-      <div className="flex flex-col flex-1 overflow-x-auto">
-        <CodeView
-          code={currentFileContent || ''}
-          lang={currentFile.split('.').pop() || ''}
-        />
       </div>
     </div>
   )

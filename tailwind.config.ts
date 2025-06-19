@@ -68,7 +68,13 @@ const config = {
   				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
-  			}
+  			},
+			cursor: {
+				DEFAULT: 'hsl(var(--cursor-background))',
+				foreground: 'hsl(var(--cursor-foreground))',
+				border: 'hsl(var(--cursor-border))',
+				accent: 'hsl(var(--cursor-accent))',
+			}
   		},
   		borderRadius: {
   			lg: 'var(--radius)',

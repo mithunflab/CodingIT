@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import './code-theme.css'
 import { Textarea } from '@/components/ui/textarea'
 import { 
   Save, 
@@ -47,6 +48,7 @@ import {
   PanelLeftOpen
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { fr } from 'zod/v4/locales'
 
 interface FileContent {
   name: string
@@ -550,10 +552,10 @@ export function CursorLikeEditor({ files, sandboxId, onFileUpdate, className }: 
           </Button>
           <h3 className="text-sm font-medium flex items-center gap-2">
             <Code2 className="w-4 h-4" />
-            Cursor-like Editor
+            Editor
           </h3>
           {hasUnsavedChanges && <Badge variant="secondary" className="text-xs">{modifiedFiles.length} unsaved</Badge>}
-          {isGenerating && <Badge variant="outline" className="text-xs"><Loader2 className="w-3 h-3 animate-spin mr-1" />AI Generating...</Badge>}
+          {isGenerating && <Badge variant="outline" className="text-xs"><Loader2 className="w-3 h-3 animate-spin mr-1" /></Badge>}
         </div>
         
         <div className="flex items-center gap-2">
@@ -714,7 +716,6 @@ export function CursorLikeEditor({ files, sandboxId, onFileUpdate, className }: 
 
       <div className="flex items-center justify-between px-3 py-1 border-t bg-muted/20 text-xs text-muted-foreground">
         <div className="flex items-center gap-4">
-          <span>Cursor-like Editor v1.1</span>
           {sandboxId && <span className="flex items-center gap-1"><Terminal className="w-3 h-3" />Sandbox: {sandboxId.slice(0, 8)}...</span>}
           <span className="flex items-center gap-1"><GitBranch className="w-3 h-3" />main</span>
         </div>
