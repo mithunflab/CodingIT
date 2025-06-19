@@ -2,35 +2,28 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
-  
   const requestId = `mid_${crypto.randomUUID()}`
   const startTime = Date.now()
   
   console.log(`[Middleware ${requestId}] ${request.method} ${request.nextUrl.pathname}`)
 
-  
   if (request.nextUrl.pathname.startsWith('/api/')) {
     const response = NextResponse.next()
-    
     
     response.headers.set('Access-Control-Allow-Origin', '*')
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
     response.headers.set('Access-Control-Max-Age', '86400')
     
-    
     response.headers.set('X-Request-ID', requestId)
     response.headers.set('X-Response-Time', `${Date.now() - startTime}ms`)
-    
     
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 200, headers: response.headers })
     }
 
-    
     if (request.method === 'POST') {
       const contentType = request.headers.get('content-type')
-      
       
       if (request.nextUrl.pathname === '/api/chat') {
         if (!contentType?.includes('application/json')) {
@@ -48,7 +41,6 @@ export function middleware(request: NextRequest) {
           )
         }
       }
-      
       
       if (request.nextUrl.pathname === '/api/project/analyze' || 
           request.nextUrl.pathname === '/api/upload-files') {
@@ -96,7 +88,7 @@ export function middleware(request: NextRequest) {
   
   response.headers.set('Content-Security-Policy', csp)
   
-  
+  // Add request tracking
   response.headers.set('X-Request-ID', requestId)
   
   console.log(`[Middleware ${requestId}] Processed in ${Date.now() - startTime}ms`)
@@ -106,7 +98,13 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
     '/((?!_next/static|_next/image|favicon.ico|public|icons).*)',
   ],
 }
