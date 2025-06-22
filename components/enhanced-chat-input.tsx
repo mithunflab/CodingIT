@@ -501,8 +501,8 @@ export function EnhancedChatInput({
         </div>
       </div>
       <p className="text-xs text-muted-foreground mt-2 text-center">
-        CodinIT.dev Powered By{" "}
-        <a href="https://e2b.dev" target="_blank" className="text-[#ff8800]" rel="noreferrer">
+        CodinIT Powered By{" "}
+        <a href="https://codinit.dev" target="_blank" className="text-[#ff8800]" rel="noreferrer">
           ✶ E2B
         </a>
       </p>

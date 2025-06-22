@@ -1,4 +1,21 @@
-import { APIError, RateLimitError } from "./models"
+export class APIError extends Error {
+  constructor(
+    message: string,
+    public statusCode?: number,
+    public provider?: string,
+    public retryable: boolean = false
+  ) {
+    super(message)
+    this.name = 'APIError'
+  }
+}
+
+export class RateLimitError extends APIError {
+  constructor(message: string, provider?: string) {
+    super(message, 429, provider, true)
+    this.name = 'RateLimitError'
+  }
+}
 
 export interface APIMetrics {
   totalRequests: number

@@ -12,6 +12,10 @@ export interface ChatSession {
   isProject?: boolean
   projectName?: string
   tags?: string[]
+  projectId?: string // Added to link chat sessions to projects
+  lastMessage?: string // Added to store a snippet of the last message
+  timestamp: Date // Added to store the timestamp of the last message
+  isActive?: boolean // Added to indicate if the chat session is active
 }
 
 export interface Project {

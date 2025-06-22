@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-interface Project {
+export interface Project {
   [x: string]: any;
   tags: any;
   id: string;
@@ -100,7 +100,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(errorData.details || errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       const { project } = await response.json();

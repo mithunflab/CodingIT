@@ -27,11 +27,6 @@ interface ChatRequest {
 
 interface ChatResponse {
   message: string
-  suggestions?: {
-    type: 'code' | 'refactor' | 'explain' | 'debug'
-    content: string
-    description: string
-  }[]
   codeBlocks?: {
     language: string
     code: string
@@ -88,14 +83,8 @@ async function generateContextualResponse(
   history: ChatRequest['history'],
   sandboxId?: string,
 ): Promise<ChatResponse> {
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) {
-    throw new Error('OpenAI API key not configured')
-  }
-
   const { file, content, language, selection, cursorPosition } = context
 
-  // Build context-aware system prompt
   const systemPrompt = `You are an expert coding assistant specializing in ${language} development. You help developers write better code, debug issues, explain concepts, and optimize performance.
 
 **Current Context:**
@@ -150,136 +139,35 @@ The user is asking about this code. Help them effectively.`
   ]
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('/api/ai/enhance-text', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
-        messages,
-        temperature: 0.3,
-        max_tokens: 2000,
-        tools: [
-          {
-            type: 'function',
-            function: {
-              name: 'analyze_code',
-              description: 'Analyze code for issues, optimizations, or explanations',
-              parameters: {
-                type: 'object',
-                properties: {
-                  analysis_type: {
-                    type: 'string',
-                    enum: ['debug', 'optimize', 'explain', 'refactor', 'security'],
-                    description: 'Type of code analysis to perform'
-                  },
-                  code_snippet: {
-                    type: 'string',
-                    description: 'The code snippet to analyze'
-                  },
-                  suggestions: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        type: { type: 'string' },
-                        description: { type: 'string' },
-                        code: { type: 'string' },
-                        line: { type: 'number' }
-                      }
-                    }
-                  }
-                },
-                required: ['analysis_type', 'code_snippet']
-              }
-            }
-          },
-          {
-            type: 'function',
-            function: {
-              name: 'generate_code',
-              description: 'Generate new code based on requirements',
-              parameters: {
-                type: 'object',
-                properties: {
-                  requirement: {
-                    type: 'string',
-                    description: 'What the code should accomplish'
-                  },
-                  language: {
-                    type: 'string',
-                    description: 'Programming language for the code'
-                  },
-                  code: {
-                    type: 'string',
-                    description: 'The generated code'
-                  },
-                  explanation: {
-                    type: 'string',
-                    description: 'Explanation of how the code works'
-                  }
-                },
-                required: ['requirement', 'language', 'code']
-              }
-            }
-          }
-        ],
-        tool_choice: 'auto'
+        textToEnhance: message,
+        context: { file, content, language, selection, cursorPosition },
+        history: messages,
+        sandboxId,
       }),
     })
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.statusText}`)
+      throw new Error(`Enhance Text API error: ${response.statusText}`)
     }
 
     const result = await response.json()
-    const assistantMessage = result.choices[0]?.message
+    const enhancedText = result.enhancedText
 
-    if (!assistantMessage) {
-      throw new Error('No response from AI')
-    }
-
-    // Process function calls if any
-    const toolCalls = assistantMessage.tool_calls
-    let responseMessage = assistantMessage.content || ''
-    let suggestions: ChatResponse['suggestions'] = []
-    let codeBlocks: ChatResponse['codeBlocks'] = []
-
-    if (toolCalls) {
-      for (const toolCall of toolCalls) {
-        const functionName = toolCall.function.name
-        const functionArgs = JSON.parse(toolCall.function.arguments)
-
-        if (functionName === 'analyze_code') {
-          suggestions.push({
-            type: functionArgs.analysis_type,
-            content: functionArgs.code_snippet,
-            description: `Code analysis: ${functionArgs.analysis_type}`
-          })
-
-          if (functionArgs.suggestions) {
-            suggestions.push(...functionArgs.suggestions.map((s: any) => ({
-              type: s.type,
-              content: s.code,
-              description: s.description
-            })))
-          }
-        } else if (functionName === 'generate_code') {
-          codeBlocks.push({
-            language: functionArgs.language,
-            code: functionArgs.code,
-            description: functionArgs.explanation || functionArgs.requirement
-          })
-        }
-      }
+    if (!enhancedText) {
+      throw new Error('No enhanced text from AI')
     }
 
     // Extract code blocks from response if any
     const codeBlockRegex = /```(\w+)\n([\s\S]*?)```/g
     let match
-    while ((match = codeBlockRegex.exec(responseMessage)) !== null) {
+    const codeBlocks: ChatResponse['codeBlocks'] = []
+    while ((match = codeBlockRegex.exec(enhancedText)) !== null) {
       codeBlocks.push({
         language: match[1],
         code: match[2].trim(),
@@ -288,8 +176,7 @@ The user is asking about this code. Help them effectively.`
     }
 
     return {
-      message: responseMessage,
-      suggestions: suggestions.length > 0 ? suggestions : undefined,
+      message: enhancedText,
       codeBlocks: codeBlocks.length > 0 ? codeBlocks : undefined
     }
 
@@ -299,34 +186,8 @@ The user is asking about this code. Help them effectively.`
     // Fallback response
     return {
       message: "I'm having trouble processing your request right now. Could you please try rephrasing your question or check if there are any syntax errors in your code?",
-      suggestions: [{
-        type: 'debug',
-        content: 'Check for syntax errors and ensure your code follows proper formatting',
-        description: 'Basic debugging suggestion'
-      }]
     }
   }
-}
-
-async function executeInSandbox(sandboxId: string | undefined, command: string): Promise<string> {
-  if (!sandboxId) {
-    return 'Error: Sandbox ID not provided.'
-  }
-
-  // This is a placeholder for actual sandbox execution logic.
-  // In a real implementation, you would make an API call to your sandbox service.
-  console.log(`Executing command in sandbox ${sandboxId}: ${command}`)
-  
-  // Simulate a command execution
-  if (command.startsWith('ls')) {
-    return 'file1.txt\nfile2.js\nnode_modules/'
-  } else if (command.startsWith('cat')) {
-    return `Content of ${command.split(' ')[1]}`
-  } else if (command.startsWith('npm install')) {
-    return 'Successfully installed packages.'
-  }
-
-  return `Command executed: ${command}`
 }
 
 async function storeChatInteraction(

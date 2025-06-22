@@ -100,8 +100,13 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('[api/projects/route.ts] POST - Error creating project in Supabase:', error);
-      return NextResponse.json({ error: 'Failed to create project' }, { status: 500 })
+      console.error('[api/projects/route.ts] POST - Error creating project in Supabase:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
+      return NextResponse.json({ error: 'Failed to create project', details: error.message }, { status: 500 })
     }
 
     console.log(`[api/projects/route.ts] POST - Successfully created project ${project.id} for user ${user.id}.`);

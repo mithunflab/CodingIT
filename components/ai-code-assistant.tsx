@@ -533,7 +533,7 @@ export function AICodeAssistant({
               />
               <div className="flex items-center justify-between">
                 <div className="text-xs text-muted-foreground">
-                  Ctrl+Enter to send • AI powered by GPT-4
+                  Ctrl+Enter to send
                 </div>
                 <Button
                   onClick={handleSendMessage}

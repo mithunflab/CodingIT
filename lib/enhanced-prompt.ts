@@ -303,7 +303,7 @@ ${constraints.productionReady ? '- All code must be immediately deployable\n- En
 
   private static templatesToPrompt(templates: TemplatesDataObject): string {
     return `${Object.entries(templates).map(([id, t], index) => 
-      `${index + 1}. ${id}: "${'instructions' in t ? t.instructions : 'No instructions'}". Files: ${t.files ? Object.keys(t.files).join(', ') : 'none'}. Dependencies installed: ${t.lib.join(', ')}. Port: ${'port' in t ? (t.port ?? 'none') : 'none'}.`
+      `${index + 1}. ${id}: "${'instructions' in t ? t.instructions : 'No instructions'}". File: ${'file' in t && t.file ? t.file : 'none'}. Dependencies installed: ${t.lib.join(', ')}. Port: ${'port' in t ? (t.port ?? 'none') : 'none'}.`
     ).join('\n')}`
   }
 }

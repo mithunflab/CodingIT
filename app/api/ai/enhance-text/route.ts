@@ -16,10 +16,6 @@ const rateLimitMaxRequests = process.env.RATE_LIMIT_MAX_REQUESTS
   : 20
 const ratelimitWindow = process.env.RATE_LIMIT_WINDOW ? (process.env.RATE_LIMIT_WINDOW as Duration) : "1h"
 
-const enhanceRequestSchema = z.object({
-  textToEnhance: z.string().min(1).max(2000)
-})
-
 const enhanceResponseSchema = z.object({
   enhancedText: z.string(),
   reasoning: z.string().optional()
@@ -51,27 +47,25 @@ export async function POST(req: NextRequest) {
     const { textToEnhance } = body
 
     
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          async get(name: string) {
-            return (await cookieStore).get(name)?.value
+          getAll() {
+            return cookieStore.getAll()
           },
-          async set(name: string, value: string, options: CookieOptions) {
+          setAll(cookiesToSet) {
             try {
-              (await cookieStore).set(name, value, options)
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              )
             } catch (error) {
-              console.warn(`Failed to set cookie '${name}':`, error)
-            }
-          },
-          async remove(name: string) {
-            try {
-              (await cookieStore).delete(name)
-            } catch (error) {
-              console.warn(`Failed to delete cookie '${name}':`, error)
+              // The `setAll` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+              console.warn(`Failed to set cookie(s):`, error)
             }
           },
         },
@@ -118,7 +112,7 @@ export async function POST(req: NextRequest) {
     }
 
     
-    const defaultModel = modelsList.models.find(m => m.providerId === "openai" && m.id === "gpt-4o") || 
+    const defaultModel = modelsList.models.find(m => m.providerId === "google" && m.id === "gemini-2.5-flash") || 
                          modelsList.models.find(m => m.providerId === "anthropic" && m.id === "claude-3-5-sonnet-20241022") ||
                          modelsList.models[0]
 
@@ -132,7 +126,7 @@ export async function POST(req: NextRequest) {
     let modelClient: LanguageModel
     try {
       console.log(`[Enhance Text API ${requestId}] Creating model client: ${defaultModel.providerId}/${defaultModel.id}`)
-      modelClient = await getModelClient(defaultModel, {}) as LanguageModel
+      modelClient = getModelClient(defaultModel, {}) as LanguageModel
     } catch (error: any) {
       logError("Model client creation failed", error, { requestId, provider: defaultModel.providerId, modelId: defaultModel.id })
       return NextResponse.json(
