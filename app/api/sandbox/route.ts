@@ -201,25 +201,30 @@ export async function POST(req: Request) {
 
 function validateSandboxRequest(request: any): { valid: boolean; error?: string; code?: string } {
   if (!request.fragment) {
+    console.error("Validation failed: Fragment is required", { code: "MISSING_FRAGMENT" }); // Added logging
     return { valid: false, error: "Fragment is required", code: "MISSING_FRAGMENT" }
   }
 
   if (!request.userID || typeof request.userID !== 'string') {
+    console.error("Validation failed: Valid user ID is required", { code: "MISSING_USER_ID", userID: request.userID }); // Added logging
     return { valid: false, error: "Valid user ID is required", code: "MISSING_USER_ID" }
   }
 
   if (!request.teamID || typeof request.teamID !== 'string') {
+    console.error("Validation failed: Valid team ID is required", { code: "MISSING_TEAM_ID", teamID: request.teamID }); // Added logging
     return { valid: false, error: "Valid team ID is required", code: "MISSING_TEAM_ID" }
   }
 
   const { fragment } = request
 
   if (!fragment.template || typeof fragment.template !== 'string') {
+    console.error("Validation failed: Valid template is required", { code: "INVALID_TEMPLATE", template: fragment.template }); // Added logging
     return { valid: false, error: "Valid template is required", code: "INVALID_TEMPLATE" }
   }
 
   
   if (!Object.keys(templatesData).includes(fragment.template)) {
+    console.error("Validation failed: Unknown template", { code: "UNKNOWN_TEMPLATE", template: fragment.template, allowedTemplates: Object.keys(templatesData) }); // Added logging
     return { valid: false, error: `Template '${fragment.template}' is not a valid template.`, code: "UNKNOWN_TEMPLATE" }
   }
 
@@ -228,9 +233,11 @@ function validateSandboxRequest(request: any): { valid: boolean; error?: string;
     for (let i = 0; i < fragment.files.length; i++) {
       const file = fragment.files[i]
       if (!file.file_path || typeof file.file_path !== 'string') {
+        console.error("Validation failed: File missing or invalid file path", { code: "INVALID_FILE_PATH", fileIndex: i, filePath: file.file_path }); // Added logging
         return { valid: false, error: `File ${i}: Missing or invalid file path`, code: "INVALID_FILE_PATH" }
       }
       if (typeof file.file_content !== 'string') {
+        console.error("Validation failed: File content must be a string", { code: "INVALID_FILE_CONTENT", fileIndex: i }); // Added logging
         return { valid: false, error: `File ${i}: File content must be a string`, code: "INVALID_FILE_CONTENT" }
       }
     }

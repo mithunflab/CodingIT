@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
 
 interface CodeAnalysisRequest {
   code: string
   language: string
   file: string
   cursorPosition: { line: number; column: number }
+  model: any // LLMModel
+  config: any
 }
 
 interface CodeSuggestion {
@@ -30,6 +31,7 @@ interface Diagnostic {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = require('@/lib/supabase').supabase
     const authHeader = request.headers.get('authorization')
     if (!authHeader) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -42,14 +44,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body: CodeAnalysisRequest = await request.json()
-    const { code, language, file, cursorPosition } = body
+    const { code, language, file, cursorPosition, model, config } = body
 
-    if (!code || !language) {
+    if (!code || !language || !model || !config) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     // Analyze code using AI
-    const analysis = await analyzeCodeWithAI(code, language, file, cursorPosition)
+    const analysis = await analyzeCodeWithAI(code, language, file, cursorPosition, model, config)
 
     return NextResponse.json({
       suggestions: analysis.suggestions,
@@ -70,109 +72,44 @@ async function analyzeCodeWithAI(
   code: string,
   language: string,
   file: string,
-  cursorPosition: { line: number; column: number }
+  cursorPosition: { line: number; column: number },
+  model: any, // LLMModel
+  config: any // LLMModelConfig
 ): Promise<{
   suggestions: CodeSuggestion[]
   diagnostics: Diagnostic[]
   metrics: any
 }> {
-  // Get OpenAI API key from environment
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) {
-    throw new Error('OpenAI API key not configured')
-  }
-
   const lines = code.split('\n')
   const currentLine = lines[cursorPosition.line - 1] || ''
-  const context = lines.slice(Math.max(0, cursorPosition.line - 5), cursorPosition.line + 5).join('\n')
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `You are an expert code analyst and assistant. Analyze the provided ${language} code and provide:
+    const { E2BToolClient, E2BToolType } = require('@/lib/e2b/toolClient')
+    const e2bToolClient = new E2BToolClient()
 
-1. **Code Suggestions**: Improvements, optimizations, refactoring opportunities
-2. **Diagnostics**: Potential errors, warnings, and issues
-3. **Best Practices**: Adherence to ${language} conventions and patterns
-
-Focus on:
-- Performance optimizations
-- Code quality improvements
-- Security vulnerabilities
-- Best practice violations
-- Type safety (for TypeScript)
-- Modern syntax usage
-- Error handling improvements
-
-Return your analysis as JSON in this exact format:
-{
-  "suggestions": [
-    {
-      "id": "unique-id",
-      "type": "completion|refactor|fix|optimize",
-      "line": number,
-      "column": number,
-      "text": "original text",
-      "replacement": "suggested replacement",
-      "confidence": 0.0-1.0,
-      "description": "brief description"
-    }
-  ],
-  "diagnostics": [
-    {
-      "id": "unique-id",
-      "type": "error|warning|info",
-      "line": number,
-      "column": number,
-      "message": "diagnostic message",
-      "suggestion": "optional fix suggestion"
-    }
-  ]
-}`
-          },
-          {
-            role: 'user',
-            content: `Analyze this ${language} code from file "${file}":
-
-\`\`\`${language}
-${code}
-\`\`\`
-
-Current cursor position: Line ${cursorPosition.line}, Column ${cursorPosition.column}
-Current line context: "${currentLine}"
-
-Provide analysis focusing on the area around the cursor and overall code quality.`
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 2000,
-      }),
+    const result = await e2bToolClient.execute({
+      toolType: 'new_task' as any, //E2BToolType,
+      userInput: `Analyze this ${language} code from file "${file}":\n\`\`\`${language}\n${code}\n\`\`\`\nCurrent cursor position: Line ${cursorPosition.line}, Column ${cursorPosition.column}\nCurrent line context: "${currentLine}"\n\nProvide analysis focusing on the area around the cursor and overall code quality.`,
+      model: model,
+      config: config,
+      userID: 'user-id', // Replace with actual user ID
+      teamID: 'team-id', // Replace with actual team ID
     })
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.statusText}`)
+    if (!result.success) {
+      throw new Error(result.executionResult.toolResponse || 'Code analysis failed')
     }
 
-    const result = await response.json()
-    const analysisText = result.choices[0]?.message?.content
+    const analysisText = result.executionResult.aiResponse
 
     if (!analysisText) {
-      throw new Error('No analysis returned from OpenAI')
+      throw new Error('No analysis returned from AI')
     }
 
     // Parse the JSON response
     try {
       const analysis = JSON.parse(analysisText)
-      
+
       // Add IDs if missing
       analysis.suggestions = analysis.suggestions?.map((s: any, i: number) => ({
         ...s,

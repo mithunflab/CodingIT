@@ -59,6 +59,29 @@ export function Preview({
   onClose: () => void
 }) {
   const [isLiveEditorEnabled, setIsLiveEditorEnabled] = useState(false)
+
+  {selectedTab === 'editor' && (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={isLiveEditorEnabled ? "default" : "outline"}
+            size="sm"
+            onClick={() => setIsLiveEditorEnabled(!isLiveEditorEnabled)}
+          >
+            Live Editor
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Toggle Live Editor Mode</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )}
+
+  {selectedTab === 'editor' && isLiveEditorEnabled && (
+    <div className="p-2 bg-blue-100 text-sm text-blue-700 text-center">
+      Live Editor mode is enabled.
+    </div>
+  )}
   const [showAIAssistant, setShowAIAssistant] = useState(false)
   const [editorLayout, setEditorLayout] = useState<'full' | 'split'>('full')
   const [showSidebar, setShowSidebar] = useState(true)
@@ -90,10 +113,10 @@ export function Preview({
     },
     {
       id: 'editor' as const,
-      label: 'Cursor Editor',
+      label: 'Files',
       icon: <Edit3 className="w-4 h-4" />,
-      description: 'AI-powered code editing experience',
-      badge: 'AI Enhanced'
+      description: 'Edit your code files',
+      badge: 'Enhanced'
     }
   ], [])
 

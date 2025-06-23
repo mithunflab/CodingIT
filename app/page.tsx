@@ -22,15 +22,13 @@ import templates, { type TemplateId } from "@/lib/templates"
 import type { ExecutionResult } from "@/lib/types"
 import type { DeepPartial } from "ai"
 import { experimental_useObject as useObject } from "ai/react"
-import { FolderPlus } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
 import { usePostHog } from "posthog-js/react"
 import { useCallback, useEffect, useState } from "react"
 import { useLocalStorage } from "usehooks-ts"
 import { ViewType } from "@/components/auth/types"
 import { parseApiError } from "@/lib/utils"
 import { SettingsDialog } from "@/components/chat-sidebar/settings-dialog"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface ProjectAnalysis {
   structure: {
@@ -63,16 +61,9 @@ export default function Home() {
 
   const [isAuthDialogOpen, setAuthDialog] = useState(false)
   const [authView, setAuthView] = useState<ViewType>("sign_in")
-  const { session, isLoading, userTeam, signOut } = useAuth()
+  const { session, isLoading, userTeam } = useAuth()
 
-  const {
-    isOpen: isProjectDialogOpen,
-    mode: projectDialogMode,
-    editingProject,
-    openCreateDialog,
-    closeDialog: closeProjectDialog,
-    handleSave: handleProjectSave,
-  } = useProjectDialog()
+  useProjectDialog()
 
   const [messages, setMessages] = useState<Message[]>([])
   const [chatInput, setChatInput] = useState("")
@@ -91,9 +82,9 @@ export default function Home() {
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const [isRateLimited, setIsRateLimited] = useState(false)
-  const [currentRequestId, setCurrentRequestId] = useState<string>("")
+  const [] = useState<string>("")
   const [hasMounted, setHasMounted] = useState(false)
-  const [projectContext, setProjectContext] = useState<{
+  const [, setProjectContext] = useState<{
     files: File[]
     analysis: ProjectAnalysis | null
   }>({ files: [], analysis: null })
@@ -110,12 +101,6 @@ export default function Home() {
     // but for now, opening the modal relies on the check within its render.
   };
   
-  const handleTemplateChange = useCallback((newTemplate: TemplateId | 'auto') => {
-    console.log("[Template Change]", { from: selectedTemplate, to: newTemplate })
-    if (newTemplate !== 'auto') {
-      setSelectedTemplate(newTemplate as TemplateId)
-    }
-  }, [selectedTemplate, setSelectedTemplate])
 
   useEffect(() => {
     console.log("[Debug] Current template config:", {
@@ -225,10 +210,6 @@ export default function Home() {
     }
   }, [messages])
 
-  const openSignUpDialog = useCallback(() => { 
-  setAuthView("sign_up")
-  setAuthDialog(true)
-  }, [setAuthDialog])
 
   const handlePreviewClose = useCallback(() => {
     setFragment(null)

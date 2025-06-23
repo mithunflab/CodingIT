@@ -528,7 +528,7 @@ export function AICodeAssistant({
                 onChange={(e) => setCurrentMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask me anything about your code... (Ctrl+Enter to send)"
-                className="min-h-[80px] resize-none"
+                className="min-h-[80px] resize-none overflow-y-auto"
                 disabled={isLoading}
               />
               <div className="flex items-center justify-between">

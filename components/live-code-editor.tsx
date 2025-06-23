@@ -48,7 +48,7 @@ import {
   PanelLeftOpen
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { fr } from 'zod/v4/locales'
+import { FileTree, FileTreeNode } from './file-tree'
 
 interface FileContent {
   name: string
@@ -100,15 +100,51 @@ interface CursorLikeEditorProps {
   className?: string
 }
 
+function buildFileTree(files: { path: string }[]): FileTreeNode[] {
+  const root: FileTreeNode = { name: 'root', type: 'folder', children: [] };
+
+  for (const file of files) {
+    const pathParts = file.path.split('/').filter(p => p);
+    let currentNode = root;
+
+    for (let i = 0; i < pathParts.length; i++) {
+      const part = pathParts[i];
+      let childNode = currentNode.children!.find(c => c.name === part);
+
+      if (!childNode) {
+        const isFile = i === pathParts.length - 1;
+        childNode = {
+          name: part,
+          type: isFile ? 'file' : 'folder',
+        };
+        if (!isFile) {
+          childNode.children = [];
+        }
+        currentNode.children!.push(childNode);
+        // Keep children sorted, folders first
+        currentNode.children!.sort((a, b) => {
+          if (a.type !== b.type) {
+            return a.type === 'folder' ? -1 : 1;
+          }
+          return a.name.localeCompare(b.name);
+        });
+      }
+      currentNode = childNode;
+    }
+  }
+  return root.children || [];
+}
+
 export function CursorLikeEditor({ files, sandboxId, onFileUpdate, className }: CursorLikeEditorProps) {
-  const [currentFile, setCurrentFile] = useState(files[0]?.name || '')
+  const [currentFile, setCurrentFile] = useState(files[0]?.path || files[0]?.name || '')
   const [fileContents, setFileContents] = useState<Record<string, FileContent>>(() => {
     const initial: Record<string, FileContent> = {}
     files.forEach(file => {
-      initial[file.name] = {
+      const path = file.path || file.name
+      initial[path] = {
         name: file.name,
         content: file.content,
-        path: file.path || file.name,
+        path: path,
         language: getLanguageFromFilename(file.name),
         modified: false,
         saving: false,
@@ -145,6 +181,7 @@ export function CursorLikeEditor({ files, sandboxId, onFileUpdate, className }: 
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
   const aiGenerationRef = useRef<AbortController>()
 
+  const fileTree = useMemo(() => buildFileTree(files.map(f => ({ path: f.path || f.name }))), [files])
   const currentFileData = fileContents[currentFile]
 
   function getLanguageFromFilename(filename: string): string {
@@ -586,17 +623,15 @@ export function CursorLikeEditor({ files, sandboxId, onFileUpdate, className }: 
 
             <ScrollArea className="flex-1">
               {sidebarActiveTab === 'files' && (
-                <div className="p-2">
-                  <div className="space-y-1">
-                    {Object.values(fileContents).map((file) => (
-                      <div key={file.name} className={cn("flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-accent", currentFile === file.name && "bg-accent")} onClick={() => setCurrentFile(file.name)}>
-                        {getFileIcon(file.name)}
-                        <span className="text-sm">{file.name}</span>
-                        {file.modified && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <FileTree
+                  files={fileTree}
+                  onFileSelect={(path) => {
+                    const file = Object.values(fileContents).find(f => f.path === path)
+                    if (file) {
+                      setCurrentFile(file.path)
+                    }
+                  }}
+                />
               )}
               {sidebarActiveTab === 'chat' && (
                 <div className="p-4 flex flex-col h-full">
@@ -634,12 +669,12 @@ export function CursorLikeEditor({ files, sandboxId, onFileUpdate, className }: 
 
         <div className="flex-1 flex flex-col">
           <div className="flex border-b bg-muted/10 overflow-x-auto">
-            {Object.keys(fileContents).map((fileName) => (
-              <div key={fileName} className={cn("flex items-center gap-2 pl-3 pr-2 py-2 border-r cursor-pointer hover:bg-accent", currentFile === fileName && "bg-accent border-b-2 border-b-primary")} onClick={() => setCurrentFile(fileName)}>
-                {getFileIcon(fileName)}
-                <span className="text-sm">{fileName}</span>
-                {fileContents[fileName].modified && <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />}
-                <Button variant="ghost" size="icon" className="w-5 h-5" onClick={(e) => { e.stopPropagation(); const {[fileName]: _, ...rest} = fileContents; setFileContents(rest); if(currentFile === fileName) setCurrentFile(Object.keys(rest)[0] || '')}}><X className="w-3 h-3" /></Button>
+            {Object.keys(fileContents).map((filePath) => (
+              <div key={filePath} className={cn("flex items-center gap-2 pl-3 pr-2 py-2 border-r cursor-pointer hover:bg-accent", currentFile === filePath && "bg-accent border-b-2 border-b-primary")} onClick={() => setCurrentFile(filePath)}>
+                {getFileIcon(fileContents[filePath].name)}
+                <span className="text-sm">{fileContents[filePath].name}</span>
+                {fileContents[filePath].modified && <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />}
+                <Button variant="ghost" size="icon" className="w-5 h-5" onClick={(e) => { e.stopPropagation(); const {[filePath]: _, ...rest} = fileContents; setFileContents(rest); if(currentFile === filePath) setCurrentFile(Object.keys(rest)[0] || '')}}><X className="w-3 h-3" /></Button>
               </div>
             ))}
           </div>
@@ -657,7 +692,7 @@ export function CursorLikeEditor({ files, sandboxId, onFileUpdate, className }: 
                     <Button variant="ghost" size="icon" onClick={() => navigator.clipboard.writeText(currentFileData.content)}><Copy className="w-4 h-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => { const blob = new Blob([currentFileData.content], {type: 'text/plain'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = currentFileData.name; a.click(); URL.revokeObjectURL(url);}}><Download className="w-4 h-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => navigator.share({ title: currentFileData.name, text: `Check out this code from my sandbox!` })}><Share className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => { const original = files.find(f => f.name === currentFile); if(original) handleContentChange(original.content)}}><RotateCcw className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => { const original = files.find(f => (f.path || f.name) === currentFile); if(original) handleContentChange(original.content)}}><RotateCcw className="w-4 h-4" /></Button>
                   </div>
                 </div>
                 

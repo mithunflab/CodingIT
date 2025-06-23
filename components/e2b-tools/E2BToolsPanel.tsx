@@ -29,7 +29,7 @@ import {
   useE2BTools, 
   type UseE2BToolsOptions, 
   type E2BToolType 
-} from '@/lib/e2b/toolClient'
+} from '../../components/e2b-tools'
 import type { LLMModel, LLMModelConfig } from '@/lib/models'
 
 interface E2BToolsPanelProps {
@@ -381,7 +381,7 @@ export function E2BToolsPanel({
                   <div className="space-y-3">
                     <div>
                       <h5 className="font-medium text-sm mb-2">Generated Files</h5>
-                      {e2bTools.lastResult.executionResult.files.map((file, index) => (
+                      {e2bTools.lastResult.executionResult.files.map((file: any, index: number) => (
                         <div key={index} className="p-3 bg-muted rounded-lg space-y-2">
                           <div className="flex items-center gap-2">
                             <FileText className="w-4 h-4" />

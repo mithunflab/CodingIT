@@ -192,7 +192,7 @@ Execute condensation with production-grade precision.`
         }
       },
       sandboxConfig: {
-        template: "code-interpreter-v1",
+        template: this.selectOptimalTemplate(userInput, context.template),
         timeout: 60000, // 1 minute
         constraints: {
           memory_limit: "1GB",
@@ -274,7 +274,7 @@ Generate comprehensive, actionable rules that enhance development quality.`
         }
       },
       sandboxConfig: {
-        template: "codinit-engineer",
+        template: this.selectOptimalTemplate(userInput, context.template),
         timeout: 120000, // 2 minutes
         constraints: {
           operation_type: "rule_generation",
@@ -374,7 +374,7 @@ Deliver production-ready bug resolution with enterprise-grade quality.`
         }
       },
       sandboxConfig: {
-        template: "codinit-engineer",
+        template: this.selectOptimalTemplate(userInput, context.template),
         timeout: 300000, // 5 minutes
         constraints: {
           operation_type: "debugging",
@@ -486,7 +486,7 @@ Create enterprise-grade documentation that accelerates development and reduces s
         }
       },
       sandboxConfig: {
-        template: "codinit-engineer",
+        template: this.selectOptimalTemplate(userInput, context.template),
         timeout: 180000, // 3 minutes
         constraints: {
           operation_type: "documentation",
@@ -548,11 +548,11 @@ ${instructions}`
       return 'gradio-developer'
     }
     if (input.includes('python') || input.includes('data analysis') || input.includes('script')) {
-      return 'code-interpreter-v1'
+      return 'streamlit-developer'
     }
     
     // Default to universal template
-    return 'codinit-engineer'
+    return 'nextjs-developer'
   }
 }
 

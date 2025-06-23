@@ -367,7 +367,7 @@ export function EnhancedChatInput({
             autoFocus={true}
             minRows={1}
             maxRows={5}
-            className="text-normal px-3 resize-none ring-0 bg-inherit w-full m-0 outline-none"
+            className="text-normal px-3 resize-none ring-0 bg-inherit w-full m-0 outline-none overflow-y-auto"
             required={true}
             placeholder="What would you like to ship today...?"
             autoComplete="off"

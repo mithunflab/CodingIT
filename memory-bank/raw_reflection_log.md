@@ -1,17 +1,22 @@
 ---
-Date: 2025-06-20
-TaskRef: "Fix unused variable in components/file-tree.tsx"
+Date: 2025-06-23
+TaskRef: "Fix E2B tool panel error: template 'codinit-engineer' not found"
 
 Learnings:
-- Identified an unused import (`Folder` icon from `lucide-react`).
-- Resolved the issue by incorporating the `Folder` icon into the UI, improving visual distinction between files and folders.
-- Adjusted styling (`ml-6`, `shrink-0`) to maintain consistent alignment after adding the new icon.
+- Identified that the error was caused by hardcoded, non-existent E2B sandbox template names in `lib/e2b/toolPrompts.ts`.
+- The valid templates are defined by the directories in `sandbox-templates/`.
+- The `selectOptimalTemplate` function is a good pattern for dynamically choosing a template based on user input, but its default was incorrect.
+- Several tool prompt generators were not using this dynamic selection, leading to errors.
 
 Difficulties:
-- None. The task was straightforward.
+- Tracing the source of the template name required inspecting multiple files (`app/api/tools/route.ts` and `lib/e2b/toolPrompts.ts`).
 
 Successes:
-- The fix not only resolved the technical warning but also resulted in a tangible UI improvement.
+- Successfully identified the root cause of the error.
+- Refactored the code to not only fix the immediate error but also to make the tool selection more robust by using the `selectOptimalTemplate` function across multiple tool generators.
+- Corrected the default fallback template to a valid one (`nextjs-developer`).
 
 Improvements_Identified_For_Consolidation:
-- General pattern: When resolving "unused import" warnings for UI components, consider if the component can be used to enhance the user interface rather than just being removed.
+- General pattern: When dealing with selectable items like templates, avoid hardcoding values. Use a dynamic selection function with a safe, valid default.
+- Project Specific: The E2B tool implementation relies on template names matching directory names in `sandbox-templates/`. This is a key architectural detail to remember.
+---

@@ -19,4 +19,4 @@ function ping_server() {
 }
 
 ping_server &
-cd /home/user && npx next --turbo
+cd /home/user && npm run dev

@@ -60,7 +60,6 @@ export function DeployDialog({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="default">
-          <Logo />
           Deploy
         </Button>
       </DropdownMenuTrigger>

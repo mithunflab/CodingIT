@@ -16,7 +16,7 @@ interface FileTreeProps {
 
 const FileNode: React.FC<{ node: FileTreeNode; path: string; onFileSelect: (path: string) => void }> = ({ node, path, onFileSelect }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const currentPath = `${path}/${node.name}`;
+  const currentPath = path ? `${path}/${node.name}` : node.name;
 
   const handleToggle = () => {
     if (node.type === 'folder') {
