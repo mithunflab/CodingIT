@@ -17,7 +17,6 @@ export interface UserSettings {
   
   // Privacy settings
   profile_visibility: "public" | "private" | "contacts"
-  activity_status: boolean
   project_visibility: "public" | "private" | "contacts"
   analytics_enabled: boolean
   personalization_enabled: boolean
@@ -122,7 +121,6 @@ export async function getUserSettings(): Promise<UserSettings | null> {
           animations_enabled: true,
           sound_enabled: true,
           profile_visibility: "private",
-          activity_status: true,
           project_visibility: "private",
           analytics_enabled: true,
           personalization_enabled: true,

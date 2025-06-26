@@ -76,7 +76,7 @@ export function ProjectInstructionsModal({
               Set project instructions
             </DialogTitle>
             <p className="text-sm text-muted-foreground mt-2">
-              Provide Claude with relevant instructions and information for chats within new project. 
+              Provide us with relevant instructions and information for chats within new project. 
               This will work alongside user preferences and the selected style in a chat.
             </p>
           </DialogHeader>

@@ -5,6 +5,7 @@ import { createMistral } from '@ai-sdk/mistral'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createOllama } from 'ollama-ai-provider'
 import { createFireworks } from '@ai-sdk/fireworks'
+import { trace } from "@opentelemetry/api";
 
 export type LLMModel = {
   id: string
@@ -32,8 +33,7 @@ export function getModelClient(model: LLMModel, config: LLMModelConfig) {
   const providerConfigs = {
     anthropic: () => createAnthropic({ apiKey, baseURL })(modelNameString),
     openai: () => createOpenAI({ apiKey, baseURL })(modelNameString),
-    google: () =>
-      createGoogleGenerativeAI({ apiKey, baseURL })(modelNameString),
+    google: () => createGoogleGenerativeAI({ apiKey, baseURL })(modelNameString),
     mistral: () => createMistral({ apiKey, baseURL })(modelNameString),
     groq: () =>
       createOpenAI({
@@ -78,5 +78,10 @@ export function getModelClient(model: LLMModel, config: LLMModelConfig) {
     throw new Error(`Unsupported provider: ${providerId}`)
   }
 
-  return createClient()
+  const tracer = trace.getTracer("default");
+  return tracer.startActiveSpan(`getModelClient: ${providerId}`, (span) => {
+    const client = createClient();
+    span.end();
+    return client;
+  });
 }

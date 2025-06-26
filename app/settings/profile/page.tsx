@@ -347,22 +347,6 @@ export default function ProfilePage() {
 
           <Separator />
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="activityStatus">Activity Status</Label>
-              <p className="text-sm text-muted-foreground">
-                Show when you are online and active
-              </p>
-            </div>
-            <Switch
-              id="activityStatus"
-              checked={profile.activity_status}
-              onCheckedChange={(checked) => handleInputChange("activity_status", checked)}
-            />
-          </div>
-
-          <Separator />
-
           <div className="space-y-2">
             <Label htmlFor="profileVisibility">Profile Visibility</Label>
             <Select

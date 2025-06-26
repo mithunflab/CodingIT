@@ -223,19 +223,6 @@ export default function PrivacyPage() {
 
           <Separator />
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="activityStatus">Activity Status</Label>
-              <p className="text-sm text-muted-foreground">
-                Show when you are online and active
-              </p>
-            </div>
-            <Switch
-              id="activityStatus"
-              checked={settings.activity_status}
-              onCheckedChange={(checked) => handleSettingChange("activity_status", checked)}
-            />
-          </div>
 
           <Separator />
 

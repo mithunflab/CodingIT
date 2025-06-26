@@ -17,7 +17,6 @@ export interface ProfileData {
   work_description: string | null
   preferences: string | null
   personalized_responses: boolean
-  activity_status: boolean
   profile_visibility: "public" | "private" | "contacts"
   avatar_url?: string | null
 }
@@ -85,7 +84,6 @@ export async function getProfile(): Promise<ProfileData | null> {
           work_description: null,
           preferences: null,
           personalized_responses: true,
-          activity_status: true,
           profile_visibility: "private",
           avatar_url: null,
         }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Mail, KeyRound, Loader2 } from 'lucide-react';
+import { Mail, KeyRound, Loader2, User } from 'lucide-react';
 import { SignUpFormProps } from './types'; // Assuming VIEWS is also in types or not needed directly here
 import { AuthInput } from './AuthInput';
 import { SupabaseClient } from '@supabase/supabase-js'; // Ensure SupabaseClient is imported
@@ -21,6 +21,8 @@ export function SignUpForm({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
 
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -49,7 +51,11 @@ export function SignUpForm({
         password,
         options: {
           emailRedirectTo: redirectTo,
-          data: metadata,
+          data: {
+            ...metadata,
+            first_name: firstName,
+            last_name: lastName,
+          },
         },
       });
       if (error) throw error;
@@ -65,6 +71,30 @@ export function SignUpForm({
 
   return (
     <form id="auth-sign-up" onSubmit={handleSignUp} className="space-y-4">
+      <div className="flex space-x-4">
+        <AuthInput
+          id="first-name"
+          label="First Name"
+          type="text"
+          placeholder="Your first name"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          required
+          autoComplete="given-name"
+          icon={<User />}
+        />
+        <AuthInput
+          id="last-name"
+          label="Last Name"
+          type="text"
+          placeholder="Your last name"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          required
+          autoComplete="family-name"
+          icon={<User />}
+        />
+      </div>
       <AuthInput
         id="email"
         label={AUTH_TEXT.EMAIL_LABEL}
