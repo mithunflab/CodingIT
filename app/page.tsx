@@ -8,7 +8,9 @@ import { ChatPicker } from '@/components/chat-picker'
 import { ChatSettings } from '@/components/chat-settings'
 import { NavBar } from '@/components/navbar'
 import { Preview } from '@/components/preview'
+import Sidebar from '@/components/sidebar'
 import { useAuth } from '@/lib/auth'
+import { Project, createProject, saveMessage, getProjectMessages, generateProjectTitle } from '@/lib/database'
 import { Message, toAISDKMessages, toMessageImage } from '@/lib/messages'
 import { LLMModelConfig } from '@/lib/models'
 import modelsList from '@/lib/models.json'
@@ -16,6 +18,7 @@ import { FragmentSchema, fragmentSchema as schema } from '@/lib/schema'
 import { supabase } from '@/lib/supabase'
 import templates, { TemplateId } from '@/lib/templates'
 import { ExecutionResult } from '@/lib/types'
+import { cn } from '@/lib/utils'
 import { DeepPartial } from 'ai'
 import { experimental_useObject as useObject } from 'ai/react'
 import { usePostHog } from 'posthog-js/react'
@@ -25,9 +28,7 @@ import { useLocalStorage } from 'usehooks-ts'
 export default function Home() {
   const [chatInput, setChatInput] = useLocalStorage('chat', '')
   const [files, setFiles] = useState<File[]>([])
-  const [selectedTemplate, setSelectedTemplate] = useState<'auto' | TemplateId>(
-    'auto',
-  )
+  const [selectedTemplate, setSelectedTemplate] = useState<'auto' | TemplateId>('auto')
   const [languageModel, setLanguageModel] = useLocalStorage<LLMModelConfig>(
     'languageModel',
     {
@@ -46,6 +47,14 @@ export default function Home() {
   const [authView, setAuthView] = useState<ViewType>('sign_in')
   const [isRateLimited, setIsRateLimited] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  
+  // Project management state
+  const [currentProject, setCurrentProject] = useState<Project | null>(null)
+  const [isLoadingProject, setIsLoadingProject] = useState(false)
+
+  // Sidebar open state
+  const [isSidebarOpen, setSidebarOpen] = useState(false)
+
   const { session, userTeam } = useAuth(setAuthDialog, setAuthView)
 
   const filteredModels = modelsList.models.filter((model) => {
@@ -64,6 +73,12 @@ export default function Home() {
       : { [selectedTemplate]: templates[selectedTemplate] }
   const lastMessage = messages[messages.length - 1]
 
+  useEffect(() => {
+    if (lastMessage) {
+      console.log('Last message:', lastMessage)
+    }
+  }, [lastMessage])
+
   const { object, submit, isLoading, stop, error } = useObject({
     api: '/api/chat',
     schema,
@@ -72,13 +87,10 @@ export default function Home() {
       if (error.message.includes('limit')) {
         setIsRateLimited(true)
       }
-
       setErrorMessage(error.message)
     },
     onFinish: async ({ object: fragment, error }) => {
       if (!error) {
-        // send it to /api/sandbox
-        console.log('fragment', fragment)
         setIsPreviewLoading(true)
         posthog.capture('fragment_generated', {
           template: fragment?.template,
@@ -95,7 +107,6 @@ export default function Home() {
         })
 
         const result = await response.json()
-        console.log('result', result)
         posthog.capture('sandbox_created', { url: result.url })
 
         setResult(result)
@@ -106,6 +117,37 @@ export default function Home() {
       }
     },
   })
+
+  useEffect(() => {
+    async function loadProjectMessages() {
+      if (!currentProject) {
+        setMessages([])
+        return
+      }
+
+      setIsLoadingProject(true)
+      const projectMessages = await getProjectMessages(currentProject.id)
+      setMessages(projectMessages)
+      setIsLoadingProject(false)
+    }
+
+    loadProjectMessages()
+  }, [currentProject])
+
+  useEffect(() => {
+    async function saveMessagesToDb() {
+      if (!currentProject || !session || messages.length === 0) return
+
+      const lastMessage = messages[messages.length - 1]
+      const sequenceNumber = messages.length - 1
+
+      await saveMessage(currentProject.id, lastMessage, sequenceNumber)
+    }
+
+    if (messages.length > 0 && currentProject && session) {
+      saveMessagesToDb()
+    }
+  }, [messages, currentProject, session])
 
   useEffect(() => {
     if (object) {
@@ -149,7 +191,6 @@ export default function Home() {
         ...previousMessages[index ?? previousMessages.length - 1],
         ...message,
       }
-
       return updatedMessages
     })
   }
@@ -163,6 +204,15 @@ export default function Home() {
 
     if (isLoading) {
       stop()
+    }
+
+    // Create new project if none exists
+    if (!currentProject) {
+      const title = await generateProjectTitle(chatInput)
+      const newProject = await createProject(title, selectedTemplate === 'auto' ? undefined : selectedTemplate)
+      if (newProject) {
+        setCurrentProject(newProject)
+      }
     }
 
     const content: Message['content'] = [{ type: 'text', text: chatInput }]
@@ -253,6 +303,7 @@ export default function Home() {
     setResult(undefined)
     setCurrentTab('code')
     setIsPreviewLoading(false)
+    setCurrentProject(null)
   }
 
   function setCurrentPreview(preview: {
@@ -268,6 +319,18 @@ export default function Home() {
     setCurrentPreview({ fragment: undefined, result: undefined })
   }
 
+  function handleProjectSelect(project: Project | null) {
+    setCurrentProject(project)
+    if (!project) {
+      handleClearChat()
+    }
+  }
+
+  async function handleNewProject() {
+    setCurrentProject(null)
+    handleClearChat()
+  }
+
   return (
     <main className="flex min-h-screen max-h-screen">
       {supabase && (
@@ -278,7 +341,15 @@ export default function Home() {
           supabase={supabase}
         />
       )}
-      <div className="grid w-full md:grid-cols-2">
+
+      <Sidebar onStateChange={setSidebarOpen} userName={userTeam?.name} userPlan={userTeam?.tier} />
+
+
+      {/* Main content with left margin to account for collapsed sidebar */}
+      <div className={cn(
+        "grid w-full md:grid-cols-2 transition-all duration-300",
+        session ? "ml-16" : "ml-0"
+      )}>
         <div
           className={`flex flex-col w-full max-h-full max-w-[800px] mx-auto px-4 overflow-auto ${fragment ? 'col-span-1' : 'col-span-2'}`}
         >
@@ -292,11 +363,19 @@ export default function Home() {
             canUndo={messages.length > 1 && !isLoading}
             onUndo={handleUndo}
           />
-          <Chat
-            messages={messages}
-            isLoading={isLoading}
-            setCurrentPreview={setCurrentPreview}
-          />
+          
+          {isLoadingProject ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="text-muted-foreground">Loading project...</div>
+            </div>
+          ) : (
+            <Chat
+              messages={messages}
+              isLoading={isLoading}
+              setCurrentPreview={setCurrentPreview}
+            />
+          )}
+          
           <ChatInput
             retry={retry}
             isErrored={error !== undefined}
