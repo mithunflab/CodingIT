@@ -1,10 +1,8 @@
-"use client"
-
-import { supabase } from "./supabase"
-import type { ViewType } from "@/components/auth/types"
-import type { Session } from "@supabase/supabase-js"
-import { usePostHog } from "posthog-js/react"
-import { useState, useEffect, useCallback } from "react"
+import { supabase } from './supabase'
+import { ViewType } from '@/components/auth'
+import { Session } from '@supabase/supabase-js'
+import { usePostHog } from 'posthog-js/react'
+import { useState, useEffect } from 'react'
 
 type UserTeam = {
   email: string
@@ -13,228 +11,94 @@ type UserTeam = {
   tier: string
 }
 
-export async function getUserTeam(session: Session): Promise<UserTeam | undefined> {
-  if (!session?.user?.id) {
-    console.warn("[getUserTeam] No session or user ID provided");
-    return undefined;
-  }
-  console.log("[getUserTeam] Returning static default team for user:", session.user.id);
-  return createDefaultTeam(session);
+export async function getUserTeam(
+  session: Session,
+): Promise<UserTeam | undefined> {
+  const { data: defaultTeam } = await supabase!
+    .from('users_teams')
+    .select('teams (id, name, tier, email)')
+    .eq('user_id', session?.user.id)
+    .eq('is_default', true)
+    .single()
+
+  return defaultTeam?.teams as unknown as UserTeam
 }
 
-async function createDefaultTeam(session: Session): Promise<UserTeam> {
-  console.log("[createDefaultTeam] Creating static default team object for user:", session.user.id);
-  const teamName = session.user.user_metadata?.full_name
-    ? `${session.user.user_metadata.full_name}'s Team`
-    : session.user.email
-      ? `${session.user.email.split("@")[0]}'s Team`
-      : "My Default Team";
-
-  const staticDefaultTeam: UserTeam = {
-    id: `static_team_for_${session.user.id.replace(/-/g, "").substring(0, 16)}`, // Provide a static ID
-    name: teamName,
-    tier: "free", // Default tier
-    email: session.user.email || "unknown@user.com",
-  };
-  console.log("[createDefaultTeam] Returning static default team:", staticDefaultTeam);
-  return staticDefaultTeam;
-}
-
-export function useAuth(setAuthDialog: (value: boolean) => void, setAuthView: (value: ViewType) => void) {
+export function useAuth(
+  setAuthDialog: (value: boolean) => void,
+  setAuthView: (value: ViewType) => void,
+) {
   const [session, setSession] = useState<Session | null>(null)
   const [userTeam, setUserTeam] = useState<UserTeam | undefined>(undefined)
   const [recovery, setRecovery] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  useEffect(() => {
-    console.log('[lib/auth.ts] isLoading state changed:', isLoading);
-  }, [isLoading]);
-  const [authError, setAuthError] = useState<string | null>(null)
-  useEffect(() => {
-    if (authError) console.error('[lib/auth.ts] authError state changed:', authError);
-  }, [authError]);
   const posthog = usePostHog()
 
-  const setupUserTeam = useCallback(
-    async (session: Session, retryCount = 0): Promise<UserTeam | undefined> => {
-      console.log("[setupUserTeam] Setting up team for user:", session.user.id, "retry:", retryCount)
-
-      try {
-        const team = await getUserTeam(session)
-
-        if (!team && retryCount < 2) {
-          console.log("[setupUserTeam] No team found, retrying...")
-          await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait 1 second
-          return setupUserTeam(session, retryCount + 1)
-        }
-
-        console.log("[setupUserTeam] Team retrieved:", team)
-        setUserTeam(team)
-        setAuthError(null) // Clear any previous auth errors
-        return team
-      } catch (error) {
-        console.error("[setupUserTeam] Error setting up team:", error)
-        setAuthError("Failed to set up user team. Please try refreshing the page.")
-
-        // Return a fallback team to prevent blocking the user
-        const fallbackTeam: UserTeam = {
-          id: `fallback_${session.user.id.substring(0, 8)}`,
-          name: "Default Team",
-          tier: "free",
-          email: session.user.email || "unknown@user.com",
-        }
-
-        setUserTeam(fallbackTeam)
-        return fallbackTeam
-      }
-    },
-    [setUserTeam, setAuthError]
-  )
-
   useEffect(() => {
-    const activeSupabase = supabase;
-
-    // Early exit if Supabase is not configured
-    if (typeof activeSupabase === "undefined") {
-      console.error("Supabase client is not initialized. Authentication cannot proceed.");
-      setSession(null);
-      setUserTeam(undefined);
-      setAuthError("Application is not configured correctly. Supabase client is missing.");
-      setIsLoading(false); // Ensure loading is stopped
-      return; // Exit useEffect if supabase is not available
+    if (!supabase) {
+      console.warn('Supabase is not initialized')
+      return setSession({ user: { email: 'demo@codinit.dev' } } as Session)
     }
 
-    const initializeAuth = async () => {
-      console.log('[lib/auth.ts] initializeAuth started');
-      try {
-        const { data: { session: initialSession }, error: initialError } = await activeSupabase.auth.getSession();
-        console.log('[lib/auth.ts] getSession result - initialSession:', initialSession?.user?.id, 'initialError:', initialError);
-
-        if (initialError) {
-          console.error("[useAuth] Error getting initial session:", initialError);
-          setAuthError("Failed to authenticate. Please try signing in again.");
-          setSession(null); // Ensure session is null on error
-          setUserTeam(undefined); // Ensure team is undefined
-          return;
-        }
-
-        console.log("[useAuth] Initial session (user ID):", initialSession?.user?.id);
-        setSession(initialSession);
-
-        if (initialSession) {
-          await setupUserTeam(initialSession);
-
-          if (!initialSession.user.user_metadata?.is_fragments_user) {
-            await new Promise(resolve => setTimeout(resolve, 500)); 
-            try {
-              await activeSupabase.auth.updateUser({
-                data: { is_fragments_user: true },
-              });
-            } catch (updateError) {
-              console.warn("[useAuth] Failed to update user metadata (after delay):", updateError);
-            }
-          }
-
-          posthog.identify(initialSession.user.id, {
-            email: initialSession.user.email,
-            supabase_id: initialSession.user.id,
-          });
-          // posthog.capture("sign_in"); // This might be redundant if onAuthStateChange also captures it
-        }
-      } catch (e) {
-        console.error("[useAuth] Critical error during initial auth setup:", e);
-        setAuthError("An unexpected error occurred during authentication setup.");
-        setSession(null);
-        setUserTeam(undefined);
-      } finally {
-        setIsLoading(false); // Ensure isLoading is set to false in all cases
-      }
-    };
-
-    initializeAuth();
-
-    const loadingFallbackTimeout = setTimeout(() => {
-      setIsLoading(currentIsLoading => {
-        if (currentIsLoading) {
-          console.warn("[useAuth] Fallback: Forcing isLoading to false after 60s timeout. Auth process might have hung or is very slow.");
-          setAuthError(prevError => prevError || "Authentication is taking longer than expected. Displaying page with potentially incomplete auth state.");
-        }
-        return false;
-      });
-    }, 60000);
-
-    const {
-      data: { subscription },
-    } = activeSupabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log("[lib/auth.ts] onAuthStateChange - event:", _event, "session user ID:", session?.user?.id);
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
-
       if (session) {
-        const team = await setupUserTeam(session)
-        console.log("[useAuth] Team after auth change:", team)
-      } else {
-        setUserTeam(undefined)
-        setAuthError(null)
-      }
-
-      if (_event === "PASSWORD_RECOVERY") {
-        setRecovery(true)
-        setAuthView("update_password")
-        setAuthDialog(true)
-      }
-
-      if (_event === "USER_UPDATED" && recovery) {
-        setRecovery(false)
-      }
-
-      if (_event === "SIGNED_IN" && !recovery) {
-        const team = await setupUserTeam(session as Session)
-        setAuthDialog(false)
-
-        if (!session?.user.user_metadata?.is_fragments_user) {
-          // Add a small delay to allow session to fully settle after OAuth redirect
-          await new Promise(resolve => setTimeout(resolve, 500));
-          try { // @ts-ignore
-            await activeSupabase.auth.updateUser({
-              data: { is_fragments_user: true },
-            })
-          } catch (updateError) {
-            console.warn("[useAuth] Failed to update user metadata (onAuthStateChange, after delay):", updateError)
-          }
+        getUserTeam(session).then(setUserTeam)
+        if (!session.user.user_metadata.is_fragments_user) {
+          supabase?.auth.updateUser({
+            data: { is_fragments_user: true },
+          })
         }
-
         posthog.identify(session?.user.id, {
           email: session?.user.email,
           supabase_id: session?.user.id,
         })
-        posthog.capture("sign_in")
+        posthog.capture('sign_in')
+      }
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+
+      if (_event === 'PASSWORD_RECOVERY') {
+        setRecovery(true)
+        setAuthView('update_password')
+        setAuthDialog(true)
       }
 
-      if (_event === "SIGNED_OUT") {
-        setAuthView("sign_in")
-        setUserTeam(undefined)
-        setAuthError(null)
-        posthog.capture("sign_out")
+      if (_event === 'USER_UPDATED' && recovery) {
+        setRecovery(false)
+      }
+
+      if (_event === 'SIGNED_IN' && !recovery) {
+        getUserTeam(session as Session).then(setUserTeam)
+        setAuthDialog(false)
+        if (!session?.user.user_metadata.is_fragments_user) {
+          supabase?.auth.updateUser({
+            data: { is_fragments_user: true },
+          })
+        }
+        posthog.identify(session?.user.id, {
+          email: session?.user.email,
+          supabase_id: session?.user.id,
+        })
+        posthog.capture('sign_in')
+      }
+
+      if (_event === 'SIGNED_OUT') {
+        setAuthView('sign_in')
+        posthog.capture('sign_out')
         posthog.reset()
         setRecovery(false)
       }
     })
 
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(loadingFallbackTimeout); // Clear the fallback timeout on unmount
-    }
-  }, [recovery, setAuthDialog, setAuthView, posthog, setupUserTeam])
-
-  const openAuthDialog = () => {
-    setAuthDialog(true);
-    setAuthView("sign_in"); // Or your default view
-  };
+    return () => subscription.unsubscribe()
+  }, [recovery, setAuthDialog, setAuthView, posthog])
 
   return {
     session,
     userTeam,
-    isLoading,
-    authError,
-    openAuthDialog, // Expose the function
   }
 }

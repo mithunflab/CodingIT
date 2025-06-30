@@ -1,51 +1,15 @@
 import './globals.css'
 import { PostHogProvider, ThemeProvider } from './providers'
 import { Toaster } from '@/components/ui/toaster'
+import { Analytics } from '@vercel/analytics/next'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import dynamic from 'next/dynamic'
-
-const AuthProvider = dynamic(
-  () => import('@/contexts/AuthContext').then(mod => ({ default: mod.AuthProvider })),
-  { ssr: true }
-)
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://codingit.vercel.app'),
-  title: 'CodinIT',
-  keywords: [
-    'AI software engineer',
-    'open source',
-    'live code execution',
-    'file uploads',
-    'real-time chat',
-    'codinit',
-    'codingit',
-    'lovable.dev alternative',
-    'bolt.new alternative',
-    'v0.dev alternative'
-  ],
-  description: 'Open-source alternative to lovable.dev, bolt.new & v0.dev. AI software engineer — live code execution, file uploads, & real-time chat blazing-fast.',
-  icons: [
-    { rel: "apple-touch-icon", sizes: "180x180", url: "/apple-touch-icon.png" },
-    { rel: "icon", type: "image/x-icon", url: "/favicon.ico" },
-    { rel: "icon", type: "image/png", sizes: "32x32", url: "/icons/favicon-32x32.png" },
-    { rel: "icon", type: "image/png", sizes: "16x16", url: "/icons/favicon-16x16.png" },
-    { rel: "icon", type: "image/png", sizes: "192x192", url: "/android-chrome-192x192.png" },
-    { rel: "icon", type: "image/png", sizes: "512x512", url: "/android-chrome-512x512.png" }
-  ],
-  manifest: "/site.webmanifest",
-  openGraph: {
-    title: "CodinIT.dev - #1 Open Source AI App Builder",
-    description: "Open-source alternative to lovable.dev, bolt.new & v0.dev. AI software engineer — live code execution, file uploads, & real-time chat blazing-fast.",
-    images: ["/opengraph.png"],
-    url: "https://codingit.vercel.app",
-    siteName: "CodinIT.dev",
-    type: "website",
-    locale: "en_US",
-  }
+  title: 'CodinIT.dev',
+  description: "Create apps and websites by chatting with AI. Prompt, build & deploy your web apps with our AI agents.",
 }
 
 export default function RootLayout({
@@ -63,11 +27,10 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <AuthProvider>
-              {children}
-            </AuthProvider>
+            {children}
           </ThemeProvider>
           <Toaster />
+          <Analytics />
         </body>
       </PostHogProvider>
     </html>

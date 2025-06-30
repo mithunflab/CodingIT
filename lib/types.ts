@@ -19,5 +19,3 @@ export type ExecutionResultWeb = ExecutionResultBase & {
 }
 
 export type ExecutionResult = ExecutionResultInterpreter | ExecutionResultWeb
-
-export type { TemplateId }

@@ -19,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Duration } from '@/lib/duration'
 import { usePostHog } from 'posthog-js/react'
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 
 export function DeployDialog({
@@ -60,6 +61,7 @@ export function DeployDialog({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="default">
+        <Image src="/icon.png" alt="CodinIT" width={32} height={32} />
           Deploy
         </Button>
       </DropdownMenuTrigger>

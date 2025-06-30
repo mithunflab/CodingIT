@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { LLMModel, LLMModelConfig } from '@/lib/models'
-import { TemplateId, TemplatesDataObject } from '@/lib/templates'
+import { TemplateId, Templates } from '@/lib/templates'
 import 'core-js/features/object/group-by.js'
 import { Sparkles } from 'lucide-react'
 import Image from 'next/image'
@@ -20,15 +20,13 @@ export function ChatPicker({
   models,
   languageModel,
   onLanguageModelChange,
-  hasMounted,
 }: {
-  templates: TemplatesDataObject
+  templates: Templates
   selectedTemplate: 'auto' | TemplateId
   onSelectedTemplateChange: (template: 'auto' | TemplateId) => void
   models: LLMModel[]
   languageModel: LLMModelConfig
   onLanguageModelChange: (config: LLMModelConfig) => void
-  hasMounted: boolean // Define type for hasMounted
 }) {
   return (
     <div className="flex items-center space-x-2">
@@ -41,7 +39,7 @@ export function ChatPicker({
           <SelectTrigger className="whitespace-nowrap border-none shadow-none focus:ring-0 px-0 py-0 h-6 text-xs">
             <SelectValue placeholder="Select a persona" />
           </SelectTrigger>
-          <SelectContent side="top" forceMount>
+          <SelectContent side="top">
             <SelectGroup>
               <SelectLabel>Persona</SelectLabel>
               <SelectItem value="auto">
@@ -58,6 +56,7 @@ export function ChatPicker({
                 <SelectItem key={templateId} value={templateId}>
                   <div className="flex items-center space-x-2">
                     <Image
+                      className="flex"
                       src={`/thirdparty/templates/${templateId}.svg`}
                       alt={templateId}
                       width={14}
@@ -73,7 +72,6 @@ export function ChatPicker({
       </div>
       <div className="flex flex-col">
         <Select
-          key={hasMounted ? `lm-client-${languageModel.model}` : 'lm-server'} // Add key here
           name="languageModel"
           defaultValue={languageModel.model}
           onValueChange={(e) => onLanguageModelChange({ model: e })}
@@ -81,7 +79,7 @@ export function ChatPicker({
           <SelectTrigger className="whitespace-nowrap border-none shadow-none focus:ring-0 px-0 py-0 h-6 text-xs">
             <SelectValue placeholder="Language model" />
           </SelectTrigger>
-          <SelectContent forceMount>
+          <SelectContent>
             {Object.entries(
               Object.groupBy(models, ({ provider }) => provider),
             ).map(([provider, models]) => (
@@ -91,6 +89,7 @@ export function ChatPicker({
                   <SelectItem key={model.id} value={model.id}>
                     <div className="flex items-center space-x-2">
                       <Image
+                        className="flex"
                         src={`/thirdparty/logos/${model.providerId}.svg`}
                         alt={model.provider}
                         width={14}

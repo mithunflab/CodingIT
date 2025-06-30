@@ -1,32 +1,22 @@
+'use client'
+
 import Image from 'next/image'
 import { useTheme } from 'next-themes'
-import { useEffect, useState } from 'react'
+import { ComponentProps } from 'react'
 
-const Logo = () => {
-  const { resolvedTheme } = useTheme() // Use resolvedTheme for actual light/dark
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  let logoSrcToRender: string;
-
-  if (!mounted) {
-    logoSrcToRender = '/logo-dark.png';
-  } else {
-    logoSrcToRender = resolvedTheme === 'dark' ? '/logo-dark.png' : '/android-chrome-192x192.png';
-  }
+export default function Logo(
+  props: Omit<ComponentProps<typeof Image>, 'src' | 'alt'>
+) {
+  const { theme } = useTheme()
+  const src = theme === 'dark' ? '/thirdparty/logo.png' : '/thirdparty/logo-dark.png'
 
   return (
     <Image
-      src={logoSrcToRender}
-      width={42}
-      height={42}
+      src={src}
       alt="Logo"
-      key={mounted ? resolvedTheme : 'initial'} // Add key to help React differentiate if src changes
+      width={24}
+      height={24}
+      {...props}
     />
   )
 }
-
-export default Logo;

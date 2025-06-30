@@ -1,7 +1,6 @@
-import Auth from './auth'
-import { type ViewType } from './auth/types' // Updated import path for ViewType
-import Logo from './logo'
+import Auth, { ViewType } from './auth'
 import { validateEmail } from '@/app/actions/validate-email'
+import Image from 'next/image'
 import {
   Dialog,
   DialogContent,
@@ -26,16 +25,13 @@ export function AuthDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>
         <VisuallyHidden>
-          <DialogTitle>Sign in to CodinIT</DialogTitle>
+          <DialogTitle>Sign in</DialogTitle>
           <DialogDescription>
-            Sign in or create an account to access CodinIT
+            Sign in or create an account.
           </DialogDescription>
         </VisuallyHidden>
-        <div className="flex justify-center items-center flex-col">
           <h1 className="flex items-center gap-4 text-xl font-bold mb-6 w-full">
-            <div className="flex items-center justify-center rounded-md shadow-md bg-black p-2">
-              <Logo />
-            </div>
+            <Image src="/icon.png" alt="CodinIT" width={32} height={32} />
             Sign in to CodinIT
           </h1>
           <div className="w-full">
@@ -50,7 +46,6 @@ export function AuthDialog({
               }}
             />
           </div>
-        </div>
       </DialogContent>
     </Dialog>
   )

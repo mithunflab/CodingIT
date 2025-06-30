@@ -1,7 +1,65 @@
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { ExecutionResultInterpreter } from '@/lib/types'
+import { Result as CellResultData } from '@e2b/code-interpreter'
 import { Terminal } from 'lucide-react'
 import Image from 'next/image'
+
+function CellResult({ result }: { result: CellResultData }) {
+  // Order of checks is important
+  if (result.png) {
+    return (
+      <Image
+        src={`data:image/png;base64,${result.png}`}
+        alt="result"
+        width={600}
+        height={400}
+      />
+    )
+  }
+  if (result.jpeg) {
+    return (
+      <Image
+        src={`data:image/jpeg;base64,${result.jpeg}`}
+        alt="result"
+        width={600}
+        height={400}
+      />
+    )
+  }
+  if (result.pdf) {
+    return (
+      <iframe
+        src={`data:application/pdf;base64,${result.pdf}`}
+        className="w-full h-96 border-none"
+        title="PDF result"
+      />
+    )
+  }
+  if (result.html) {
+    return (
+      <iframe
+        srcDoc={result.html}
+        className="w-full h-96 border-none"
+        sandbox="allow-scripts"
+        title="HTML result"
+      />
+    )
+  }
+  if (result.latex) {
+    return <pre className="text-xs font-mono">{result.latex}</pre>
+  }
+  if (result.json) {
+    return (
+      <pre className="text-xs font-mono">
+        {JSON.stringify(result.json, null, 2)}
+      </pre>
+    )
+  }
+  if (result.text) {
+    return <pre className="text-xs font-mono">{result.text}</pre>
+  }
+  return null
+}
 
 function LogsOutput({
   stdout,
@@ -39,6 +97,7 @@ export function FragmentInterpreter({
 }) {
   const { cellResults, stdout, stderr, runtimeError } = result
 
+  // The AI-generated code experienced runtime error
   if (runtimeError) {
     const { name, value, traceback } = runtimeError
     return (
@@ -56,20 +115,13 @@ export function FragmentInterpreter({
     )
   }
 
-  // Cell results can contain text, pdfs, images, and code (html, latex, json)
-  // TODO: Show all results
-  // TODO: Check other formats than `png`
   if (cellResults.length > 0) {
-    const imgInBase64 = cellResults[0].png
     return (
       <div className="flex flex-col h-full">
-        <div className="w-full flex-1 p-4 flex items-start justify-center border-b">
-          <Image
-            src={`data:image/png;base64,${imgInBase64}`}
-            alt="result"
-            width={600}
-            height={400}
-          />
+        <div className="w-full flex-1 p-4 flex flex-col items-start justify-center border-b space-y-4">
+          {cellResults.map((cellResult, index) => (
+            <CellResult key={index} result={cellResult} />
+          ))}
         </div>
         <LogsOutput stdout={stdout} stderr={stderr} />
       </div>

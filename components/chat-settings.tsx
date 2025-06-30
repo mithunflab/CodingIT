@@ -47,15 +47,15 @@ export function ChatSettings({
             <div className="flex flex-col gap-2 px-2 py-2">
               <Label htmlFor="apiKey">API Key</Label>
               <Input
-                id="apiKey"
                 name="apiKey"
                 type="password"
-                placeholder={languageModel.apiKey ? "" : "Auto (uses default)"}
-                value={languageModel.apiKey || ""} // Controlled component
+                placeholder="Auto"
+                required={true}
+                defaultValue={languageModel.apiKey}
                 onChange={(e) =>
                   onLanguageModelChange({
                     apiKey:
-                      e.target.value.trim().length > 0 ? e.target.value.trim() : undefined,
+                      e.target.value.length > 0 ? e.target.value : undefined,
                   })
                 }
                 className="text-sm"
@@ -69,15 +69,15 @@ export function ChatSettings({
             <div className="flex flex-col gap-2 px-2 py-2">
               <Label htmlFor="baseURL">Base URL</Label>
               <Input
-                id="baseURL"
                 name="baseURL"
                 type="text"
-                placeholder={languageModel.baseURL ? "" : "Auto (uses default)"}
-                value={languageModel.baseURL || ""} // Controlled component
+                placeholder="Auto"
+                required={true}
+                defaultValue={languageModel.baseURL}
                 onChange={(e) =>
                   onLanguageModelChange({
                     baseURL:
-                      e.target.value.trim().length > 0 ? e.target.value.trim() : undefined,
+                      e.target.value.length > 0 ? e.target.value : undefined,
                   })
                 }
                 className="text-sm"
@@ -89,12 +89,10 @@ export function ChatSettings({
         <div className="flex flex-col gap-1.5 px-2 py-2">
           <span className="text-sm font-medium">Parameters</span>
           <div className="flex space-x-4 items-center">
-            <Label htmlFor="outputTokens" className="text-sm flex-1 text-muted-foreground font-normal">
+            <span className="text-sm flex-1 text-muted-foreground">
               Output tokens
-            </Label>
+            </span>
             <Input
-              id="outputTokens"
-              name="outputTokens"
               type="number"
               defaultValue={languageModel.maxTokens}
               min={50}
@@ -110,12 +108,10 @@ export function ChatSettings({
             />
           </div>
           <div className="flex space-x-4 items-center">
-            <Label htmlFor="temperature" className="text-sm flex-1 text-muted-foreground font-normal">
+            <span className="text-sm flex-1 text-muted-foreground">
               Temperature
-            </Label>
+            </span>
             <Input
-              id="temperature"
-              name="temperature"
               type="number"
               defaultValue={languageModel.temperature}
               min={0}
@@ -131,10 +127,8 @@ export function ChatSettings({
             />
           </div>
           <div className="flex space-x-4 items-center">
-            <Label htmlFor="topP" className="text-sm flex-1 text-muted-foreground font-normal">Top P</Label>
+            <span className="text-sm flex-1 text-muted-foreground">Top P</span>
             <Input
-              id="topP"
-              name="topP"
               type="number"
               defaultValue={languageModel.topP}
               min={0}
@@ -150,10 +144,8 @@ export function ChatSettings({
             />
           </div>
           <div className="flex space-x-4 items-center">
-            <Label htmlFor="topK" className="text-sm flex-1 text-muted-foreground font-normal">Top K</Label>
+            <span className="text-sm flex-1 text-muted-foreground">Top K</span>
             <Input
-              id="topK"
-              name="topK"
               type="number"
               defaultValue={languageModel.topK}
               min={0}
@@ -169,12 +161,10 @@ export function ChatSettings({
             />
           </div>
           <div className="flex space-x-4 items-center">
-            <Label htmlFor="frequencyPenalty" className="text-sm flex-1 text-muted-foreground font-normal">
-              Frequency penalty
-            </Label>
+            <span className="text-sm flex-1 text-muted-foreground">
+              Frequence penalty
+            </span>
             <Input
-              id="frequencyPenalty"
-              name="frequencyPenalty"
               type="number"
               defaultValue={languageModel.frequencyPenalty}
               min={0}
@@ -190,12 +180,10 @@ export function ChatSettings({
             />
           </div>
           <div className="flex space-x-4 items-center">
-            <Label htmlFor="presencePenalty" className="text-sm flex-1 text-muted-foreground font-normal">
+            <span className="text-sm flex-1 text-muted-foreground">
               Presence penalty
-            </Label>
+            </span>
             <Input
-              id="presencePenalty"
-              name="presencePenalty"
               type="number"
               defaultValue={languageModel.presencePenalty}
               min={0}

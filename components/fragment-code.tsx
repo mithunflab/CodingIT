@@ -1,3 +1,4 @@
+import { CodeView } from './code-view'
 import { Button } from './ui/button'
 import { CopyButton } from './ui/copy-button'
 import {
@@ -12,9 +13,9 @@ import { useState } from 'react'
 export function FragmentCode({
   files,
 }: {
-  files: { name: string; content: string; path?: string }[]
+  files: { name: string; content: string }[]
 }) {
-  const [currentFile, setCurrentFile] = useState(files[0]?.name || '')
+  const [currentFile, setCurrentFile] = useState(files[0].name)
   const currentFileContent = files.find(
     (file) => file.name === currentFile,
   )?.content
@@ -36,9 +37,9 @@ export function FragmentCode({
     <div className="flex flex-col h-full">
       <div className="flex items-center px-2 pt-1 gap-2">
         <div className="flex flex-1 gap-2 overflow-x-auto">
-          {files.map((file, index) => (
+          {files.map((file) => (
             <div
-              key={file.path || `${file.name}-${index}`}
+              key={file.name}
               className={`flex gap-2 select-none cursor-pointer items-center text-sm text-muted-foreground px-2 py-1 rounded-md hover:bg-muted border ${
                 file.name === currentFile ? 'bg-muted border-muted' : ''
               }`}
@@ -79,6 +80,12 @@ export function FragmentCode({
             </Tooltip>
           </TooltipProvider>
         </div>
+      </div>
+      <div className="flex flex-col flex-1 overflow-x-auto">
+        <CodeView
+          code={currentFileContent || ''}
+          lang={currentFile.split('.').pop() || ''}
+        />
       </div>
     </div>
   )

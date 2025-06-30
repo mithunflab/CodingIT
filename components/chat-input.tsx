@@ -1,15 +1,19 @@
-"use client"
+'use client'
 
-import type React from "react"
-import Image from "next/image"
-
-import { RepoBanner } from "./repo-banner"
-import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { isFileInArray } from "@/lib/utils"
-import { ArrowUp, Paperclip, Square, X, AlertTriangle, RefreshCw } from "lucide-react"
-import { type SetStateAction, useEffect, useMemo, useState, useCallback } from "react"
-import TextareaAutosize from "react-textarea-autosize"
+import { RepoBanner } from './repo-banner'
+import { Button } from '@/components/ui/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { isFileInArray } from '@/lib/utils'
+import { ArrowUp, Paperclip, Square, X } from 'lucide-react'
+import { SetStateAction, useEffect, useMemo, useState, useCallback } from 'react'
+import TextareaAutosize from 'react-textarea-autosize'
+import Image from 'next/image'
+import { useTypingEffect } from '@/lib/hooks/use-typing-effect'
 
 export function ChatInput({
   retry,
@@ -40,6 +44,17 @@ export function ChatInput({
   handleFileChange: (change: SetStateAction<File[]>) => void
   children: React.ReactNode
 }) {
+  const placeholder = useTypingEffect(
+    [
+      'Tell CodinIT what you want to create',
+      'Build me a landing page for...',
+      'Create a content management system',
+      'Create a documentation site',
+      'Update animations in my component'
+    ],
+    100,
+    2000,
+  )
   function handleFileInput(e: React.ChangeEvent<HTMLInputElement>) {
     handleFileChange((prev) => {
       const newFiles = Array.from(e.target.files || [])
@@ -56,7 +71,7 @@ export function ChatInput({
     const items = Array.from(e.clipboardData.items)
 
     for (const item of items) {
-      if (item.type.indexOf("image") !== -1) {
+      if (item.type.indexOf('image') !== -1) {
         e.preventDefault()
 
         const file = item.getAsFile()
@@ -77,9 +92,9 @@ export function ChatInput({
   function handleDrag(e: React.DragEvent) {
     e.preventDefault()
     e.stopPropagation()
-    if (e.type === "dragenter" || e.type === "dragover") {
+    if (e.type === 'dragenter' || e.type === 'dragover') {
       setDragActive(true)
-    } else if (e.type === "dragleave") {
+    } else if (e.type === 'dragleave') {
       setDragActive(false)
     }
   }
@@ -89,11 +104,15 @@ export function ChatInput({
     e.stopPropagation()
     setDragActive(false)
 
-    const droppedFiles = Array.from(e.dataTransfer.files).filter((file) => file.type.startsWith("image/"))
+    const droppedFiles = Array.from(e.dataTransfer.files).filter((file) =>
+      file.type.startsWith('image/'),
+    )
 
     if (droppedFiles.length > 0) {
       handleFileChange((prev) => {
-        const uniqueFiles = droppedFiles.filter((file) => !isFileInArray(file, prev))
+        const uniqueFiles = droppedFiles.filter(
+          (file) => !isFileInArray(file, prev),
+        )
         return [...prev, ...uniqueFiles]
       })
     }
@@ -111,10 +130,8 @@ export function ChatInput({
             <X className="h-3 w-3 cursor-pointer" />
           </span>
           <Image
-            src={URL.createObjectURL(file) || "/placeholder.svg"}
+            src={URL.createObjectURL(file)}
             alt={file.name}
-            width={40}
-            height={40}
             className="rounded-xl w-10 h-10 object-cover"
           />
         </div>
@@ -123,7 +140,7 @@ export function ChatInput({
   }, [files, handleFileRemove])
 
   function onEnter(e: React.KeyboardEvent<HTMLFormElement>) {
-    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
       if (e.currentTarget.checkValidity()) {
         handleSubmit(e)
@@ -137,76 +154,7 @@ export function ChatInput({
     if (!isMultiModal) {
       handleFileChange([])
     }
-  }, [isMultiModal, handleFileChange])
-
-  // Enhanced error type detection
-  const isAuthError =
-    errorMessage.includes("Authentication error") ||
-    errorMessage.includes("Missing user") ||
-    errorMessage.includes("Missing team") ||
-    errorMessage.includes("sign out and sign in")
-
-  const isServerError =
-    errorMessage.includes("Server error") || errorMessage.includes("Internal") || errorMessage.includes("server error")
-
-  const isNetworkError =
-    errorMessage.includes("Network error") || errorMessage.includes("connection") || errorMessage.includes("timeout")
-
-  const isModelError = errorMessage.includes("model") || errorMessage.includes("API key")
-
-  const getErrorStyling = () => {
-    if (isAuthError) return "bg-red-400/10 text-red-400 border border-red-400/20"
-    if (isServerError) return "bg-orange-400/10 text-orange-400 border border-orange-400/20"
-    if (isNetworkError) return "bg-blue-400/10 text-blue-400 border border-blue-400/20"
-    if (isRateLimited) return "bg-yellow-400/10 text-yellow-400 border border-yellow-400/20"
-    return "bg-red-400/10 text-red-400 border border-red-400/20"
-  }
-
-  const getErrorIcon = () => {
-    if (isNetworkError) return <RefreshCw className="h-4 w-4" />
-    return <AlertTriangle className="h-4 w-4" />
-  }
-
-  const getErrorAction = () => {
-    if (isAuthError) {
-      return (
-        <button
-          className="px-2 py-1 rounded-sm bg-red-400/20 hover:bg-red-400/30 transition-colors"
-          onClick={() => window.location.reload()}
-        >
-          Refresh Page
-        </button>
-      )
-    }
-
-    if (isServerError || isNetworkError || isModelError) {
-      return (
-        <button
-          className="px-2 py-1 rounded-sm bg-orange-400/20 hover:bg-orange-400/30 transition-colors"
-          onClick={retry}
-        >
-          Try Again
-        </button>
-      )
-    }
-
-    if (isRateLimited) {
-      return (
-        <button
-          className="px-2 py-1 rounded-sm bg-yellow-400/20 hover:bg-yellow-400/30 transition-colors"
-          onClick={retry}
-        >
-          Retry
-        </button>
-      )
-    }
-
-    return (
-      <button className="px-2 py-1 rounded-sm bg-red-400/20 hover:bg-red-400/30 transition-colors" onClick={retry}>
-        Try Again
-      </button>
-    )
-  }
+  }, [handleFileChange, isMultiModal])
 
   return (
     <form
@@ -219,21 +167,31 @@ export function ChatInput({
       onDrop={isMultiModal ? handleDrop : undefined}
     >
       {isErrored && (
-        <div className={`flex items-center p-3 text-sm font-medium mx-4 mb-4 rounded-xl ${getErrorStyling()}`}>
-          <div className="flex items-center gap-2 flex-1">
-            {getErrorIcon()}
-            <span className="flex-1">{errorMessage}</span>
-          </div>
-          <div className="ml-2">{getErrorAction()}</div>
+        <div
+          className={`flex items-center p-1.5 text-sm font-medium mx-4 mb-10 rounded-xl ${
+            isRateLimited
+              ? 'bg-orange-400/10 text-orange-400'
+              : 'bg-red-400/10 text-red-400'
+          }`}
+        >
+          <span className="flex-1 px-1.5">{errorMessage}</span>
+          <button
+            className={`px-2 py-1 rounded-sm ${
+              isRateLimited ? 'bg-orange-400/20' : 'bg-red-400/20'
+            }`}
+            onClick={retry}
+          >
+            Try again
+          </button>
         </div>
       )}
       <div className="relative">
         <RepoBanner className="absolute bottom-full inset-x-2 translate-y-1 z-0 pb-2" />
         <div
-          className={`shadow-md rounded-2xl relative z-10 bg-background border focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-background transition-shadow duration-200 ${
+          className={`shadow-md rounded-2xl relative z-10 bg-background border ${
             dragActive
-              ? "before:absolute before:inset-0 before:rounded-2xl before:border-2 before:border-dashed before:border-primary"
-              : ""
+              ? 'before:absolute before:inset-0 before:rounded-2xl before:border-2 before:border-dashed before:border-primary'
+              : ''
           }`}
         >
           <div className="flex items-center px-3 py-2 gap-1">{children}</div>
@@ -243,7 +201,7 @@ export function ChatInput({
             maxRows={5}
             className="text-normal px-3 resize-none ring-0 bg-inherit w-full m-0 outline-none"
             required={true}
-            placeholder="Describe your app..."
+            placeholder={placeholder}
             disabled={isErrored}
             value={input}
             onChange={handleInputChange}
@@ -271,7 +229,7 @@ export function ChatInput({
                       className="rounded-xl h-10 w-10"
                       onClick={(e) => {
                         e.preventDefault()
-                        document.getElementById("multimodal")?.click()
+                        document.getElementById('multimodal')?.click()
                       }}
                     >
                       <Paperclip className="h-5 w-5" />
@@ -325,8 +283,8 @@ export function ChatInput({
         </div>
       </div>
       <p className="text-xs text-muted-foreground mt-2 text-center">
-        CodinIT.dev Powered By{" "}
-        <a href="https://codinit.dev" target="_blank" className="text-[#ff8800]" rel="noreferrer">
+        CodinIT.dev sponsored by{' '}
+        <a href="https://e2b.dev" target="_blank" className="text-[#ff8800]">
           ✶ E2B
         </a>
       </p>
