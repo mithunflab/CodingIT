@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { ViewType } from '@/components/auth'
+import { randomString } from './utils'
 import { Session } from '@supabase/supabase-js'
 import { usePostHog } from 'posthog-js/react'
 import { useState, useEffect } from 'react'
@@ -72,7 +73,33 @@ export function useAuth(
       }
 
       if (_event === 'SIGNED_IN' && !recovery) {
-        getUserTeam(session as Session).then(setUserTeam)
+        getUserTeam(session as Session).then((team) => {
+          if (team) {
+            setUserTeam(team)
+          } else {
+            const teamId = randomString(10)
+            supabase!
+              .from('teams')
+              .insert({
+                id: teamId,
+                name: 'My Team',
+                tier: 'free',
+                email: session?.user.email,
+              })
+              .then(() => {
+                supabase!
+                  .from('users_teams')
+                  .insert({
+                    user_id: session?.user.id,
+                    team_id: teamId,
+                    is_default: true,
+                  })
+                  .then(() => {
+                    getUserTeam(session as Session).then(setUserTeam)
+                  })
+              })
+          }
+        })
         setAuthDialog(false)
         if (!session?.user.user_metadata.is_fragments_user) {
           supabase?.auth.updateUser({
@@ -95,7 +122,7 @@ export function useAuth(
     })
 
     return () => subscription.unsubscribe()
-  }, [recovery, setAuthDialog, setAuthView, posthog])
+  }, [recovery, userTeam, setAuthDialog, setAuthView, posthog])
 
   return {
     session,
