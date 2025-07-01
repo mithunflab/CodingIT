@@ -1,5 +1,5 @@
+// File: components/navbar.tsx
 import Logo from './logo'
-import { Avatar, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -17,13 +17,12 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
-  DiscordLogoIcon,
   GitHubLogoIcon,
-  TwitterLogoIcon,
 } from '@radix-ui/react-icons'
 import { Session } from '@supabase/supabase-js'
-import { ArrowRight, LogOut, Trash, Undo } from 'lucide-react'
+import { ArrowRight, LogOut, Trash, Undo, Settings, Menu } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export function NavBar({
   session,
@@ -100,29 +99,18 @@ export function NavBar({
         </TooltipProvider>
         {session ? (
           <DropdownMenu>
-            <TooltipProvider>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage
-                        src={
-                          session.user.user_metadata?.avatar_url ||
-                          'https://avatar.vercel.sh/' + session.user.email
-                        }
-                        alt={session.user.email}
-                      />
-                    </Avatar>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>My Account</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end">
               <DropdownMenuLabel className="flex flex-col">
                 <span className="text-sm">My Account</span>
                 <span className="text-xs text-muted-foreground">
-                  {session.user.email}
+                  {session.user.user_metadata?.name ||
+                    session.user.user_metadata?.full_name ||
+                    session.user.email}
                 </span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -131,26 +119,27 @@ export function NavBar({
                   window.open('https://codinit.dev', '_blank')
                 }}
               >
-                <Logo
+                <Image
+                  src={typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? '/thirdparty/logo-dark.png' : '/thirdparty/logo.png'}
                   width={16}
                   height={16}
                   className="mr-2 text-muted-foreground"
+                  alt="CodinIT Logo"
                 />
+
                 About CodinIT
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onSocialClick('github')}>
                 <GitHubLogoIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                 Star on GitHub
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onSocialClick('discord')}>
-                <DiscordLogoIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                Join us on Discord
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onSocialClick('x')}>
-                <TwitterLogoIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                Follow us on X
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/settings">
+                  <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={signOut}>
                 <LogOut className="mr-2 h-4 w-4 text-muted-foreground" />
                 Sign out

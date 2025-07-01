@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/auth';
+import { Session } from '@supabase/supabase-js';
 import { 
   MessageSquare, 
   Search, 
@@ -14,7 +16,8 @@ import {
   Archive,
   Star,
   ChevronDown,
-  MoreHorizontal
+  MoreHorizontal,
+  CreditCardIcon
 } from 'lucide-react';
 import Logo from './logo';
 
@@ -47,6 +50,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   userName,
   userPlan,
 }) => {
+  const { session } = useAuth(
+    () => {},
+    () => {},
+  );
   const [state, setState] = useState<SidebarState>({
     isOpen: false,
     isHovering: false,
@@ -132,13 +139,23 @@ const Sidebar: React.FC<SidebarProps> = ({
         aria-label="Navigation sidebar"
         role="navigation"
       >
-        {children || <DefaultSidebarContent userName={userName} userPlan={userPlan} />}
+        {children || (
+          <DefaultSidebarContent
+            userName={userName}
+            userPlan={userPlan}
+            session={session}
+          />
+        )}
       </aside>
     </>
   );
 };
 
-const DefaultSidebarContent: React.FC<{ userName?: string; userPlan?: string }> = ({ userName, userPlan }) => {
+const DefaultSidebarContent: React.FC<{
+  userName?: string;
+  userPlan?: string;
+  session: Session | null;
+}> = ({ userName, userPlan, session }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const recentChats = [
@@ -195,7 +212,6 @@ const DefaultSidebarContent: React.FC<{ userName?: string; userPlan?: string }> 
                     key={index}
                     className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent transition-colors cursor-pointer group"
                   >
-                    <MessageSquare className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                     <span className="text-sm text-foreground truncate group-hover:text-accent-foreground transition-colors">
                       {chat}
                     </span>
@@ -245,36 +261,42 @@ const DefaultSidebarContent: React.FC<{ userName?: string; userPlan?: string }> 
 
       {/* Footer */}
       <div className="border-t">
-        {/* Get free tokens */}
-        <div className="p-4">
-          <button className="flex items-center gap-2 text-sm text-green-400 hover:text-green-300 transition-colors">
-            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-            Get free tokens
+        {/* Get free tokens, Go Pro, Settings and Help */}
+        <div className="p-4 space-y-1">
+          <button className="flex items-center gap-2 text-sm text-green-400 hover:text-green-300 transition-colors w-full">
+        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+        Get free tokens
+          </button>
+          <button className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-accent transition-colors">
+        <CreditCardIcon className="w-4 h-4 text-muted-foreground" />
+        <span className="text-sm text-foreground">Go Pro</span>
+          </button>
+          <button className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-accent transition-colors">
+        <Settings className="w-4 h-4 text-muted-foreground" />
+        <span className="text-sm text-foreground">Settings</span>
+          </button>
+          <button className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-accent transition-colors">
+        <HelpCircle className="w-4 h-4 text-muted-foreground" />
+        <span className="text-sm text-foreground">Help Center</span>
           </button>
         </div>
-
-        {/* Settings and Help */}
-        <div className="px-4 pb-4 space-y-1">
-          <button className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-accent transition-colors">
-            <Settings className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-foreground">Settings</span>
-          </button>
-          
-          <button className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-accent transition-colors">
-            <HelpCircle className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-foreground">Help Center</span>
-          </button>
-        </div>
+      </div>
 
         {/* User Profile */}
         <div className="border-t p-4">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-medium text-sm">G</span>
+              <span className="text-white font-medium text-sm">
+                {session?.user.user_metadata?.name?.[0] || 'G'}
+              </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{userName || 'Guest'}</p>
-              <p className="text-xs text-muted-foreground">{userPlan || 'Personal Plan'}</p>
+              <p className="text-sm font-medium text-foreground truncate">
+                {session?.user.user_metadata?.name || userName || ''}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {session?.user.user_metadata?.plan || userPlan || 'Free Plan'}
+              </p>
             </div>
             <button className="p-1 hover:bg-accent rounded transition-colors">
               <LogOut className="w-4 h-4 text-muted-foreground" />
@@ -282,7 +304,6 @@ const DefaultSidebarContent: React.FC<{ userName?: string; userPlan?: string }> 
           </div>
         </div>
       </div>
-    </div>
   );
 };
 
