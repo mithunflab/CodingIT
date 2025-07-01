@@ -9,17 +9,12 @@ import {
   Search, 
   Settings, 
   HelpCircle, 
-  User, 
   LogOut,
-  Plus,
-  Calendar,
-  Archive,
-  Star,
-  ChevronDown,
   MoreHorizontal,
   CreditCardIcon
 } from 'lucide-react';
 import Logo from './logo';
+import { PricingModal } from './pricing';
 
 export interface SidebarProps {
   children?: ReactNode;
@@ -157,10 +152,9 @@ const DefaultSidebarContent: React.FC<{
   session: Session | null;
 }> = ({ userName, userPlan, session }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
 
-  const recentChats = [
-    ''
-  ];
+  const recentChats: string[] = [];
 
   return (
     <div className="flex flex-col h-full bg-background text-foreground">
@@ -220,11 +214,6 @@ const DefaultSidebarContent: React.FC<{
               </div>
             </div>
 
-            {/* Last 30 Days */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <h4 className="text-xs text-muted-foreground">Last 30 days</h4>
-              </div>
               <div className="space-y-1">
                 {recentChats.slice(1, 6).map((chat, index) => (
                   <div
@@ -257,7 +246,7 @@ const DefaultSidebarContent: React.FC<{
             </div>
           </div>
         </div>
-      </div>
+      
 
       {/* Footer */}
       <div className="border-t">
@@ -265,7 +254,7 @@ const DefaultSidebarContent: React.FC<{
         <div className="p-4 space-y-1">
           <button className="flex items-center gap-2 text-sm text-green-400 hover:text-green-300 transition-colors w-full">
         <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-        Get free tokens
+        <span className="text-sm">Get free tokens</span>
           </button>
           <button className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-accent transition-colors">
         <CreditCardIcon className="w-4 h-4 text-muted-foreground" />
@@ -287,7 +276,7 @@ const DefaultSidebarContent: React.FC<{
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-white font-medium text-sm">
-                {session?.user.user_metadata?.name?.[0] || 'G'}
+                {session?.user.user_metadata?.name?.[0] || ''}
               </span>
             </div>
             <div className="flex-1 min-w-0">
@@ -303,8 +292,13 @@ const DefaultSidebarContent: React.FC<{
             </button>
           </div>
         </div>
-      </div>
+      <PricingModal
+        isOpen={isPricingModalOpen}
+        onClose={() => setIsPricingModalOpen(false)}
+      />
+    </div>
   );
 };
+
 
 export default Sidebar;

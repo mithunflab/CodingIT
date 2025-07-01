@@ -1,4 +1,3 @@
-// File: components/navbar.tsx
 import Logo from './logo'
 import { Button } from '@/components/ui/button'
 import {
@@ -116,7 +115,7 @@ export function NavBar({
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => {
-                  window.open('https://codinit.dev', '_blank')
+                  window.open('https://codinit.dev/codinit-beta', '_blank')
                 }}
               >
                 <Image

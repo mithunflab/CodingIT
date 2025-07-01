@@ -342,7 +342,11 @@ export default function Home() {
         />
       )}
 
-      <Sidebar onStateChange={setSidebarOpen} userName={userTeam?.name} userPlan={userTeam?.tier} />
+      <Sidebar
+        onStateChange={setSidebarOpen}
+        userName={userTeam?.name}
+        userPlan={userTeam?.tier}
+      />
 
 
       {/* Main content with left margin to account for collapsed sidebar */}

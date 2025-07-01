@@ -10,6 +10,8 @@ interface PricingCardProps {
   highlight?: boolean;
   highlightLabel?: string;
   buttonVariant?: "default" | "outline";
+  buttonText?: string;
+  badge?: string;
 }
 
 export function PricingCard({
@@ -19,6 +21,8 @@ export function PricingCard({
   features,
   highlight = false,
   buttonVariant = "outline",
+  buttonText = "Get Started",
+  badge,
 }: PricingCardProps) {
   return (
     <div
@@ -29,13 +33,20 @@ export function PricingCard({
       <div className={highlight ? "grid gap-6 sm:grid-cols-2" : ""}>
         <div className="space-y-4">
           <div>
-            <h2 className="font-medium">{title}</h2>
+            <div className="flex justify-between">
+              <h2 className="font-medium">{title}</h2>
+              {badge && (
+                <div className="text-sm font-bold bg-primary text-primary-foreground rounded-full px-3 py-1">
+                  {badge}
+                </div>
+              )}
+            </div>
             <span className="my-3 block text-2xl font-semibold">{price}</span>
             <p className="text-muted-foreground text-sm">{description}</p>
           </div>
 
           <Button asChild className="w-full" variant={buttonVariant}>
-            <Link href="">Get Started</Link>
+            <Link href="">{buttonText}</Link>
           </Button>
         </div>
       </div>
