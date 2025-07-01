@@ -3,21 +3,53 @@
     "name": "Python data analyst",
     "lib": ["python", "jupyter", "numpy", "pandas", "matplotlib", "seaborn", "plotly"],
     "file": "script.py",
-    "instructions": "Runs code as a Jupyter notebook cell. Strong data analysis angle. Can use complex visualisation to explain results.",
+    "files": ["script.py", "notebook_utils.py", "data/sample.csv"],
+    "instructions": "Runs code as a Jupyter notebook cell with a strong data analysis focus. Use idiomatic, efficient pandas/numpy patterns. Complex visualizations must explain results clearly. No placeholder datasets or fake outputs.",
     "port": null
   },
   "nextjs-developer": {
     "name": "Next.js developer",
-    "lib": ["nextjs@14.2.5", "typescript", "@types/node", "@types/react", "@types/react-dom", "postcss", "tailwindcss", "shadcn"],
+    "lib": [
+      "nextjs@14.2.5",
+      "typescript",
+      "tailwindcss",
+      "postcss",
+      "autoprefixer",
+      "shadcn/ui",
+      "clsx",
+      "lucide-react",
+      "@radix-ui/react-slot",
+      "@types/node",
+      "@types/react",
+      "@types/react-dom"
+    ],
     "file": "pages/index.tsx",
-    "instructions": "A Next.js 13+ app that reloads automatically. Using the pages router.",
+    "files": [
+      "pages/index.tsx",
+      "pages/_app.tsx",
+      "components/ui/button.tsx",
+      "components/ui/input.tsx",
+      "components/theme-toggle.tsx",
+      "lib/utils.ts",
+      "styles/globals.css",
+      "tailwind.config.ts",
+      "postcss.config.js"
+    ],
+    "instructions": "A production-grade Next.js 14+ app using the Pages Router and ShadCN UI. Follow their component structure strictly: use `components/ui/*` for UI primitives, utility functions under `lib/`, and Tailwind theming with support for dark mode. Code must be clean, typed, and reusable. Do not generate placeholders or mockups.",
     "port": 3000
   },
   "vue-developer": {
     "name": "Vue.js developer",
     "lib": ["vue@latest", "nuxt@3.13.0", "tailwindcss"],
     "file": "app.vue",
-    "instructions": "A Vue.js 3+ app that reloads automatically. Only when asked specifically for a Vue app.",
+    "files": [
+      "app.vue",
+      "components/Navbar.vue",
+      "components/Footer.vue",
+      "layouts/default.vue",
+      "assets/styles/tailwind.css"
+    ],
+    "instructions": "A Vue 3+ app built with Nuxt 3. Must reload automatically. Use real logic only, no boilerplate or placeholder code. Respect dark/light mode support and code conventions.",
     "port": 3000
   },
   "streamlit-developer": {
@@ -32,7 +64,8 @@
       "plotly"
     ],
     "file": "app.py",
-    "instructions": "A streamlit app that reloads automatically.",
+    "files": ["app.py", "utils/plot.py", "utils/data_loader.py", "data/input.csv"],
+    "instructions": "A live-reloading Streamlit app. Must use real datasets or clearly defined inputs. UI must be functional, not illustrative. Visualizations should be meaningful and reproducible.",
     "port": 8501
   },
   "gradio-developer": {
@@ -47,7 +80,8 @@
       "plotly"
     ],
     "file": "app.py",
-    "instructions": "A gradio app. Gradio Blocks/Interface should be called demo.",
+    "files": ["app.py", "components/inference.py", "components/ui.py", "data/test_data.json"],
+    "instructions": "A production-ready Gradio app. Use Gradio Blocks or Interface, always named 'demo'. Input/output examples must be executable. Avoid placeholder text, mock inputs, or speculative logic.",
     "port": 7860
   }
 }
