@@ -13,19 +13,149 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
-import { Sparkles, Zap } from 'lucide-react'
-import { useState } from 'react'
+import { useToast } from '@/components/ui/use-toast'
+import { Sparkles, Zap, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useAuth } from '@/lib/auth'
+import { 
+  getUserProfile, 
+  getUserPreferences, 
+  updateUserProfile, 
+  updateUserPreferences,
+  UserProfile,
+  UserPreferences
+} from '@/lib/user-settings'
 
 export default function ProfileSettings() {
+  const { session } = useAuth(() => {}, () => {})
+  const { toast } = useToast()
+  
+  // Form state
   const [fullName, setFullName] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [workDescription, setWorkDescription] = useState('')
   const [aiAssistance, setAiAssistance] = useState(true)
   const [smartSuggestions, setSmartSuggestions] = useState(false)
+  
+  // Loading states
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isUpdatingPreferences, setIsUpdatingPreferences] = useState(false)
 
-  const handleSave = () => {
-    // Handle form submission
-    console.log('Saving profile settings...')
+  // Load user data on mount
+  useEffect(() => {
+    if (!session?.user?.id) return
+
+    const loadUserData = async () => {
+      setIsLoading(true)
+      try {
+        const [profile, preferences] = await Promise.all([
+          getUserProfile(session.user.id),
+          getUserPreferences(session.user.id)
+        ])
+
+        if (profile) {
+          setFullName(profile.full_name || '')
+          setDisplayName(profile.display_name || '')
+          setWorkDescription(profile.work_description || '')
+        }
+
+        if (preferences) {
+          setAiAssistance(preferences.ai_assistance)
+          setSmartSuggestions(preferences.smart_suggestions)
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load profile data. Please refresh the page.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadUserData()
+  }, [session?.user?.id, toast])
+
+  const handleSaveProfile = async () => {
+    if (!session?.user?.id) return
+
+    setIsSaving(true)
+    try {
+      const success = await updateUserProfile(session.user.id, {
+        full_name: fullName,
+        display_name: displayName,
+        work_description: workDescription
+      })
+
+      if (success) {
+        toast({
+          title: "Success",
+          description: "Profile information updated successfully.",
+        })
+      } else {
+        throw new Error('Failed to update profile')
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error)
+      toast({
+        title: "Error",
+        description: "Failed to save profile information. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleUpdatePreference = async (key: keyof UserPreferences, value: boolean) => {
+    if (!session?.user?.id) return
+
+    setIsUpdatingPreferences(true)
+    try {
+      const success = await updateUserPreferences(session.user.id, {
+        [key]: value
+      })
+
+      if (success) {
+        if (key === 'ai_assistance') setAiAssistance(value)
+        if (key === 'smart_suggestions') setSmartSuggestions(value)
+        
+        toast({
+          title: "Success",
+          description: "Preference updated successfully.",
+        })
+      } else {
+        throw new Error('Failed to update preference')
+      }
+    } catch (error) {
+      console.error('Error updating preference:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update preference. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdatingPreferences(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-medium">Profile</h2>
+          <p className="text-sm text-muted-foreground">
+            Manage your personal information and preferences.
+          </p>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -88,7 +218,13 @@ export default function ProfileSettings() {
           </div>
 
           <div className="flex justify-end">
-            <Button onClick={handleSave}>Save changes</Button>
+            <Button 
+              onClick={handleSaveProfile}
+              disabled={isSaving}
+            >
+              {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save changes
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -113,7 +249,8 @@ export default function ProfileSettings() {
               </div>
               <Switch
                 checked={aiAssistance}
-                onCheckedChange={setAiAssistance}
+                onCheckedChange={(checked) => handleUpdatePreference('ai_assistance', checked)}
+                disabled={isUpdatingPreferences}
               />
             </CardContent>
           </Card>
@@ -121,19 +258,20 @@ export default function ProfileSettings() {
           <Card>
             <CardContent className="flex items-center justify-between p-6">
               <div className="flex items-start gap-4">
-                <div className="rounded-lg bg-secondary/10 p-2">
-                  <Zap className="h-5 w-5 text-secondary-foreground" />
+                <div className="rounded-lg bg-primary/10 p-2">
+                  <Zap className="h-5 w-5 text-primary" />
                 </div>
                 <div className="space-y-1">
                   <h4 className="font-medium">Smart Suggestions</h4>
                   <p className="text-sm text-muted-foreground">
-                    Receive contextual suggestions for templates, components, and best practices.
+                    Receive contextual suggestions for templates, components, and optimization opportunities.
                   </p>
                 </div>
               </div>
               <Switch
                 checked={smartSuggestions}
-                onCheckedChange={setSmartSuggestions}
+                onCheckedChange={(checked) => handleUpdatePreference('smart_suggestions', checked)}
+                disabled={isUpdatingPreferences}
               />
             </CardContent>
           </Card>

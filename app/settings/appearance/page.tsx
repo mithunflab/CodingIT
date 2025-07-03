@@ -1,98 +1,216 @@
 'use client'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
-import { Check, Monitor, Moon, Sun } from 'lucide-react'
+import { Label } from '@/components/ui/label'
+import { useToast } from '@/components/ui/use-toast'
+import { Check, Monitor, Moon, Sun, Loader2 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useState, useEffect } from 'react'
+import { cn } from '@/lib/utils'
+import { useAuth } from '@/lib/auth'
+import { 
+  getUserPreferences, 
+  updateUserPreferences,
+  UserPreferences
+} from '@/lib/user-settings'
+
+const themes = [
+  {
+    name: 'Light',
+    value: 'light' as const,
+    icon: Sun,
+    description: 'A clean, bright interface'
+  },
+  {
+    name: 'Dark', 
+    value: 'dark' as const,
+    icon: Moon,
+    description: 'Easy on your eyes in low light'
+  },
+  {
+    name: 'System',
+    value: 'system' as const,
+    icon: Monitor,
+    description: 'Adapts to your system settings'
+  }
+]
+
+const fonts = [
+  {
+    name: 'Inter',
+    value: 'inter' as const,
+    description: 'Modern and readable sans-serif font',
+    preview: 'The quick brown fox jumps over the lazy dog'
+  },
+  {
+    name: 'JetBrains Mono',
+    value: 'jetbrains-mono' as const,
+    description: 'Monospace font optimized for coding',
+    preview: 'const message = "Hello, World!";'
+  },
+  {
+    name: 'Cal Sans',
+    value: 'cal-sans' as const,
+    description: 'Geometric sans-serif with character',
+    preview: 'Design with purpose and clarity'
+  }
+]
 
 export default function AppearanceSettings() {
   const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-  const [selectedFont, setSelectedFont] = useState('inter')
+  const { session } = useAuth(() => {}, () => {})
+  const { toast } = useToast()
+  
+  // State
+  const [selectedTheme, setSelectedTheme] = useState<'light' | 'dark' | 'system'>('system')
+  const [selectedFont, setSelectedFont] = useState<'inter' | 'jetbrains-mono' | 'cal-sans'>('inter')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isUpdating, setIsUpdating] = useState(false)
 
+  // Load user preferences on mount
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    if (!session?.user?.id) return
 
-  if (!mounted) {
-    return null
+    const loadPreferences = async () => {
+      setIsLoading(true)
+      try {
+        const preferences = await getUserPreferences(session.user.id)
+        
+        if (preferences) {
+          setSelectedTheme(preferences.theme)
+          setSelectedFont(preferences.font_family)
+          
+          // Sync with theme system
+          if (theme !== preferences.theme) {
+            setTheme(preferences.theme)
+          }
+        }
+      } catch (error) {
+        console.error('Error loading appearance preferences:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load appearance settings. Please refresh the page.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadPreferences()
+  }, [session?.user?.id, theme, setTheme, toast])
+
+  const handleThemeChange = async (newTheme: 'light' | 'dark' | 'system') => {
+    if (!session?.user?.id) return
+
+    setIsUpdating(true)
+    try {
+      // Update local state immediately for better UX
+      setSelectedTheme(newTheme)
+      setTheme(newTheme)
+
+      // Save to database
+      const success = await updateUserPreferences(session.user.id, {
+        theme: newTheme
+      })
+
+      if (success) {
+        toast({
+          title: "Success",
+          description: "Theme updated successfully.",
+        })
+      } else {
+        // Revert on failure
+        setSelectedTheme(selectedTheme)
+        setTheme(selectedTheme)
+        throw new Error('Failed to save theme preference')
+      }
+    } catch (error) {
+      console.error('Error updating theme:', error)
+      toast({
+        title: "Error",
+        description: "Failed to save theme preference. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdating(false)
+    }
   }
 
-  const themes = [
-    {
-      name: 'Light',
-      value: 'light',
-      icon: Sun,
-      preview: (
-        <div className="space-y-2 rounded-sm bg-[#ecedef] p-2">
-          <div className="space-y-2 rounded-md bg-white p-2 shadow-sm">
-            <div className="h-2 w-[80px] rounded-lg bg-[#ecedef]" />
-            <div className="h-2 w-[100px] rounded-lg bg-[#ecedef]" />
-          </div>
-          <div className="flex items-center space-x-2 rounded-md bg-white p-2 shadow-sm">
-            <div className="h-4 w-4 rounded-full bg-[#ecedef]" />
-            <div className="h-2 w-[100px] rounded-lg bg-[#ecedef]" />
-          </div>
-        </div>
-      ),
-    },
-    {
-      name: 'Dark',
-      value: 'dark',
-      icon: Moon,
-      preview: (
-        <div className="space-y-2 rounded-sm bg-slate-950 p-2">
-          <div className="space-y-2 rounded-md bg-slate-800 p-2 shadow-sm">
-            <div className="h-2 w-[80px] rounded-lg bg-slate-400" />
-            <div className="h-2 w-[100px] rounded-lg bg-slate-400" />
-          </div>
-          <div className="flex items-center space-x-2 rounded-md bg-slate-800 p-2 shadow-sm">
-            <div className="h-4 w-4 rounded-full bg-slate-400" />
-            <div className="h-2 w-[100px] rounded-lg bg-slate-400" />
-          </div>
-        </div>
-      ),
-    },
-    {
-      name: 'System',
-      value: 'system',
-      icon: Monitor,
-      preview: (
-        <div className="space-y-2 rounded-sm bg-gradient-to-r from-[#ecedef] to-slate-950 p-2">
-          <div className="space-y-2 rounded-md bg-gradient-to-r from-white to-slate-800 p-2 shadow-sm">
-            <div className="h-2 w-[80px] rounded-lg bg-gradient-to-r from-[#ecedef] to-slate-400" />
-            <div className="h-2 w-[100px] rounded-lg bg-gradient-to-r from-[#ecedef] to-slate-400" />
-          </div>
-          <div className="flex items-center space-x-2 rounded-md bg-gradient-to-r from-white to-slate-800 p-2 shadow-sm">
-            <div className="h-4 w-4 rounded-full bg-gradient-to-r from-[#ecedef] to-slate-400" />
-            <div className="h-2 w-[100px] rounded-lg bg-gradient-to-r from-[#ecedef] to-slate-400" />
-          </div>
-        </div>
-      ),
-    },
-  ]
+  const handleFontChange = async (newFont: 'inter' | 'jetbrains-mono' | 'cal-sans') => {
+    if (!session?.user?.id) return
 
-  const fonts = [
-    {
-      name: 'Inter',
-      value: 'inter',
-      class: 'font-sans',
-      preview: 'Aa',
-    },
-    {
-      name: 'JetBrains Mono',
-      value: 'jetbrains',
-      class: 'font-mono',
-      preview: 'Aa',
-    },
-    {
-      name: 'Cal Sans',
-      value: 'cal-sans',
-      class: 'font-serif',
-      preview: 'Aa',
-    },
-  ]
+    setIsUpdating(true)
+    try {
+      // Update local state immediately
+      setSelectedFont(newFont)
+      
+      // Apply font to document
+      document.documentElement.style.fontFamily = getFontFamily(newFont)
+
+      // Save to database
+      const success = await updateUserPreferences(session.user.id, {
+        font_family: newFont
+      })
+
+      if (success) {
+        toast({
+          title: "Success",
+          description: "Font updated successfully.",
+        })
+      } else {
+        // Revert on failure
+        setSelectedFont(selectedFont)
+        document.documentElement.style.fontFamily = getFontFamily(selectedFont)
+        throw new Error('Failed to save font preference')
+      }
+    } catch (error) {
+      console.error('Error updating font:', error)
+      toast({
+        title: "Error", 
+        description: "Failed to save font preference. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const getFontFamily = (font: 'inter' | 'jetbrains-mono' | 'cal-sans') => {
+    switch (font) {
+      case 'inter':
+        return 'Inter, system-ui, sans-serif'
+      case 'jetbrains-mono':
+        return '"JetBrains Mono", monospace'
+      case 'cal-sans':
+        return '"Cal Sans", system-ui, sans-serif'
+      default:
+        return 'Inter, system-ui, sans-serif'
+    }
+  }
+
+  // Apply font on load
+  useEffect(() => {
+    if (!isLoading) {
+      document.documentElement.style.fontFamily = getFontFamily(selectedFont)
+    }
+  }, [selectedFont, isLoading])
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-medium">Appearance</h2>
+          <p className="text-sm text-muted-foreground">
+            Customize how the interface looks and feels.
+          </p>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -105,42 +223,56 @@ export default function AppearanceSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Color Mode</CardTitle>
+          <CardTitle>Theme</CardTitle>
           <CardDescription>
-            Choose your preferred color scheme for the interface.
+            Choose your preferred color scheme.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {themes.map((themeOption) => {
               const Icon = themeOption.icon
-              const isSelected = theme === themeOption.value
+              const isSelected = selectedTheme === themeOption.value
               
               return (
-                <div
+                <button
                   key={themeOption.value}
+                  onClick={() => handleThemeChange(themeOption.value)}
+                  disabled={isUpdating}
                   className={cn(
-                    'relative cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-primary/50',
-                    isSelected ? 'border-primary' : 'border-border'
+                    'relative flex flex-col items-center p-4 border-2 rounded-lg transition-colors',
+                    'hover:border-primary/50 focus:border-primary focus:outline-none',
+                    isSelected 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-border',
+                    isUpdating && 'opacity-50 cursor-not-allowed'
                   )}
-                  onClick={() => setTheme(themeOption.value)}
                 >
                   {isSelected && (
-                    <div className="absolute top-2 right-2">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary">
-                        <Check className="h-3 w-3 text-primary-foreground" />
-                      </div>
-                    </div>
+                    <Check className="absolute top-2 right-2 h-4 w-4 text-primary" />
                   )}
                   
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Icon className="h-4 w-4" />
-                      <span className="text-sm font-medium">{themeOption.name}</span>
-                    </div>
-                    {themeOption.preview}
+                  <div className={cn(
+                    'mb-3 rounded-lg p-3',
+                    themeOption.value === 'light' && 'bg-white border',
+                    themeOption.value === 'dark' && 'bg-gray-900 border border-gray-700',
+                    themeOption.value === 'system' && 'bg-gradient-to-r from-white to-gray-900 border'
+                  )}>
+                    <Icon className={cn(
+                      'h-6 w-6',
+                      themeOption.value === 'light' && 'text-gray-900',
+                      themeOption.value === 'dark' && 'text-gray-100',
+                      themeOption.value === 'system' && 'text-gray-600'
+                    )} />
                   </div>
-                </div>
+                  
+                  <div className="text-center">
+                    <Label className="font-medium">{themeOption.name}</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {themeOption.description}
+                    </p>
+                  </div>
+                </button>
               )
             })}
           </div>
@@ -149,54 +281,60 @@ export default function AppearanceSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Chat Font</CardTitle>
+          <CardTitle>Font</CardTitle>
           <CardDescription>
-            Select the font family for chat messages and code.
+            Choose your preferred font family.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-4">
-            {fonts.map((font) => {
-              const isSelected = selectedFont === font.value
+          <div className="space-y-4">
+            {fonts.map((fontOption) => {
+              const isSelected = selectedFont === fontOption.value
               
               return (
-                <div
-                  key={font.value}
+                <button
+                  key={fontOption.value}
+                  onClick={() => handleFontChange(fontOption.value)}
+                  disabled={isUpdating}
                   className={cn(
-                    'relative cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-primary/50',
-                    isSelected ? 'border-primary' : 'border-border'
+                    'w-full flex items-start justify-between p-4 border-2 rounded-lg transition-colors text-left',
+                    'hover:border-primary/50 focus:border-primary focus:outline-none',
+                    isSelected 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-border',
+                    isUpdating && 'opacity-50 cursor-not-allowed'
                   )}
-                  onClick={() => setSelectedFont(font.value)}
                 >
-                  {isSelected && (
-                    <div className="absolute top-2 right-2">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary">
-                        <Check className="h-3 w-3 text-primary-foreground" />
-                      </div>
+                  <div className="space-y-2 flex-1">
+                    <div className="flex items-center gap-2">
+                      <Label className="font-medium">{fontOption.name}</Label>
+                      {isSelected && (
+                        <Check className="h-4 w-4 text-primary" />
+                      )}
                     </div>
-                  )}
-                  
-                  <div className="space-y-3 text-center">
-                    <div className="text-sm font-medium">{font.name}</div>
-                    <div className={cn(
-                      'text-2xl font-bold text-muted-foreground',
-                      font.class
-                    )}>
-                      {font.preview}
-                    </div>
-                    <div className={cn(
-                      'text-xs text-muted-foreground',
-                      font.class
-                    )}>
-                      The quick brown fox jumps over the lazy dog
-                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {fontOption.description}
+                    </p>
+                    <p 
+                      className="text-sm"
+                      style={{ fontFamily: getFontFamily(fontOption.value) }}
+                    >
+                      {fontOption.preview}
+                    </p>
                   </div>
-                </div>
+                </button>
               )
             })}
           </div>
         </CardContent>
       </Card>
+
+      {isUpdating && (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          <span className="text-sm text-muted-foreground">Saving preferences...</span>
+        </div>
+      )}
     </div>
   )
 }

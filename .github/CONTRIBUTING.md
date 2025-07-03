@@ -333,7 +333,7 @@ import { validateEmail } from '@/lib/utils';
 
 describe('validateEmail', () => {
   it('should validate correct email addresses', () => {
-    expect(validateEmail('user@example.com')).toBe(true);
+    expect(validateEmail('user@codinit.dev')).toBe(true);
     expect(validateEmail('invalid-email')).toBe(false);
   });
 });

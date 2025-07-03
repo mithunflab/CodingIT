@@ -224,7 +224,7 @@ function SignInForm({
           <Input
             id="email"
             type="email"
-            placeholder="you@example.com"
+            placeholder="you@codinit.dev"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -366,7 +366,7 @@ function SignUpForm({
           <Input
             id="email"
             type="email"
-            placeholder="you@example.com"
+            placeholder="you@codinit.dev"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -456,7 +456,7 @@ function MagicLink({
           <Input
             id="email"
             type="email"
-            placeholder="you@example.com"
+            placeholder="you@codinit.dev"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -509,7 +509,7 @@ function ForgottenPassword({
           <Input
             id="email"
             type="email"
-            placeholder="you@example.com"
+            placeholder="you@codinit.dev"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required

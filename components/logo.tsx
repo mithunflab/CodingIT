@@ -8,7 +8,7 @@ export default function Logo(
   props: Omit<ComponentProps<typeof Image>, 'src' | 'alt'>
 ) {
   const { theme } = useTheme()
-  const src = theme === 'dark' ? '/logo.png' : '/logo-dark.png'
+  const src = theme === 'light' ? '/logo-dark.png' : '/logo.png'
   const { width, style } = props
 
   return (

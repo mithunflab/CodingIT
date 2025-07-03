@@ -6,28 +6,296 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
+import { useToast } from '@/components/ui/use-toast'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { AlertTriangle, Camera, Mail, Shield } from 'lucide-react'
-import { useState } from 'react'
+import { AlertTriangle, Camera, Mail, Shield, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useAuth } from '@/lib/auth'
+import { supabase } from '@/lib/supabase'
+import { 
+  getUserPreferences, 
+  getUserSecuritySettings,
+  getUserProfile,
+  updateUserPreferences, 
+  updateUserSecuritySettings,
+  updateUserProfile
+} from '@/lib/user-settings'
 
 export default function AccountSettings() {
-  const [email, setEmail] = useState('user@example.com')
+  const { session } = useAuth(() => {}, () => {})
+  const { toast } = useToast()
+  
+  // Form state
+  const [email, setEmail] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
   const [emailNotifications, setEmailNotifications] = useState(true)
+  const [securityAlerts, setSecurityAlerts] = useState(true)
+  const [avatarUrl, setAvatarUrl] = useState('')
+  
+  // Loading states
+  const [isLoading, setIsLoading] = useState(true)
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false)
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [isUpdatingSettings, setIsUpdatingSettings] = useState(false)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
 
-  const handleSaveEmail = () => {
-    console.log('Saving email:', email)
+  // Load user data on mount
+  useEffect(() => {
+    if (!session?.user?.id) return
+
+    const loadUserData = async () => {
+      setIsLoading(true)
+      try {
+        const [profile, preferences, securitySettings] = await Promise.all([
+          getUserProfile(session.user.id),
+          getUserPreferences(session.user.id),
+          getUserSecuritySettings(session.user.id)
+        ])
+
+        // Set email from session
+        setEmail(session.user.email || '')
+
+        if (profile) {
+          setAvatarUrl(profile.avatar_url || '')
+        }
+
+        if (preferences) {
+          setEmailNotifications(preferences.email_notifications)
+          setSecurityAlerts(preferences.security_alerts)
+        }
+
+        if (securitySettings) {
+          setTwoFactorEnabled(securitySettings.two_factor_enabled)
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load account data. Please refresh the page.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadUserData()
+  }, [session, toast])
+
+  const handleUpdateEmail = async () => {
+    if (!supabase || !session?.user?.id) return
+
+    setIsUpdatingEmail(true)
+    try {
+      const { error } = await supabase.auth.updateUser({
+        email: email
+      })
+
+      if (error) throw error
+
+      toast({
+        title: "Email Update Initiated",
+        description: "Please check your new email address for confirmation.",
+      })
+    } catch (error: any) {
+      console.error('Error updating email:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update email. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdatingEmail(false)
+    }
   }
 
-  const handleChangePassword = () => {
-    console.log('Changing password...')
+  const handleChangePassword = async () => {
+    if (!supabase || !newPassword || newPassword !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "New passwords do not match.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsChangingPassword(true)
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+
+      if (error) throw error
+
+      // Update security settings to track password change
+      if (session?.user?.id) {
+        await updateUserSecuritySettings(session.user.id, {
+          last_password_change: new Date().toISOString()
+        })
+      }
+
+      // Clear form
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+
+      toast({
+        title: "Success",
+        description: "Password updated successfully.",
+      })
+    } catch (error: any) {
+      console.error('Error changing password:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to change password. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsChangingPassword(false)
+    }
   }
 
-  const handleEnable2FA = () => {
-    console.log('Enabling 2FA...')
+  const handleUpdateNotificationSettings = async (key: 'email_notifications' | 'security_alerts', value: boolean) => {
+    if (!session?.user?.id) return
+
+    setIsUpdatingSettings(true)
+    try {
+      const success = await updateUserPreferences(session.user.id, {
+        [key]: value
+      })
+
+      if (success) {
+        if (key === 'email_notifications') setEmailNotifications(value)
+        if (key === 'security_alerts') setSecurityAlerts(value)
+        
+        toast({
+          title: "Success",
+          description: "Notification settings updated successfully.",
+        })
+      } else {
+        throw new Error('Failed to update settings')
+      }
+    } catch (error) {
+      console.error('Error updating notification settings:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update settings. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdatingSettings(false)
+    }
+  }
+
+  const handleEnable2FA = async () => {
+    if (!session?.user?.id) return
+
+    setIsUpdatingSettings(true)
+    try {
+      // For now, just toggle the setting
+      // In a real implementation, you'd integrate with an authenticator service
+      const success = await updateUserSecuritySettings(session.user.id, {
+        two_factor_enabled: !twoFactorEnabled
+      })
+
+      if (success) {
+        setTwoFactorEnabled(!twoFactorEnabled)
+        toast({
+          title: "Success",
+          description: `Two-factor authentication ${!twoFactorEnabled ? 'enabled' : 'disabled'}.`,
+        })
+      } else {
+        throw new Error('Failed to update 2FA settings')
+      }
+    } catch (error) {
+      console.error('Error updating 2FA:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update 2FA settings. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdatingSettings(false)
+    }
+  }
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !session?.user?.id || !supabase) return
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "File size must be less than 2MB.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsUploadingAvatar(true)
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${session.user.id}/avatar.${fileExt}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName)
+
+      const success = await updateUserProfile(session.user.id, {
+        avatar_url: data.publicUrl
+      })
+
+      if (success) {
+        setAvatarUrl(data.publicUrl)
+        toast({
+          title: "Success",
+          description: "Profile picture updated successfully.",
+        })
+      }
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error)
+      toast({
+        title: "Error",
+        description: "Failed to upload profile picture. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUploadingAvatar(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-medium">Account</h2>
+          <p className="text-sm text-muted-foreground">
+            Manage your account settings and security preferences.
+          </p>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -49,14 +317,32 @@ export default function AccountSettings() {
         <CardContent>
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20">
-              <AvatarImage src="https://avatar.vercel.sh/user@example.com" />
-              <AvatarFallback>U</AvatarFallback>
+              <AvatarImage src={avatarUrl} />
+              <AvatarFallback>
+                {session?.user?.email?.charAt(0).toUpperCase() || 'U'}
+              </AvatarFallback>
             </Avatar>
             <div className="space-y-2">
-              <Button variant="outline" size="sm">
-                <Camera className="h-4 w-4 mr-2" />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                disabled={isUploadingAvatar}
+                onClick={() => document.getElementById('avatar-upload')?.click()}
+              >
+                {isUploadingAvatar ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4 mr-2" />
+                )}
                 Change picture
               </Button>
+              <input
+                id="avatar-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarUpload}
+              />
               <p className="text-xs text-muted-foreground">
                 JPG, PNG or GIF. Max size 2MB.
               </p>
@@ -74,7 +360,7 @@ export default function AccountSettings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Email address</Label>
             <div className="flex gap-2">
               <Input
                 id="email"
@@ -83,13 +369,14 @@ export default function AccountSettings() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="flex-1"
               />
-              <Button onClick={handleSaveEmail}>Update</Button>
+              <Button 
+                onClick={handleUpdateEmail}
+                disabled={isUpdatingEmail || email === session?.user?.email}
+              >
+                {isUpdatingEmail && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Update
+              </Button>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Mail className="h-4 w-4" />
-            <span>Verification email will be sent to confirm changes</span>
           </div>
         </CardContent>
       </Card>
@@ -98,43 +385,39 @@ export default function AccountSettings() {
         <CardHeader>
           <CardTitle>Password</CardTitle>
           <CardDescription>
-            Change your account password. Choose a strong password for better security.
+            Update your password to keep your account secure.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="currentPassword">Current password</Label>
+            <Label htmlFor="newPassword">New password</Label>
             <Input
-              id="currentPassword"
+              id="newPassword"
               type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Enter new password"
             />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">New password</Label>
-              <Input
-                id="newPassword"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm new password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm new password"
+            />
           </div>
 
-          <Button onClick={handleChangePassword}>Change password</Button>
+          <Button 
+            onClick={handleChangePassword}
+            disabled={isChangingPassword || !newPassword || newPassword !== confirmPassword}
+          >
+            {isChangingPassword && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Change password
+          </Button>
         </CardContent>
       </Card>
 
@@ -145,30 +428,25 @@ export default function AccountSettings() {
             Add an extra layer of security to your account.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-muted p-2">
-                <Shield className="h-5 w-5" />
-              </div>
+              <Shield className="h-5 w-5" />
               <div>
-                <h4 className="font-medium">Authenticator App</h4>
+                <p className="font-medium">Authenticator App</p>
                 <p className="text-sm text-muted-foreground">
-                  {twoFactorEnabled ? 'Two-factor authentication is enabled' : 'Two-factor authentication is disabled'}
+                  {twoFactorEnabled ? 'Two-factor authentication is enabled' : 'Use an authenticator app to generate codes'}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {!twoFactorEnabled && (
-                <Button onClick={handleEnable2FA} size="sm">
-                  Enable
-                </Button>
-              )}
-              <Switch
-                checked={twoFactorEnabled}
-                onCheckedChange={setTwoFactorEnabled}
-              />
-            </div>
+            <Button 
+              variant={twoFactorEnabled ? "destructive" : "default"}
+              onClick={handleEnable2FA}
+              disabled={isUpdatingSettings}
+            >
+              {isUpdatingSettings && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {twoFactorEnabled ? 'Disable' : 'Enable'}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -177,47 +455,65 @@ export default function AccountSettings() {
         <CardHeader>
           <CardTitle>Notifications</CardTitle>
           <CardDescription>
-            Manage your notification preferences.
+            Choose which notifications you want to receive.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h4 className="font-medium">Email notifications</h4>
+            <div className="space-y-0.5">
+              <Label htmlFor="email-notifications">Email notifications</Label>
               <p className="text-sm text-muted-foreground">
-                Receive emails about account activity and product updates
+                Receive notifications about your account activity
               </p>
             </div>
             <Switch
+              id="email-notifications"
               checked={emailNotifications}
-              onCheckedChange={setEmailNotifications}
+              onCheckedChange={(checked) => handleUpdateNotificationSettings('email_notifications', checked)}
+              disabled={isUpdatingSettings}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="security-alerts">Security alerts</Label>
+              <p className="text-sm text-muted-foreground">
+                Get notified about important security events
+              </p>
+            </div>
+            <Switch
+              id="security-alerts"
+              checked={securityAlerts}
+              onCheckedChange={(checked) => handleUpdateNotificationSettings('security_alerts', checked)}
+              disabled={isUpdatingSettings}
             />
           </div>
         </CardContent>
       </Card>
 
-      <Card>
+      <Separator />
+
+      <Card className="border-destructive">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-destructive" />
-            Danger Zone
-          </CardTitle>
+          <CardTitle className="text-destructive">Danger Zone</CardTitle>
           <CardDescription>
-            Irreversible actions that will affect your account.
+            Irreversible and destructive actions.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Separator />
-          <div className="space-y-4">
-            <div>
-              <h4 className="font-medium text-destructive mb-2">Delete Account</h4>
-              <p className="text-sm text-muted-foreground mb-4">
-                Permanently delete your account and all associated data. This action cannot be undone.
-              </p>
-              <Button variant="destructive">
-                Delete my account
-              </Button>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <div>
+                <p className="font-medium">Delete Account</p>
+                <p className="text-sm text-muted-foreground">
+                  Permanently delete your account and all associated data
+                </p>
+              </div>
             </div>
+            <Button variant="destructive" size="sm">
+              Delete Account
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -1,38 +1,25 @@
-import './globals.css'
-import { PostHogProvider, ThemeProvider } from './providers'
+import { ThemeProvider } from 'next-themes'
 import { Toaster } from '@/components/ui/toaster'
-import { Analytics } from '@vercel/analytics/next'
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-
-const inter = Inter({ subsets: ['latin'] })
-
-export const metadata: Metadata = {
-  title: 'CodinIT.dev',
-  description: "Create apps and websites by chatting with AI. Prompt, build & deploy your web apps with our AI agents.",
-}
+import './globals.css'
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <PostHogProvider>
-        <body className={inter.className}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-          </ThemeProvider>
+      <body>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
           <Toaster />
-          <Analytics />
-        </body>
-      </PostHogProvider>
+        </ThemeProvider>
+      </body>
     </html>
   )
 }
