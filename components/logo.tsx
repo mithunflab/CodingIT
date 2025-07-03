@@ -8,15 +8,15 @@ export default function Logo(
   props: Omit<ComponentProps<typeof Image>, 'src' | 'alt'>
 ) {
   const { theme } = useTheme()
-  const src = theme === 'dark' ? '/thirdparty/logo.png' : '/thirdparty/logo-dark.png'
+  const src = theme === 'dark' ? '/logo.png' : '/logo-dark.png'
+  const { width, style } = props
 
   return (
     <Image
       src={src}
       alt="Logo"
-      width={24}
-      height={24}
       {...props}
+      style={{ ...style, width, height: 'auto' }}
     />
   )
 }

@@ -1,6 +1,7 @@
 import { DeployDialog } from './deploy-dialog'
 import { FragmentCode } from './fragment-code'
 import { FragmentPreview } from './fragment-preview'
+import { FragmentTerminal } from './fragment-terminal'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -12,7 +13,7 @@ import {
 import { FragmentSchema } from '@/lib/schema'
 import { ExecutionResult } from '@/lib/types'
 import { DeepPartial } from 'ai'
-import { ChevronsRight, LoaderCircle } from 'lucide-react'
+import { ChevronsRight, LoaderCircle, Terminal } from 'lucide-react'
 import { Dispatch, SetStateAction } from 'react'
 
 export function Preview({
@@ -28,8 +29,8 @@ export function Preview({
 }: {
   teamID: string | undefined
   accessToken: string | undefined
-  selectedTab: 'code' | 'fragment'
-  onSelectedTabChange: Dispatch<SetStateAction<'code' | 'fragment'>>
+  selectedTab: 'code' | 'fragment' | 'terminal'
+  onSelectedTabChange: Dispatch<SetStateAction<'code' | 'fragment' | 'terminal'>>
   isChatLoading: boolean
   isPreviewLoading: boolean
   fragment?: DeepPartial<FragmentSchema>
@@ -41,13 +42,14 @@ export function Preview({
   }
 
   const isLinkAvailable = result?.template !== 'code-interpreter-v1'
+  const isTerminalAvailable = result && result.template !== 'code-interpreter-v1'
 
   return (
     <div className="absolute md:relative z-10 top-0 left-0 shadow-2xl md:rounded-tl-3xl md:rounded-bl-3xl md:border-l md:border-y bg-popover h-full w-full overflow-auto">
       <Tabs
         value={selectedTab}
         onValueChange={(value) =>
-          onSelectedTabChange(value as 'code' | 'fragment')
+          onSelectedTabChange(value as 'code' | 'fragment' | 'terminal')
         }
         className="h-full flex flex-col items-start justify-start"
       >
@@ -94,6 +96,14 @@ export function Preview({
                   />
                 )}
               </TabsTrigger>
+              <TabsTrigger
+                disabled={!isTerminalAvailable}
+                className="font-normal text-xs py-1 px-2 gap-1 flex items-center"
+                value="terminal"
+              >
+                <Terminal className="h-3 w-3" />
+                Terminal
+              </TabsTrigger>
             </TabsList>
           </div>
           {result && (
@@ -125,6 +135,15 @@ export function Preview({
             </TabsContent>
             <TabsContent value="fragment" className="h-full">
               {result && <FragmentPreview result={result as ExecutionResult} />}
+            </TabsContent>
+            <TabsContent value="terminal" className="h-full">
+              {result && (
+                <FragmentTerminal 
+                  result={result as ExecutionResult}
+                  teamID={teamID}
+                  accessToken={accessToken}
+                />
+              )}
             </TabsContent>
           </div>
         )}
