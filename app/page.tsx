@@ -41,19 +41,17 @@ export default function Home() {
   const [result, setResult] = useState<ExecutionResult>()
   const [messages, setMessages] = useState<Message[]>([])
   const [fragment, setFragment] = useState<DeepPartial<FragmentSchema>>()
-  const [currentTab, setCurrentTab] = useState<'code' | 'fragment'>('code')
+  const [currentTab, setCurrentTab] = useState<'code' | 'fragment' | 'terminal'>('code')
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
   const [isAuthDialogOpen, setAuthDialog] = useState(false)
   const [authView, setAuthView] = useState<ViewType>('sign_in')
   const [isRateLimited, setIsRateLimited] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   
-  // Project management state
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [isLoadingProject, setIsLoadingProject] = useState(false)
 
-  // Sidebar open state
-  const [isSidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const { session, userTeam } = useAuth(setAuthDialog, setAuthView)
 
@@ -347,7 +345,6 @@ export default function Home() {
         userName={userTeam?.name}
         userPlan={userTeam?.tier}
       />
-
 
       {/* Main content with left margin to account for collapsed sidebar */}
       <div className={cn(

@@ -115,17 +115,14 @@ export function NavBar({
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => {
-                  window.open('https://codinit.dev/codinit-beta', '_blank')
+                  window.open('https://codinit.dev/blog/codinit-beta', '_blank')
                 }}
               >
-                <Image
-                  src={typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? '/thirdparty/logo-dark.png' : '/thirdparty/logo.png'}
+                <Logo
                   width={16}
                   height={16}
                   className="mr-2 text-muted-foreground"
-                  alt="CodinIT Logo"
                 />
-
                 About CodinIT
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onSocialClick('github')}>
