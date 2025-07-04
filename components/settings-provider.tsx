@@ -1,7 +1,7 @@
 'use client'
 
-import { SettingsProvider as OriginalSettingsProvider } from '@/components/settings-context'
+import { SettingsProvider } from '@/lib/settings-context'
 
-export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  return <OriginalSettingsProvider>{children}</OriginalSettingsProvider>
+export function SettingsProviderWrapper({ children }: { children: React.ReactNode }) {
+  return <SettingsProvider>{children}</SettingsProvider>;
 }

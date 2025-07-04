@@ -1,4 +1,3 @@
-// File: lib/settings-utils.ts
 export interface ValidationError {
   field: string
   message: string

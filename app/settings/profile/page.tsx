@@ -16,7 +16,7 @@ import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/components/ui/use-toast'
 import { Sparkles, Zap, Loader2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/lib/auth'
+import { useAuthContext } from '@/lib/auth-provider'
 import { 
   getUserProfile, 
   getUserPreferences, 
@@ -27,7 +27,7 @@ import {
 } from '@/lib/user-settings'
 
 export default function ProfileSettings() {
-  const { session } = useAuth(() => {}, () => {})
+  const { session } = useAuthContext()
   const { toast } = useToast()
   
   // Form state

@@ -1,304 +1,398 @@
-'use client';
+import React from 'react';
+import Link from 'next/link';
+import { X, MessageCircle, Search, Gift, Settings, HelpCircle, CreditCard, User, LogOut, MoreHorizontal, Menu, Plus } from 'lucide-react';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { HelpModal } from '@/components/help-center';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+import { createClient } from '@/lib/supabase';
 
-import React, { useState, useEffect, useRef, ReactNode } from 'react';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/lib/auth';
-import { Session } from '@supabase/supabase-js';
-import { 
-  MessageSquare, 
-  Search, 
-  Settings, 
-  HelpCircle, 
-  LogOut,
-  MoreHorizontal,
-  CreditCardIcon
-} from 'lucide-react';
-import Logo from './logo';
-import { PricingModal } from './pricing';
-
-export interface SidebarProps {
-  children?: ReactNode;
-  width?: number;
-  hoverZoneWidth?: number;
-  transitionDuration?: number;
-  autoHideDelay?: number;
-  className?: string;
-  onStateChange?: (isOpen: boolean) => void;
-  userName?: string;
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
   userPlan?: string;
+  onStartNewChat?: () => void;
+  onSearch?: (query: string) => void;
+  onGetFreeTokens?: () => void;
+  onSelectAccount?: () => void;
+  onSignOut?: () => void;
+  onChatSelected?: (chatId: string) => void;
 }
 
-export interface SidebarState {
-  isOpen: boolean;
-  isHovering: boolean;
-  isTouchDevice: boolean;
+interface ChatHistoryItem {
+  id: string;
+  title: string;
+  date: string; // e.g., "Yesterday", "Last 7 days", "Last 30 days"
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
-  children,
-  width = 280,
-  hoverZoneWidth = 50,
-  transitionDuration = 300,
-  autoHideDelay = 500,
-  className,
-  onStateChange,
-  userName,
-  userPlan,
+  isOpen: initialIsOpen = false,
+  onClose = () => {},
+  userPlan = "Personal Plan",
+  onStartNewChat = () => {},
+  onSearch = () => {},
+  onGetFreeTokens = () => {},
+  onSelectAccount = () => {},
+  onSignOut = () => {},
+  onChatSelected = () => {},
 }) => {
-  const { session } = useAuth(
-    () => {},
-    () => {},
-  );
-  const [state, setState] = useState<SidebarState>({
-    isOpen: false,
-    isHovering: false,
-    isTouchDevice: false,
-  });
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [isOpen, setIsOpen] = React.useState(initialIsOpen);
+  const [user, setUser] = React.useState<SupabaseUser | null>(null);
+  const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const leaveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  const sidebarRef = useRef<HTMLDivElement>(null);
-  const hoverZoneRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const chatHistory: ChatHistoryItem[] = [
+    { id: "", title: "", date: "" },
+  ];
 
-  useEffect(() => {
-    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    setState(prev => ({ ...prev, isTouchDevice }));
-  }, []);
+  const groupedChats = chatHistory.reduce((acc, chat) => {
+    (acc[chat.date] = acc[chat.date] || []).push(chat);
+    return acc;
+  }, {} as Record<string, ChatHistoryItem[]>);
 
-  useEffect(() => {
-    onStateChange?.(state.isOpen);
-  }, [state.isOpen, onStateChange]);
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    onSearch(value);
+  };
+
+  const handleOpenSidebar = () => {
+    if (leaveTimeoutRef.current) {
+      clearTimeout(leaveTimeoutRef.current);
+      leaveTimeoutRef.current = null;
+    }
+    setIsOpen(true);
+  };
+
+  const handleCloseSidebar = () => {
+    setIsOpen(false);
+    onClose();
+  };
 
   const handleMouseEnter = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
+    if (leaveTimeoutRef.current) {
+      clearTimeout(leaveTimeoutRef.current);
+      leaveTimeoutRef.current = null;
     }
-    setState(prev => ({ ...prev, isOpen: true, isHovering: true }));
+    
+    if (!isOpen) {
+      hoverTimeoutRef.current = setTimeout(() => {
+        setIsOpen(true);
+      }, 300);
+    }
   };
 
   const handleMouseLeave = () => {
-    setState(prev => ({ ...prev, isHovering: false }));
-    timeoutRef.current = setTimeout(() => {
-      setState(prev => ({ ...prev, isOpen: false }));
-    }, autoHideDelay);
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    
+    if (isOpen) {
+      leaveTimeoutRef.current = setTimeout(() => {
+        setIsOpen(false);
+      }, 500);
+    }
   };
 
-  const handleTouchStart = () => {
-    setState(prev => ({ ...prev, isOpen: !prev.isOpen }));
-  };
+  React.useEffect(() => {
+    const supabase = createClient();
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    getUser();
 
-  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
       }
+      if (leaveTimeoutRef.current) {
+        clearTimeout(leaveTimeoutRef.current);
+      }
+      authListener?.subscription.unsubscribe();
     };
   }, []);
 
   return (
-    <>
-      {/* Hover Detection Zone */}
-      <div
-        ref={hoverZoneRef}
-        className="fixed top-0 left-0 h-full z-40 pointer-events-auto"
-        style={{ width: hoverZoneWidth }}
-        onMouseEnter={handleMouseEnter}
-        onTouchStart={state.isTouchDevice ? handleTouchStart : undefined}
-        aria-hidden="true"
-      />
-
-      {/* Backdrop */}
-      {state.isOpen && (
-        <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity lg:hidden"
-          style={{ transitionDuration: `${transitionDuration}ms` }}
-          onClick={() => setState(prev => ({ ...prev, isOpen: false }))}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        ref={sidebarRef}
-        className={cn(
-          'fixed top-0 left-0 h-full z-50 transform transition-all duration-300 ease-out',
-          'border-r bg-background',
-          state.isOpen ? 'translate-x-0' : '-translate-x-full',
-          className
-        )}
-        style={{
-          width,
-          transitionDuration: `${transitionDuration}ms`,
-        }}
+    <div className="flex h-screen">
+      {/* Always visible icons */}
+      <div 
+        className={`bg-background border-r border-border flex flex-col items-center py-4 transition-all duration-300 ease-in-out ${
+          isOpen ? 'w-0 opacity-0 overflow-hidden' : 'w-16 opacity-100'
+        }`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        aria-label="Navigation sidebar"
-        role="navigation"
       >
-        {children || (
-          <DefaultSidebarContent
-            userName={userName}
-            userPlan={userPlan}
-            session={session}
-          />
-        )}
-      </aside>
-    </>
-  );
-};
-
-const DefaultSidebarContent: React.FC<{
-  userName?: string;
-  userPlan?: string;
-  session: Session | null;
-}> = ({ userName, userPlan, session }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
-
-  const recentChats: string[] = [];
-
-  return (
-    <div className="flex flex-col h-full bg-background text-foreground">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-2">
-          <Logo width={120} height={120} />
+        {/* Top section with menu and new icons */}
+        <div className="flex flex-col items-center space-y-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleOpenSidebar}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Open sidebar"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onStartNewChat}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Start new chat"
+          >
+            <Plus className="h-5 w-5" />
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleOpenSidebar()}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Search"
+          >
+            <Search className="h-5 w-5" />
+          </Button>
         </div>
-        <button className="p-1 hover:bg-accent rounded transition-colors">
-          <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-        </button>
-      </div>
 
-      {/* New Chat Button */}
-      <div className="p-4">
-        <button className="w-full flex items-center gap-3 p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors group">
-          <MessageSquare className="w-4 h-4 text-secondary-foreground" />
-          <span className="text-sm font-medium text-secondary-foreground">Start new chat</span>
-        </button>
-      </div>
+        {/* Spacer to push bottom icons down */}
+        <div className="flex-1" />
 
-      {/* Search */}
-      <div className="px-4 pb-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-background border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring transition-all"
-          />
+        {/* Bottom section with utility icons */}
+        <div className="flex flex-col items-center space-y-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onGetFreeTokens}
+            className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950 transition-colors"
+            aria-label="Get free tokens"
+          >
+            <Gift className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            className="h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Settings"
+          >
+            <Link href="/settings">
+              <Settings className="h-5 w-5" />
+            </Link>
+          </Button>
+          <HelpModal trigger={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Help Center"
+            >
+              <HelpCircle className="h-5 w-5" />
+            </Button>
+          } />
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            className="h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="My Subscription"
+          >
+            <Link href="/settings/billing">
+              <CreditCard className="h-5 w-5" />
+            </Link>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onSelectAccount}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Select Account"
+          >
+            <User className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onSignOut}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Sign Out"
+          >
+            <LogOut className="h-5 w-5" />
+          </Button>
         </div>
       </div>
 
-      {/* Chat History */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="px-4">
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Your Chats</h3>
-            </div>
-            
-            {/* Yesterday */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                {recentChats.slice(0, 1).map((chat, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent transition-colors cursor-pointer group"
-                  >
-                    <span className="text-sm text-foreground truncate group-hover:text-accent-foreground transition-colors">
-                      {chat}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+      {/* Collapsible Sidebar Content */}
+      <div 
+        className={`h-screen bg-background border-r border-border flex flex-col transition-all duration-300 ease-in-out ${
+          isOpen ? 'w-80 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-full overflow-hidden'
+        }`}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        {/* Header Section */}
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="text-xl font-bold text-foreground">
+            CodinIT.dev
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleCloseSidebar}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Close sidebar"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
 
-              <div className="space-y-1">
-                {recentChats.slice(1, 6).map((chat, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent transition-colors cursor-pointer group"
-                  >
-                    <MessageSquare className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                    <span className="text-sm text-foreground truncate group-hover:text-accent-foreground transition-colors">
-                      {chat}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+        {/* Chat Controls */}
+        <div className="p-4 space-y-3">
+          <Button
+            onClick={onStartNewChat}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 transition-colors"
+          >
+            <MessageCircle className="h-4 w-4" />
+            Start new chat
+          </Button>
 
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                {recentChats.slice(6).map((chat, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent transition-colors cursor-pointer group"
-                  >
-                    <MessageSquare className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                    <span className="text-sm text-foreground truncate group-hover:text-accent-foreground transition-colors">
-                      {chat}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="pl-10 bg-muted/50 border-border transition-colors"
+            />
           </div>
         </div>
-      
 
-      {/* Footer */}
-      <div className="border-t">
-        {/* Get free tokens, Go Pro, Settings and Help */}
-        <div className="p-4 space-y-1">
-          <button className="flex items-center gap-2 text-sm text-green-400 hover:text-green-300 transition-colors w-full">
-        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-        <span className="text-sm">Get free tokens</span>
-          </button>
-          <button className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-accent transition-colors">
-        <CreditCardIcon className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm text-foreground">Go Pro</span>
-          </button>
-          <button className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-accent transition-colors">
-        <Settings className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm text-foreground">Settings</span>
-          </button>
-          <button className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-accent transition-colors">
-        <HelpCircle className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm text-foreground">Help Center</span>
-          </button>
-        </div>
-      </div>
-
-        {/* User Profile */}
-        <div className="border-t p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-medium text-sm">
-                {session?.user.user_metadata?.name?.[0] || ''}
-              </span>
+        {/* Chat History */}
+        <div className="flex-1 overflow-y-auto px-4 pb-4">
+          <h3 className="text-sm font-medium text-foreground mb-2">Your Chats</h3>
+          {Object.keys(groupedChats).length === 0 ? (
+            <p className="text-sm text-muted-foreground">No previous conversations</p>
+          ) : (
+            <div className="space-y-4">
+              {Object.entries(groupedChats).map(([date, chats]) => (
+                <div key={date}>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">{date}</h4>
+                  <div className="space-y-1">
+                    {chats.map((chat) => (
+                      <Button
+                        key={chat.id}
+                        variant="ghost"
+                        onClick={() => onChatSelected(chat.id)}
+                        className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 group transition-colors"
+                      >
+                        <MessageCircle className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">{chat.title}</span>
+                        <MoreHorizontal className="ml-auto h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
+          )}
+        </div>
+
+        <Separator />
+
+        {/* Utility / Navigation Links */}
+        <div className="p-4 space-y-1">
+          <Button
+            variant="ghost"
+            onClick={onGetFreeTokens}
+            className="w-full justify-start gap-3 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950 transition-colors"
+          >
+            <Gift className="h-4 w-4" />
+            Get free tokens
+          </Button>
+
+          <Button
+            variant="ghost"
+            asChild
+            className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Link href="/settings">
+              <Settings className="h-4 w-4" />
+              Settings
+            </Link>
+          </Button>
+
+          <HelpModal trigger={
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <HelpCircle className="h-4 w-4" />
+              Help Center
+            </Button>
+          } />
+
+          <Button
+            variant="ghost"
+            asChild
+            className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Link href="/settings/billing">
+              <CreditCard className="h-4 w-4" />
+              My Subscription
+            </Link>
+          </Button>
+
+          <Button
+            variant="ghost"
+            onClick={onSelectAccount}
+            className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <User className="h-4 w-4" />
+            Select Account
+          </Button>
+
+          <Button
+            variant="ghost"
+            onClick={onSignOut}
+            className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </Button>
+        </div>
+
+        {/* User Information */}
+        <div className="p-4 border-t border-border">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.user_metadata?.name ?? 'User'} />
+              <AvatarFallback className="bg-muted text-muted-foreground">
+                {user?.user_metadata?.name?.charAt(0).toUpperCase() ?? 'U'}
+              </AvatarFallback>
+            </Avatar>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">
-                {session?.user.user_metadata?.name || userName || ''}
+                {user?.user_metadata?.name ?? 'Anonymous'}
               </p>
-              <p className="text-xs text-muted-foreground">
-                {session?.user.user_metadata?.plan || userPlan || 'Free Plan'}
+              <p className="text-xs text-muted-foreground truncate">
+                {userPlan}
               </p>
             </div>
-            <button className="p-1 hover:bg-accent rounded transition-colors">
-              <LogOut className="w-4 h-4 text-muted-foreground" />
-            </button>
           </div>
         </div>
-      <PricingModal
-        isOpen={isPricingModalOpen}
-        onClose={() => setIsPricingModalOpen(false)}
-      />
+      </div>
     </div>
   );
 };
-
 
 export default Sidebar;

@@ -341,8 +341,6 @@ export default function Home() {
       )}
 
       <Sidebar
-        onStateChange={setSidebarOpen}
-        userName={userTeam?.name}
         userPlan={userTeam?.tier}
       />
 

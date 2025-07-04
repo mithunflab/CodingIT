@@ -294,9 +294,9 @@ export default function BillingSettings() {
                   Cancels on {formatDate(billingInfo.subscription.current_period_end)}
                 </p>
               )}
-              {!billingInfo?.subscription.cancel_at_period_end && billingInfo?.subscription.plan !== 'free' && (
+              {billingInfo && !billingInfo.subscription.cancel_at_period_end && billingInfo.subscription.plan !== 'free' && (
                 <p className="text-sm text-muted-foreground mt-1">
-                  Renews on {formatDate(billingInfo?.subscription.current_period_end || '')}
+                  Renews on {formatDate(billingInfo.subscription.current_period_end)}
                 </p>
               )}
             </div>

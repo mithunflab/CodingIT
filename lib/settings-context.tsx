@@ -1,3 +1,4 @@
+// File: lib/settings-context.tsx
 'use client'
 
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
@@ -9,7 +10,6 @@ import {
   UserSecuritySettings,
   getUserData 
 } from './user-settings'
-import { ViewType } from '@/components/auth'
 
 interface SettingsContextType {
   profile: UserProfile | null
@@ -24,9 +24,7 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const [authDialog, setAuthDialog] = useState(false)
-  const [authView, setAuthView] = useState<ViewType>('sign_in')
-  const { session } = useAuth(setAuthDialog, setAuthView)
+  const { session } = useAuth(() => {}, () => {})
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [preferences, setPreferences] = useState<UserPreferences | null>(null)
   const [integrations, setIntegrations] = useState<UserIntegration[]>([])
@@ -58,12 +56,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [session])
+  }, [session?.user?.id])
 
   // Load settings when user session changes
   useEffect(() => {
     refreshSettings()
-  }, [refreshSettings, session?.user?.id])
+  }, [session?.user?.id, refreshSettings])
 
   const value: SettingsContextType = {
     profile,

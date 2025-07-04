@@ -164,10 +164,9 @@ export default function IntegrationsSettings() {
       const success = await disconnectUserIntegration(session.user.id, serviceId)
 
       if (success) {
-        // Update local state
         setIntegrations(integrations.map(integration => 
           integration.service_name === serviceId 
-            ? { ...integration, is_connected: false, connection_data: undefined }
+            ? { ...integration, is_connected: false, connection_data: {} }
             : integration
         ))
         
