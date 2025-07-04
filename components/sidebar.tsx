@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { X, MessageCircle, Search, Gift, Settings, HelpCircle, CreditCard, User, LogOut, MoreHorizontal, Menu, Plus } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { HelpModal } from '@/components/help-center';
+import { PricingModal } from '@/components/pricing';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -40,6 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isOpen, setIsOpen] = React.useState(initialIsOpen);
+  const [isPricingModalOpen, setIsPricingModalOpen] = React.useState(false);
   const [user, setUser] = React.useState<SupabaseUser | null>(null);
   const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const leaveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -202,13 +204,11 @@ const Sidebar: React.FC<SidebarProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            asChild
+            onClick={() => setIsPricingModalOpen(true)}
             className="h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
             aria-label="My Subscription"
           >
-            <Link href="/settings/billing">
-              <CreditCard className="h-5 w-5" />
-            </Link>
+            <CreditCard className="h-5 w-5" />
           </Button>
           <Button
             variant="ghost"
@@ -343,13 +343,11 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           <Button
             variant="ghost"
-            asChild
+            onClick={() => setIsPricingModalOpen(true)}
             className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground transition-colors"
           >
-            <Link href="/settings/billing">
-              <CreditCard className="h-4 w-4" />
-              My Subscription
-            </Link>
+            <CreditCard className="h-4 w-4" />
+            My Subscription
           </Button>
 
           <Button
@@ -391,6 +389,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
       </div>
+      <PricingModal isOpen={isPricingModalOpen} onClose={() => setIsPricingModalOpen(false)} />
     </div>
   );
 };

@@ -18,7 +18,7 @@ jobs:
         id: git-cliff
         uses: orhun/git-cliff-action@v3
         with:
-          args: "-o CHANGELOG.md"
+          args: --latest --strip all
         env:
           GIT_CLIFF_CONFIG: |
             [changelog]
