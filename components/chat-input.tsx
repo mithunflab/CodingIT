@@ -13,7 +13,7 @@ import { ArrowUp, Paperclip, Square, X } from 'lucide-react'
 import { SetStateAction, useEffect, useMemo, useState, useCallback } from 'react'
 import TextareaAutosize from 'react-textarea-autosize'
 import Image from 'next/image'
-import { useTypingEffect } from '@/lib/hooks/use-typing-effect'
+import { useTypingEffect } from '@/hooks/use-typing-effect'
 
 export function ChatInput({
   retry,
