@@ -4,13 +4,16 @@ import { Message } from './messages'
 export interface Project {
   id: string
   user_id: string
+  team_id?: string
   title: string
   description?: string
   template_id?: string
+  status: 'active' | 'archived' | 'deleted'
+  is_public: boolean
+  metadata?: Record<string, any>
   created_at: string
   updated_at: string
   deleted_at?: string
-  metadata?: Record<string, any>
 }
 
 export interface DbMessage {
@@ -20,133 +23,261 @@ export interface DbMessage {
   content: Message['content']
   object_data?: any
   result_data?: any
-  created_at: string
   sequence_number: number
+  created_at: string
 }
 
-// Project operations
-export async function createProject(title: string, templateId?: string): Promise<Project | null> {
-  if (!supabase) return null
+// Global flag to prevent excessive retries
+let tablesChecked = false
+let tablesExist = false
+
+// Check if tables exist once, then cache result
+async function ensureTablesExist(): Promise<boolean> {
+  if (tablesChecked) return tablesExist
   
-  const { data, error } = await supabase
-    .from('projects')
-    .insert({
-      title,
-      template_id: templateId,
-      metadata: {}
-    })
-    .select()
-    .single()
-
-  if (error) {
-    console.error('Error creating project:', error)
-    return null
-  }
-
-  return data
-}
-
-export async function getProjects(): Promise<Project[]> {
-  if (!supabase) return []
-  
-  const { data, error } = await supabase
-    .from('projects')
-    .select('*')
-    .is('deleted_at', null)
-    .order('updated_at', { ascending: false })
-
-  if (error) {
-    console.error('Error fetching projects:', error)
-    return []
-  }
-
-  return data || []
-}
-
-export async function updateProject(id: string, updates: Partial<Project>): Promise<boolean> {
-  if (!supabase) return false
-  
-  const { error } = await supabase
-    .from('projects')
-    .update(updates)
-    .eq('id', id)
-
-  if (error) {
-    console.error('Error updating project:', error)
+  if (!supabase!) {
+    tablesChecked = true
+    tablesExist = false
     return false
   }
 
-  return true
-}
-
-export async function deleteProject(id: string): Promise<boolean> {
-  if (!supabase) return false
-  
-  const { error } = await supabase
-    .from('projects')
-    .update({ deleted_at: new Date().toISOString() })
-    .eq('id', id)
-
-  if (error) {
-    console.error('Error deleting project:', error)
+  try {
+    // Quick check for critical tables
+    const { error } = await supabase!.from('projects').select('id').limit(1)
+    
+    tablesChecked = true
+    tablesExist = !error || error.code !== 'PGRST106'
+    
+    if (!tablesExist) {
+      console.warn('Database tables do not exist. Please run the migration.')
+    }
+    
+    return tablesExist
+  } catch (error) {
+    console.error('Table check failed:', error)
+    tablesChecked = true
+    tablesExist = false
     return false
   }
-
-  return true
 }
 
-// Message operations
-export async function saveMessage(projectId: string, message: Message, sequenceNumber: number): Promise<boolean> {
-  if (!supabase) return false
-  
-  const { error } = await supabase
-    .from('messages')
-    .insert({
-      project_id: projectId,
-      role: message.role,
-      content: message.content,
-      object_data: message.object,
-      result_data: message.result,
-      sequence_number: sequenceNumber
-    })
-
-  if (error) {
-    console.error('Error saving message:', error)
-    return false
+// Wrapper to prevent API calls when tables don't exist
+async function safeApiCall<T>(
+  operation: () => Promise<T>,
+  fallback: T,
+  operationName: string
+): Promise<T> {
+  if (!(await ensureTablesExist())) {
+    console.warn(`Skipping ${operationName} - tables do not exist`)
+    return fallback
   }
+  
+  try {
+    return await operation()
+  } catch (error) {
+    console.error(`${operationName} failed:`, error)
+    return fallback
+  }
+}
 
-  // Update project's updated_at timestamp
-  await supabase
-    .from('projects')
-    .update({ updated_at: new Date().toISOString() })
-    .eq('id', projectId)
+// =============================================
+// PROJECT OPERATIONS
+// =============================================
 
-  return true
+export async function createProject(
+  title: string, 
+  templateId?: string,
+  description?: string,
+  teamId?: string
+): Promise<Project | null> {
+  return safeApiCall(async () => {
+    const { data: { user } } = await supabase!.auth.getUser()
+    if (!user) throw new Error('User not authenticated')
+
+    const { data, error } = await supabase!
+      .from('projects')
+      .insert({
+        user_id: user.id,
+        team_id: teamId,
+        title,
+        description,
+        template_id: templateId,
+        status: 'active',
+        is_public: false,
+        metadata: {}
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  }, null, 'createProject')
+}
+
+export async function getProjects(
+  includeArchived: boolean = false,
+  teamId?: string
+): Promise<Project[]> {
+  return safeApiCall(async () => {
+    const { data: { user } } = await supabase!.auth.getUser()
+    if (!user) return []
+
+    let query = supabase!
+      .from('projects')
+      .select('*')
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .order('updated_at', { ascending: false })
+
+    if (!includeArchived) {
+      query = query.eq('status', 'active')
+    }
+
+    if (teamId) {
+      query = query.eq('team_id', teamId)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+    return data || []
+  }, [], 'getProjects')
+}
+
+export async function getProject(projectId: string): Promise<Project | null> {
+  return safeApiCall(async () => {
+    const { data, error } = await supabase!
+      .from('projects')
+      .select('*')
+      .eq('id', projectId)
+      .single()
+
+    if (error) throw error
+    return data
+  }, null, 'getProject')
+}
+
+export async function updateProject(
+  id: string, 
+  updates: Partial<Project>
+): Promise<boolean> {
+  return safeApiCall(async () => {
+    const { error } = await supabase!
+      .from('projects')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+
+    if (error) throw error
+    return true
+  }, false, 'updateProject')
+}
+
+export async function deleteProject(id: string, permanent: boolean = false): Promise<boolean> {
+  return safeApiCall(async () => {
+    if (permanent) {
+      const { error } = await supabase!
+        .from('projects')
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+    } else {
+      const { error } = await supabase!
+        .from('projects')
+        .update({ 
+          deleted_at: new Date().toISOString(),
+          status: 'deleted'
+        })
+        .eq('id', id)
+      if (error) throw error
+    }
+    return true
+  }, false, 'deleteProject')
+}
+
+// =============================================
+// MESSAGE OPERATIONS
+// =============================================
+
+export async function saveMessage(
+  projectId: string, 
+  message: Message, 
+  sequenceNumber: number
+): Promise<boolean> {
+  return safeApiCall(async () => {
+    const { error } = await supabase!
+      .from('messages')
+      .insert({
+        project_id: projectId,
+        role: message.role,
+        content: message.content,
+        object_data: message.object,
+        result_data: message.result,
+        sequence_number: sequenceNumber
+      })
+
+    if (error) throw error
+
+    // Update project timestamp
+    await supabase!
+      .from('projects')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', projectId)
+
+    return true
+  }, false, 'saveMessage')
 }
 
 export async function getProjectMessages(projectId: string): Promise<Message[]> {
-  if (!supabase) return []
-  
-  const { data, error } = await supabase
-    .from('messages')
-    .select('*')
-    .eq('project_id', projectId)
-    .order('sequence_number', { ascending: true })
+  return safeApiCall(async () => {
+    const { data, error } = await supabase!
+      .from('messages')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('sequence_number', { ascending: true })
 
-  if (error) {
-    console.error('Error fetching messages:', error)
-    return []
-  }
+    if (error) throw error
 
-  return data?.map((msg: DbMessage) => ({
-    role: msg.role,
-    content: msg.content,
-    object: msg.object_data,
-    result: msg.result_data,
-  })) || []
+    return data?.map((msg: DbMessage) => ({
+      role: msg.role,
+      content: msg.content,
+      object: msg.object_data,
+      result: msg.result_data,
+    })) || []
+  }, [], 'getProjectMessages')
 }
+
+export async function clearProjectMessages(projectId: string): Promise<boolean> {
+  return safeApiCall(async () => {
+    const { error } = await supabase!
+      .from('messages')
+      .delete()
+      .eq('project_id', projectId)
+
+    if (error) throw error
+    return true
+  }, false, 'clearProjectMessages')
+}
+
+// =============================================
+// UTILITY FUNCTIONS
+// =============================================
 
 export async function generateProjectTitle(firstMessage: string): Promise<string> {
   const words = firstMessage.trim().split(' ').slice(0, 6)
-  return words.join(' ') + (firstMessage.split(' ').length > 6 ? '...' : '')
+  let title = words.join(' ')
+  
+  if (firstMessage.split(' ').length > 6) {
+    title += '...'
+  }
+  
+  if (!title.trim()) {
+    title = 'New Project'
+  }
+  
+  return title
+}
+
+// Reset the tables check (useful for when migration is completed)
+export function resetTableCheck(): void {
+  tablesChecked = false
+  tablesExist = false
 }

@@ -21,7 +21,7 @@ import {
 import { Session } from '@supabase/supabase-js'
 import { ArrowRight, LogOut, Trash, Undo, Settings, Menu } from 'lucide-react'
 import Link from 'next/link'
-import Image from 'next/image'
+import Icon from './logo2'
 
 export function NavBar({
   session,
@@ -118,7 +118,7 @@ export function NavBar({
                   window.open('https://codinit.dev/blog/codinit-beta', '_blank')
                 }}
               >
-                <Logo
+                <Icon
                   width={16}
                   height={16}
                   className="mr-2 text-muted-foreground"
