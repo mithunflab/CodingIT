@@ -8,7 +8,7 @@ export default function Icon(
   props: Omit<ComponentProps<typeof Image>, 'src' | 'alt'>
 ) {
   const { theme } = useTheme()
-  const src = theme === 'light' ? '/icon.png' : '/icon-dark.png'
+  const src = theme === 'light' ? '/icon-dark.png' : '/icon.png'
   const { width, style } = props
 
   return (

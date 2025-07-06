@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { createClient } from '@/lib/supabase';
+import { createBrowserClient } from '@/lib/supabase-client';
+import { getProjects, Project } from '@/lib/database';
+import { formatDistanceToNow } from 'date-fns';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -28,7 +30,7 @@ interface ChatHistoryItem {
   date: string; // e.g., "Yesterday", "Last 7 days", "Last 30 days"
 }
 
-const Sidebar: React.FC<SidebarProps> = ({
+export const Sidebar: React.FC<SidebarProps> = ({
   isOpen: initialIsOpen = false,
   onClose = () => {},
   userPlan = "Personal Plan",
@@ -43,12 +45,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [isOpen, setIsOpen] = React.useState(initialIsOpen);
   const [isPricingModalOpen, setIsPricingModalOpen] = React.useState(false);
   const [user, setUser] = React.useState<SupabaseUser | null>(null);
+  const [chatHistory, setChatHistory] = React.useState<ChatHistoryItem[]>([]);
   const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const leaveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-
-  const chatHistory: ChatHistoryItem[] = [
-    { id: "", title: "", date: "" },
-  ];
 
   const groupedChats = chatHistory.reduce((acc, chat) => {
     (acc[chat.date] = acc[chat.date] || []).push(chat);
@@ -101,15 +100,33 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   React.useEffect(() => {
-    const supabase = createClient();
+    const supabase = createBrowserClient();
+    const fetchChatHistory = async () => {
+      const projects = await getProjects();
+      const history = projects.map((project: Project) => ({
+        id: project.id,
+        title: project.title,
+        date: formatDistanceToNow(new Date(project.updated_at), { addSuffix: true }),
+      }));
+      setChatHistory(history);
+    };
+
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
+      if (user) {
+        fetchChatHistory();
+      }
     };
     getUser();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchChatHistory();
+      } else {
+        setChatHistory([]);
+      }
     });
 
     return () => {
@@ -393,5 +410,3 @@ const Sidebar: React.FC<SidebarProps> = ({
     </div>
   );
 };
-
-export default Sidebar;

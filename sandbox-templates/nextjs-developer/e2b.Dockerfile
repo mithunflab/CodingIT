@@ -1,21 +1,65 @@
-# You can use most Debian-based base images
-FROM node:22-slim
+# Use ARG to define versions for easier updates
+ARG NODE_VERSION=22-slim
+ARG NEXT_APP_VERSION=14.2.20
+ARG SHADCN_VERSION=2.1.7
 
-# Install curl
-RUN apt-get update && apt-get install -y curl && apt-get clean && rm -rf /var/lib/apt/lists/*
+# ---- Base Image ----
+# Use a base image with Node pre-installed
+FROM node:${NODE_VERSION} as base
 
+# Set up the environment
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
+WORKDIR /home/user/app
+
+# ---- Builder Stage ----
+# This stage is for building the Next.js application
+FROM base as builder
+
+# Install necessary build tools
+RUN apt-get update && apt-get install -y --no-install-recommends curl git && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Create the Next.js application
+# Using --use-pnpm for faster dependency installation
+RUN npx create-next-app@${NEXT_APP_VERSION} . --ts --tailwind --no-eslint --import-alias "@/*" --use-pnpm --no-app --no-src-dir
+
+# Copy custom configurations
+COPY _app.tsx pages/_app.tsx
+
+# Initialize and add shadcn components
+# The -y flag accepts all defaults
+RUN npx shadcn-cli@${SHADCN_VERSION} init -y
+RUN npx shadcn-cli@${SHADCN_VERSION} add --all -y
+
+# Install additional dependencies
+RUN pnpm install posthog-js
+
+# ---- Runtime Stage ----
+# This stage creates the final, smaller image
+FROM base as runtime
+
+WORKDIR /home/user/app
+
+# Copy dependencies and application code from the builder stage
+COPY --from=builder /home/user/app/package.json /home/user/app/pnpm-lock.yaml ./
+RUN pnpm install --prod
+
+COPY --from=builder /home/user/app/ ./
+
+# Copy the compile script and make it executable
 COPY compile_page.sh /compile_page.sh
 RUN chmod +x /compile_page.sh
 
-# Install dependencies and customize sandbox
-WORKDIR /home/user/nextjs-app
+# Create a non-root user for better security
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+USER nextjs
 
-RUN npx create-next-app@14.2.20 . --ts --tailwind --no-eslint --import-alias "@/*" --use-npm --no-app --no-src-dir
-COPY _app.tsx pages/_app.tsx
+# Expose the port Next.js runs on
+EXPOSE 3000
 
-RUN npx shadcn@2.1.7 init -d
-RUN npx shadcn@2.1.7 add --all
-RUN npm install posthog-js
-
-# Move the Nextjs app to the home directory and remove the nextjs-app directory
-RUN mv /home/user/nextjs-app/* /home/user/ && rm -rf /home/user/nextjs-app
+# Set the default command to start the Next.js app in development mode
+CMD ["pnpm", "run", "dev"]
