@@ -10,8 +10,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     env:
-      supabaseUrl: ${{ secrets.SUPABASE_URL }}
-      supabaseKey: ${{ secrets.SUPABASE_KEY }}
+      supabaseUrl: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      supabaseKey: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
     steps:
       - name: Checkout
