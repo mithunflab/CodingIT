@@ -1,7 +1,7 @@
 # Scaffolding for a Streamlit app
 import gradio as gr
 
-def greet(name, intensity):
+def greet(name: str, intensity: float) -> str:
     return "Hello, " + name + "!" * int(intensity)
 
 demo = gr.Interface(

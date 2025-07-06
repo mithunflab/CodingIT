@@ -1,4 +1,6 @@
-import { supabase } from './supabase'
+import { createBrowserClient } from './supabase-client'
+
+const supabase = createBrowserClient();
 
 export interface UserProfile {
   id: string

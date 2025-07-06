@@ -22,6 +22,7 @@ interface EnhancedChatConfig {
 }
 
 export function useEnhancedChat(chatConfig: EnhancedChatConfig) {
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [context, setContext] = useState({
     cwd: '/home/project',
     projectFiles: [] as string[],
@@ -74,14 +75,23 @@ export function useEnhancedChat(chatConfig: EnhancedChatConfig) {
     }
   }, [updateContext])
 
-  const submitMessage = useCallback(async (content: string) => {
-    analyzeUserLevel(content)
-    
-    await append({
-      role: 'user',
-      content
-    })
-  }, [append, analyzeUserLevel])
+  const submitMessage = useCallback(
+    async (content: string) => {
+      if (isSubmitting) return
+      setIsSubmitting(true)
+      analyzeUserLevel(content)
+
+      try {
+        await append({
+          role: 'user',
+          content,
+        })
+      } finally {
+        setIsSubmitting(false)
+      }
+    },
+    [append, analyzeUserLevel, isSubmitting],
+  )
 
   const trackError = useCallback((error: string) => {
     setContext(prev => ({
@@ -101,7 +111,7 @@ export function useEnhancedChat(chatConfig: EnhancedChatConfig) {
     input,
     setInput,
     submitMessage,
-    isLoading,
+    isLoading: isLoading || isSubmitting,
     stop,
     error,
     context,

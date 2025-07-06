@@ -8,14 +8,14 @@ import { ChatPicker } from '@/components/chat-picker'
 import { ChatSettings } from '@/components/chat-settings'
 import { NavBar } from '@/components/navbar'
 import { Preview } from '@/components/preview'
-import Sidebar from '@/components/sidebar'
+import { Sidebar } from '@/components/sidebar'
 import { useAuth } from '@/lib/auth'
 import { Project, createProject, saveMessage, getProjectMessages, generateProjectTitle } from '@/lib/database'
 import { Message, toAISDKMessages, toMessageImage } from '@/lib/messages'
 import { LLMModelConfig } from '@/lib/models'
 import modelsList from '@/lib/models.json'
 import { FragmentSchema, fragmentSchema as schema } from '@/lib/schema'
-import { supabase } from '@/lib/supabase'
+import { createBrowserClient } from '@/lib/supabase-client'
 import templates, { TemplateId } from '@/lib/templates'
 import { ExecutionResult } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -26,6 +26,7 @@ import { SetStateAction, useCallback, useEffect, useState } from 'react'
 import { useLocalStorage } from 'usehooks-ts'
 
 export default function Home() {
+  const supabase = createBrowserClient()
   const [chatInput, setChatInput] = useLocalStorage('chat', '')
   const [files, setFiles] = useState<File[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<'auto' | TemplateId>('auto')
@@ -340,14 +341,16 @@ export default function Home() {
         />
       )}
 
-      <Sidebar
-        userPlan={userTeam?.tier}
-      />
+      {session && (
+        <Sidebar
+          userPlan={userTeam?.tier}
+        />
+      )}
 
       {/* Main content with left margin to account for collapsed sidebar */}
       <div className={cn(
         "grid w-full md:grid-cols-2 transition-all duration-300",
-        session ? "ml-16" : "ml-0"
+        session ? "ml-16" : ""
       )}>
         <div
           className={`flex flex-col w-full max-h-full max-w-[800px] mx-auto px-4 overflow-auto ${fragment ? 'col-span-1' : 'col-span-2'}`}

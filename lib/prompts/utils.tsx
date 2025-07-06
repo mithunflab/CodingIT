@@ -109,7 +109,7 @@ export function getTemplateRecommendation(
   }
 
   // Default based on project context or fallback
-  if (projectContext?.framework === 'react') {
+  if (projectContext?.framework === 'next.js') {
     return Templates['nextjs-developer']
   }
 

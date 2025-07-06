@@ -1,5 +1,7 @@
-import { supabase } from './supabase'
+import { createBrowserClient } from './supabase-client'
 import { Message } from './messages'
+
+const supabase = createBrowserClient()
 
 export interface Project {
   id: string

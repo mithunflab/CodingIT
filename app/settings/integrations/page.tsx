@@ -13,9 +13,12 @@ import {
   Plus, 
   Unlink,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  Activity,
+  Clock,
+  RefreshCw
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/lib/auth'
 import { 
   getUserIntegrations, 
@@ -23,6 +26,15 @@ import {
   disconnectUserIntegration,
   UserIntegration
 } from '@/lib/user-settings'
+import { 
+  generateGitHubOAuthUrl, 
+  getGitHubScopes, 
+  revokeGitHubToken,
+  isGitHubIntegrationHealthy,
+  formatGitHubWebhookEvent,
+  getGitHubEventIcon,
+  type GitHubOAuthConfig 
+} from '@/lib/github-oauth'
 
 const availableIntegrations = [
   {
@@ -34,7 +46,7 @@ const availableIntegrations = [
   },
   {
     id: 'google-drive',
-    name: 'Google Drive',
+    name: 'Google Drive', 
     description: 'Import and export files from your Drive',
     icon: FolderOpen,
     color: 'bg-blue-600 text-white'
@@ -59,96 +71,142 @@ export default function IntegrationsSettings() {
   const { session } = useAuth(() => {}, () => {})
   const { toast } = useToast()
   
-  // State
   const [integrations, setIntegrations] = useState<UserIntegration[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [connecting, setConnecting] = useState<string | null>(null)
   const [disconnecting, setDisconnecting] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
 
-  // Load user integrations on mount
-  useEffect(() => {
+  const loadIntegrations = useCallback(async () => {
     if (!session?.user?.id) return
 
-    const loadIntegrations = async () => {
-      setIsLoading(true)
-      try {
-        const userIntegrations = await getUserIntegrations(session.user.id)
-        setIntegrations(userIntegrations)
-      } catch (error) {
-        console.error('Error loading integrations:', error)
-        toast({
-          title: "Error",
-          description: "Failed to load integrations. Please refresh the page.",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
+    try {
+      console.log('Loading integrations for user:', session.user.id)
+      const userIntegrations = await getUserIntegrations(session.user.id)
+      console.log('Loaded integrations:', userIntegrations)
+      setIntegrations(userIntegrations)
+    } catch (error) {
+      console.error('Error loading integrations:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load integrations. Please try again.",
+        variant: "destructive",
+      })
     }
-
-    loadIntegrations()
   }, [session?.user?.id, toast])
 
-  const getIntegrationStatus = (serviceId: string) => {
-    return integrations.find(integration => integration.service_name === serviceId)
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setIsLoading(false)
+      return
+    }
+
+    const initializeIntegrations = async () => {
+      setIsLoading(true)
+      await loadIntegrations()
+      setIsLoading(false)
+    }
+
+    initializeIntegrations()
+  }, [session?.user?.id, loadIntegrations])
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const success = urlParams.get('success')
+    const error = urlParams.get('error')
+
+    if (success === 'github_connected') {
+      toast({
+        title: "Success",
+        description: "GitHub connected successfully!",
+      })
+      window.history.replaceState({}, '', window.location.pathname)
+      // Force reload integrations after successful OAuth
+      loadIntegrations()
+    }
+
+    if (error) {
+      toast({
+        title: "Error", 
+        description: decodeURIComponent(error),
+        variant: "destructive",
+      })
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [loadIntegrations, toast])
+
+  const getIntegrationStatus = useCallback((serviceId: string) => {
+    const integration = integrations.find(integration => integration.service_name === serviceId)
+    console.log(`Integration status for ${serviceId}:`, integration)
+    return integration
+  }, [integrations])
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await loadIntegrations()
+    setRefreshing(false)
+    toast({
+      title: "Refreshed",
+      description: "Integration status updated.",
+    })
   }
 
   const handleConnect = async (serviceId: string) => {
-    if (!session?.user?.id) return
+    if (!session?.user?.id) {
+      toast({
+        title: "Error",
+        description: "Please log in to connect integrations.",
+        variant: "destructive",
+      })
+      return
+    }
 
     setConnecting(serviceId)
+    
     try {
-      // In a real implementation, this would initiate OAuth flow
-      // For now, we'll simulate a connection
+      if (serviceId === 'github') {
+        if (!process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID) {
+          throw new Error('GitHub OAuth not configured. Please check environment variables.')
+        }
+
+        const config: GitHubOAuthConfig = {
+          clientId: process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID,
+          redirectUri: `${window.location.origin}/api/auth/github`,
+          scopes: getGitHubScopes(),
+        }
+
+        console.log('Initiating GitHub OAuth with config:', config)
+        const authUrl = generateGitHubOAuthUrl(config)
+        window.location.href = authUrl
+        return
+      }
+
+      // For other services (simulated for now)
+      console.log(`Connecting ${serviceId} for user:`, session.user.id)
+      
       const success = await upsertUserIntegration(session.user.id, serviceId, {
         is_connected: true,
         connection_data: {
           connected_at: new Date().toISOString(),
-          // Add other service-specific data here
+          simulated: true,
         }
       })
 
       if (success) {
-        // Update local state
-        const updatedIntegrations = [...integrations]
-        const existingIndex = updatedIntegrations.findIndex(int => int.service_name === serviceId)
-        
-        if (existingIndex >= 0) {
-          updatedIntegrations[existingIndex] = {
-            ...updatedIntegrations[existingIndex],
-            is_connected: true,
-            connection_data: {
-              connected_at: new Date().toISOString(),
-            }
-          }
-        } else {
-          updatedIntegrations.push({
-            id: `temp-${Date.now()}`,
-            user_id: session.user.id,
-            service_name: serviceId,
-            is_connected: true,
-            connection_data: {
-              connected_at: new Date().toISOString(),
-            },
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-        }
-        
-        setIntegrations(updatedIntegrations)
+        await loadIntegrations() // Reload from database
         
         toast({
           title: "Success",
           description: `${availableIntegrations.find(int => int.id === serviceId)?.name} connected successfully.`,
         })
       } else {
-        throw new Error('Failed to connect service')
+        throw new Error('Failed to save integration to database')
       }
     } catch (error) {
       console.error('Error connecting service:', error)
       toast({
         title: "Error",
-        description: "Failed to connect service. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to connect service. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -160,15 +218,25 @@ export default function IntegrationsSettings() {
     if (!session?.user?.id) return
 
     setDisconnecting(serviceId)
+    
     try {
+      console.log(`Disconnecting ${serviceId} for user:`, session.user.id)
+
+      if (serviceId === 'github') {
+        const integration = getIntegrationStatus(serviceId)
+        if (integration?.connection_data?.access_token) {
+          console.log('Revoking GitHub token...')
+          const revoked = await revokeGitHubToken(integration.connection_data.access_token)
+          if (!revoked) {
+            console.warn('Failed to revoke GitHub token, but continuing with disconnect')
+          }
+        }
+      }
+
       const success = await disconnectUserIntegration(session.user.id, serviceId)
 
       if (success) {
-        setIntegrations(integrations.map(integration => 
-          integration.service_name === serviceId 
-            ? { ...integration, is_connected: false, connection_data: {} }
-            : integration
-        ))
+        await loadIntegrations() // Reload from database
         
         toast({
           title: "Success",
@@ -205,13 +273,43 @@ export default function IntegrationsSettings() {
     )
   }
 
+  if (!session?.user?.id) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-medium">Integrations</h2>
+          <p className="text-sm text-muted-foreground">
+            Please log in to manage your integrations.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const githubIntegration = getIntegrationStatus('github')
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-medium">Integrations</h2>
-        <p className="text-sm text-muted-foreground">
-          Connect external services to enhance your workflow.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-medium">Integrations</h2>
+          <p className="text-sm text-muted-foreground">
+            Connect external services to enhance your workflow.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          {refreshing ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-2" />
+          )}
+          Refresh
+        </Button>
       </div>
 
       <Card>
@@ -226,10 +324,13 @@ export default function IntegrationsSettings() {
             {availableIntegrations.map((service) => {
               const Icon = service.icon
               const integration = getIntegrationStatus(service.id)
-              const isConnected = integration?.is_connected || false
+              const isConnected = Boolean(integration?.is_connected)
               const isConnecting = connecting === service.id
               const isDisconnecting = disconnecting === service.id
               const isProcessing = isConnecting || isDisconnecting
+              const isHealthy = service.id === 'github' && integration ? isGitHubIntegrationHealthy(integration) : isConnected
+              
+              console.log(`Service ${service.id}: connected=${isConnected}, integration=`, integration)
               
               return (
                 <div
@@ -244,9 +345,11 @@ export default function IntegrationsSettings() {
                       <div className="flex items-center gap-2">
                         <h4 className="font-medium">{service.name}</h4>
                         {isConnected ? (
-                          <Badge variant="default">Connected</Badge>
+                          <Badge variant={isHealthy ? "default" : "secondary"}>
+                            {isHealthy ? "Connected" : "Needs Attention"}
+                          </Badge>
                         ) : (
-                          <Badge variant="secondary">Not connected</Badge>
+                          <Badge variant="outline">Not connected</Badge>
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">
@@ -255,6 +358,16 @@ export default function IntegrationsSettings() {
                       {isConnected && integration?.connection_data?.connected_at && (
                         <p className="text-xs text-muted-foreground">
                           Connected {new Date(integration.connection_data.connected_at).toLocaleDateString()}
+                        </p>
+                      )}
+                      {service.id === 'github' && isConnected && integration?.connection_data?.username && (
+                        <p className="text-xs text-muted-foreground">
+                          GitHub: @{integration.connection_data.username}
+                        </p>
+                      )}
+                      {integration?.connection_data?.simulated && (
+                        <p className="text-xs text-yellow-600">
+                          Simulated connection
                         </p>
                       )}
                     </div>
@@ -269,7 +382,7 @@ export default function IntegrationsSettings() {
                         disabled={isProcessing}
                       >
                         {isDisconnecting ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
                         ) : (
                           <Unlink className="h-4 w-4 mr-2" />
                         )}
@@ -277,12 +390,13 @@ export default function IntegrationsSettings() {
                       </Button>
                     ) : (
                       <Button
+                        variant="default"
                         size="sm"
                         onClick={() => handleConnect(service.id)}
                         disabled={isProcessing}
                       >
                         {isConnecting ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
                         ) : (
                           <Plus className="h-4 w-4 mr-2" />
                         )}
@@ -297,11 +411,80 @@ export default function IntegrationsSettings() {
         </CardContent>
       </Card>
 
+      {githubIntegration?.is_connected && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              GitHub Integration Status
+            </CardTitle>
+            <CardDescription>
+              Monitor your GitHub integration health and recent activity.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Connection Status</span>
+                <div className="flex items-center gap-2">
+                  <div className={`h-2 w-2 rounded-full ${isGitHubIntegrationHealthy(githubIntegration) ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                  <span className="text-sm text-muted-foreground">
+                    {isGitHubIntegrationHealthy(githubIntegration) ? 'Healthy' : 'Needs Attention'}
+                  </span>
+                </div>
+              </div>
+
+              {githubIntegration.connection_data?.github_user_id && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">GitHub User ID</span>
+                  <span className="text-sm text-muted-foreground">
+                    {githubIntegration.connection_data.github_user_id}
+                  </span>
+                </div>
+              )}
+
+              {githubIntegration.last_sync_at && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Last Sync
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {new Date(githubIntegration.last_sync_at).toLocaleString()}
+                  </span>
+                </div>
+              )}
+              
+              {githubIntegration.connection_data?.last_webhook_event && (
+                <div className="space-y-2">
+                  <span className="text-sm font-medium">Recent Activity</span>
+                  <div className="p-3 bg-muted rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <span className="text-lg">
+                        {getGitHubEventIcon(githubIntegration.connection_data.last_webhook_event.type)}
+                      </span>
+                      <div className="flex-1">
+                        <p className="text-sm">
+                          {formatGitHubWebhookEvent(githubIntegration.connection_data.last_webhook_event)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(githubIntegration.connection_data.last_webhook_event.timestamp).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Platform Capabilities</CardTitle>
           <CardDescription>
-            Configure which platform features are enabled for your projects.
+            Core features and capabilities enabled in your workspace.
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -1,5 +1,3 @@
-// File: lib/prompts/discuss-prompt.ts
-
 export const discussPrompt = () => `
 # System Prompt for AI Technical Consultant
 

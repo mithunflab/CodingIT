@@ -1,7 +1,7 @@
 # You can use most Debian-based base images
 FROM node:21-slim
+FROM e2b AS Sandbox
 
-# Install dependencies and customize sandbox
 WORKDIR /home/user/vue-app
 
 RUN npx nuxi@latest init . --packageManager=npm --gitInit=no -f

@@ -1,9 +1,11 @@
-import { supabase } from './supabase'
+import { createBrowserClient } from './supabase-client'
 import { ViewType } from '@/components/auth'
 import { randomString } from './utils'
 import { Session } from '@supabase/supabase-js'
 import { usePostHog } from 'posthog-js/react'
 import { useState, useEffect } from 'react'
+
+const supabase = createBrowserClient();
 
 type UserTeam = {
   email: string
@@ -96,7 +98,7 @@ export function useAuth(
     })
 
     return () => subscription.unsubscribe()
-  }, [recovery, userTeam, setAuthDialog, setAuthView, posthog])
+  }, [recovery, setAuthDialog, setAuthView, posthog])
 
   return {
     session,
