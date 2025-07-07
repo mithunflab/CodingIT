@@ -10,7 +10,7 @@ import { NavBar } from '@/components/navbar'
 import { Preview } from '@/components/preview'
 import { Sidebar } from '@/components/sidebar'
 import { useAuth } from '@/lib/auth'
-import { Project, createProject, saveMessage, getProjectMessages, generateProjectTitle } from '@/lib/database'
+import { Project, createProject, saveMessage, getProjectMessages, generateProjectTitle, getProject } from '@/lib/database'
 import { Message, toAISDKMessages, toMessageImage } from '@/lib/messages'
 import { LLMModelConfig } from '@/lib/models'
 import modelsList from '@/lib/models.json'
@@ -52,9 +52,14 @@ export default function Home() {
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [isLoadingProject, setIsLoadingProject] = useState(false)
 
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-
   const { session, userTeam } = useAuth(setAuthDialog, setAuthView)
+
+  const handleChatSelected = async (chatId: string) => {
+    const project = await getProject(chatId);
+    if (project) {
+      setCurrentProject(project);
+    }
+  };
 
   const filteredModels = modelsList.models.filter((model) => {
     if (process.env.NEXT_PUBLIC_HIDE_LOCAL_MODELS) {
@@ -318,18 +323,6 @@ export default function Home() {
     setCurrentPreview({ fragment: undefined, result: undefined })
   }
 
-  function handleProjectSelect(project: Project | null) {
-    setCurrentProject(project)
-    if (!project) {
-      handleClearChat()
-    }
-  }
-
-  async function handleNewProject() {
-    setCurrentProject(null)
-    handleClearChat()
-  }
-
   return (
     <main className="flex min-h-screen max-h-screen">
       {supabase && (
@@ -344,6 +337,7 @@ export default function Home() {
       {session && (
         <Sidebar
           userPlan={userTeam?.tier}
+          onChatSelected={handleChatSelected}
         />
       )}
 

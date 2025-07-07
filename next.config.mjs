@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack: (config) => {
-    config.externals.push('onnxruntime-node')
+  webpack(config, { isServer }) {
+    config.externals = [...config.externals, 'onnxruntime-node']
     return config
   },
 }

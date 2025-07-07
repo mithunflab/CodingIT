@@ -1,7 +1,13 @@
 import React from 'react';
 import Link from 'next/link';
-import { X, MessageCircle, Search, Gift, Settings, HelpCircle, CreditCard, User, LogOut, MoreHorizontal, Menu, Plus } from 'lucide-react';
+import { X, MessageCircle, Search, Gift, Settings, HelpCircle, CreditCard, User, LogOut, MoreHorizontal, Menu, Plus, Trash2, CornerUpLeft } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { HelpModal } from '@/components/help-center';
 import { PricingModal } from '@/components/pricing';
 import { Button } from '@/components/ui/button';
@@ -9,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { createBrowserClient } from '@/lib/supabase-client';
-import { getProjects, Project } from '@/lib/database';
+import { getProjects, Project, deleteProject } from '@/lib/database';
 import { formatDistanceToNow } from 'date-fns';
 
 interface SidebarProps {
@@ -58,6 +64,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const value = e.target.value;
     setSearchQuery(value);
     onSearch(value);
+  };
+
+  const handleDeleteChat = async (chatId: string) => {
+    await deleteProject(chatId);
+    setChatHistory(chatHistory.filter(chat => chat.id !== chatId));
   };
 
   const handleOpenSidebar = () => {
@@ -306,16 +317,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">{date}</h4>
                   <div className="space-y-1">
                     {chats.map((chat) => (
-                      <Button
-                        key={chat.id}
-                        variant="ghost"
-                        onClick={() => onChatSelected(chat.id)}
-                        className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 group transition-colors"
-                      >
-                        <MessageCircle className="h-4 w-4 flex-shrink-0" />
-                        <span className="truncate">{chat.title}</span>
-                        <MoreHorizontal className="ml-auto h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </Button>
+                      <DropdownMenu key={chat.id}>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 group transition-colors"
+                          >
+                            <MessageCircle className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">{chat.title}</span>
+                            <MoreHorizontal className="ml-auto h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent side="right" align="start">
+                          <DropdownMenuItem onClick={() => onChatSelected(chat.id)}>
+                            <CornerUpLeft className="mr-2 h-4 w-4" />
+                            <span>Re-enter</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDeleteChat(chat.id)} className="text-red-500">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Delete</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     ))}
                   </div>
                 </div>

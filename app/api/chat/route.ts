@@ -3,7 +3,6 @@ import { getModelClient } from '@/lib/models'
 import { LLMModel, LLMModelConfig } from '@/lib/models'
 import { toPrompt } from '@/lib/prompt'
 import ratelimit from '@/lib/ratelimit'
-import { retrieveRelevantCode } from '@/lib/retrieval'
 import { fragmentSchema as schema } from '@/lib/schema'
 import { Templates } from '@/lib/templates'
 import { streamObject, LanguageModel, CoreMessage } from 'ai'
@@ -62,21 +61,7 @@ export async function POST(req: Request) {
   const modelClient = getModelClient(model, config)
 
   try {
-    const lastUserMessage = messages[messages.length - 1]?.content;
-    let retrievedContext = '';
-    if (typeof lastUserMessage === 'string') {
-      const relevantCode = await retrieveRelevantCode(lastUserMessage);
-      if (relevantCode.length > 0) {
-        retrievedContext = `
----
-Here is some relevant code from our knowledge base that might help:
-${relevantCode.join('\n---\n')}
----
-`;
-      }
-    }
-
-    const systemPrompt = toPrompt(template) + retrievedContext;
+    const systemPrompt = toPrompt(template);
 
     const stream = await streamObject({
       model: modelClient as LanguageModel,

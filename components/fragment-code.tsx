@@ -7,18 +7,55 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { Download, FileText } from 'lucide-react'
-import { useState } from 'react'
+import { Download } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { FileTree, FileSystemNode } from './file-tree'
+import { ScrollArea } from './ui/scroll-area'
 
-export function FragmentCode({
-  files,
-}: {
-  files: { name: string; content: string }[]
-}) {
-  const [currentFile, setCurrentFile] = useState(files[0].name)
-  const currentFileContent = files.find(
-    (file) => file.name === currentFile,
-  )?.content
+export function FragmentCode() {
+  const [fileTree, setFileTree] = useState<FileSystemNode[]>([])
+  const [selectedFile, setSelectedFile] = useState<string | null>(null)
+  const [code, setCode] = useState('')
+
+  useEffect(() => {
+    async function fetchFileTree() {
+      try {
+        const response = await fetch('/api/files')
+        const data = await response.json()
+        setFileTree(data)
+      } catch (error) {
+        console.error('Error fetching file tree:', error)
+      }
+    }
+    fetchFileTree()
+  }, [])
+
+  async function handleSelectFile(path: string) {
+    try {
+      const response = await fetch(`/api/files/content?path=${path}`)
+      const content = await response.text()
+      setCode(content)
+      setSelectedFile(path)
+    } catch (error) {
+      console.error('Error fetching file content:', error)
+    }
+  }
+
+  async function handleSave(content: string) {
+    if (!selectedFile) return
+
+    try {
+      await fetch('/api/files/content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ path: selectedFile, content }),
+      })
+    } catch (error) {
+      console.error('Error saving file:', error)
+    }
+  }
 
   function download(filename: string, content: string) {
     const blob = new Blob([content], { type: 'text/plain' })
@@ -34,57 +71,45 @@ export function FragmentCode({
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center px-2 pt-1 gap-2">
-        <div className="flex flex-1 gap-2 overflow-x-auto">
-          {files.map((file) => (
-            <div
-              key={file.name}
-              className={`flex gap-2 select-none cursor-pointer items-center text-sm text-muted-foreground px-2 py-1 rounded-md hover:bg-muted border ${
-                file.name === currentFile ? 'bg-muted border-muted' : ''
-              }`}
-              onClick={() => setCurrentFile(file.name)}
-            >
-              <FileText className="h-4 w-4" />
-              {file.name}
-            </div>
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          <TooltipProvider>
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <CopyButton
-                  content={currentFileContent || ''}
-                  className="text-muted-foreground"
-                />
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Copy</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground"
-                  onClick={() =>
-                    download(currentFile, currentFileContent || '')
-                  }
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Download</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </div>
+    <div className="flex h-full">
+      <ScrollArea className="w-1/4 border-r">
+        <FileTree files={fileTree} onSelectFile={handleSelectFile} />
+      </ScrollArea>
       <div className="flex flex-col flex-1 overflow-x-auto">
+        {selectedFile && (
+          <div className="flex items-center justify-end px-2 pt-1 gap-2">
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <CopyButton
+                    content={code}
+                    className="text-muted-foreground"
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Copy</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground"
+                    onClick={() => download(selectedFile, code)}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Download</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
         <CodeView
-          code={currentFileContent || ''}
-          lang={currentFile.split('.').pop() || ''}
+          code={code}
+          lang={selectedFile?.split('.').pop() || ''}
+          onSave={handleSave}
         />
       </div>
     </div>
