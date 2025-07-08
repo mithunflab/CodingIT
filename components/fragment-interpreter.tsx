@@ -1,8 +1,10 @@
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import { ExecutionResultInterpreter } from '@/lib/types'
 import { Result as CellResultData } from '@e2b/code-interpreter'
-import { Terminal } from 'lucide-react'
+import { Terminal, PlayIcon, LoaderIcon } from 'lucide-react'
 import Image from 'next/image'
+import { useState } from 'react'
 
 function CellResult({ result }: { result: CellResultData }) {
   // Order of checks is important
@@ -92,46 +94,54 @@ function LogsOutput({
 
 export function FragmentInterpreter({
   result,
+  code,
+  executeCode,
 }: {
   result: ExecutionResultInterpreter
+  code: string
+  executeCode: (code: string) => Promise<void>
 }) {
-  const { cellResults, stdout, stderr, runtimeError } = result
+  const [isLoading, setIsLoading] = useState(false)
+  const { cellResults, stdout, stderr, runtimeError } = result || {}
 
-  // The AI-generated code experienced runtime error
-  if (runtimeError) {
-    const { name, value, traceback } = runtimeError
-    return (
-      <div className="p-4">
-        <Alert variant="destructive">
-          <Terminal className="h-4 w-4" />
-          <AlertTitle>
-            {name}: {value}
-          </AlertTitle>
-          <AlertDescription className="font-mono whitespace-pre-wrap">
-            {traceback}
-          </AlertDescription>
-        </Alert>
+  const handleExecute = async () => {
+    setIsLoading(true)
+    await executeCode(code)
+    setIsLoading(false)
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="w-full flex-1 p-4 flex flex-col items-start justify-center border-b space-y-4">
+        {cellResults && cellResults.length > 0 && cellResults.map((cellResult, index) => (
+          <CellResult key={index} result={cellResult} />
+        ))}
+        {runtimeError && (
+          <Alert variant="destructive">
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>
+              {runtimeError.name}: {runtimeError.value}
+            </AlertTitle>
+            <AlertDescription className="font-mono whitespace-pre-wrap">
+              {runtimeError.traceback}
+            </AlertDescription>
+          </Alert>
+        )}
+        {(!cellResults || cellResults.length === 0) && !runtimeError && (
+          <span>No output or logs</span>
+        )}
       </div>
-    )
-  }
-
-  if (cellResults.length > 0) {
-    return (
-      <div className="flex flex-col h-full">
-        <div className="w-full flex-1 p-4 flex flex-col items-start justify-center border-b space-y-4">
-          {cellResults.map((cellResult, index) => (
-            <CellResult key={index} result={cellResult} />
-          ))}
-        </div>
-        <LogsOutput stdout={stdout} stderr={stderr} />
+      <LogsOutput stdout={stdout || []} stderr={stderr || []} />
+      <div className="p-4 border-t">
+        <Button onClick={handleExecute} disabled={isLoading}>
+          {isLoading ? (
+            <LoaderIcon className="animate-spin mr-2" />
+          ) : (
+            <PlayIcon className="mr-2" />
+          )}
+          Execute
+        </Button>
       </div>
-    )
-  }
-
-  // No cell results, but there is stdout or stderr
-  if (stdout.length > 0 || stderr.length > 0) {
-    return <LogsOutput stdout={stdout} stderr={stderr} />
-  }
-
-  return <span>No output or logs</span>
+    </div>
+  )
 }

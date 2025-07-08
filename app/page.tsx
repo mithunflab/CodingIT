@@ -24,6 +24,7 @@ import { experimental_useObject as useObject } from 'ai/react'
 import { usePostHog } from 'posthog-js/react'
 import { SetStateAction, useCallback, useEffect, useState } from 'react'
 import { useLocalStorage } from 'usehooks-ts'
+import { useEnhancedChat } from '@/hooks/use-enhanced-chat'
 
 export default function Home() {
   const supabase = createBrowserClient()
@@ -53,6 +54,14 @@ export default function Home() {
   const [isLoadingProject, setIsLoadingProject] = useState(false)
 
   const { session, userTeam } = useAuth(setAuthDialog, setAuthView)
+
+  const { executeCode } = useEnhancedChat({
+    userID: session?.user?.id,
+    teamID: userTeam?.id,
+    template: templates,
+    model: modelsList.models.find(m => m.id === languageModel.model)!,
+    config: languageModel,
+  })
 
   const handleChatSelected = async (chatId: string) => {
     const project = await getProject(chatId);
@@ -369,6 +378,7 @@ export default function Home() {
               messages={messages}
               isLoading={isLoading}
               setCurrentPreview={setCurrentPreview}
+              executeCode={executeCode}
             />
           )}
           

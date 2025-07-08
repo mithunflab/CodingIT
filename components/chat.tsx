@@ -1,15 +1,17 @@
 import { Message } from '@/lib/messages'
 import { FragmentSchema } from '@/lib/schema'
-import { ExecutionResult } from '@/lib/types'
+import { ExecutionResult, ExecutionResultInterpreter } from '@/lib/types'
 import { DeepPartial } from 'ai'
 import { LoaderIcon, Terminal } from 'lucide-react'
 import Image from 'next/image'
 import { useEffect } from 'react'
+import { FragmentInterpreter } from './fragment-interpreter'
 
 export function Chat({
   messages,
   isLoading,
   setCurrentPreview,
+  executeCode,
 }: {
   messages: Message[]
   isLoading: boolean
@@ -17,6 +19,7 @@ export function Chat({
     fragment: DeepPartial<FragmentSchema> | undefined
     result: ExecutionResult | undefined
   }) => void
+  executeCode: (code: string) => Promise<void>
 }) {
   const messagesString = JSON.stringify(messages)
   useEffect(() => {
@@ -53,7 +56,7 @@ export function Chat({
               )
             }
           })}
-          {message.object && (
+          {message.object && message.object.template !== 'code-interpreter-v1' && (
             <div
               onClick={() =>
                 setCurrentPreview({
@@ -75,6 +78,13 @@ export function Chat({
                 </span>
               </div>
             </div>
+          )}
+          {message.object && message.object.template === 'code-interpreter-v1' && (
+            <FragmentInterpreter
+              result={message.result as ExecutionResultInterpreter}
+              code={message.object.code || ''}
+              executeCode={executeCode}
+            />
           )}
         </div>
       ))}

@@ -23,6 +23,7 @@ interface EnhancedChatConfig {
 
 export function useEnhancedChat(chatConfig: EnhancedChatConfig) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isExecuting, setIsExecuting] = useState(false)
   const [context, setContext] = useState({
     cwd: '/home/project',
     projectFiles: [] as string[],
@@ -31,7 +32,7 @@ export function useEnhancedChat(chatConfig: EnhancedChatConfig) {
     supabase: undefined as any
   })
 
-  const { messages, input, setInput, append, isLoading, stop, error } = useChat({
+  const { messages, input, setInput, append, isLoading, stop, error, setMessages } = useChat({
     api: '/api/chat',
     body: {
       userID: chatConfig.userID,
@@ -100,6 +101,48 @@ export function useEnhancedChat(chatConfig: EnhancedChatConfig) {
     }))
   }, [])
 
+  const executeCode = useCallback(
+    async (code: string) => {
+      if (isExecuting) return
+      setIsExecuting(true)
+
+      try {
+        const response = await fetch('/api/code/execute', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sessionID: chatConfig.userID,
+            code,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to execute code')
+        }
+
+        const result = await response.json()
+        
+        const lastMessage = messages[messages.length - 1]
+        if (lastMessage) {
+          const updatedMessage = {
+            ...lastMessage,
+            result: result,
+          }
+          setMessages([...messages.slice(0, -1), updatedMessage])
+        }
+
+      } catch (error: any) {
+        trackError(error.message)
+      } finally {
+        setIsExecuting(false)
+      }
+    },
+    [isExecuting, chatConfig.userID, trackError, messages, setMessages],
+  )
+
   useEffect(() => {
     if (error) {
       trackError(error.message)
@@ -111,11 +154,12 @@ export function useEnhancedChat(chatConfig: EnhancedChatConfig) {
     input,
     setInput,
     submitMessage,
-    isLoading: isLoading || isSubmitting,
+    isLoading: isLoading || isSubmitting || isExecuting,
     stop,
     error,
     context,
     updateContext,
-    trackError
+    trackError,
+    executeCode,
   }
 }
