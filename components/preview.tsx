@@ -26,6 +26,8 @@ export function Preview({
   fragment,
   result,
   onClose,
+  code,
+  executeCode,
 }: {
   teamID: string | undefined
   accessToken: string | undefined
@@ -36,6 +38,8 @@ export function Preview({
   fragment?: DeepPartial<FragmentSchema>
   result?: ExecutionResult
   onClose: () => void
+  code: string
+  executeCode: (code: string) => Promise<void>
 }) {
   if (!fragment) {
     return null
@@ -125,7 +129,13 @@ export function Preview({
               <FragmentCode />
             </TabsContent>
             <TabsContent value="fragment" className="h-full">
-              {result && <FragmentPreview result={result as ExecutionResult} />}
+              {result && (
+                <FragmentPreview
+                  result={result as ExecutionResult}
+                  code={code}
+                  executeCode={executeCode}
+                />
+              )}
             </TabsContent>
             <TabsContent value="terminal" className="h-full">
               {result && (

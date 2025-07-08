@@ -422,6 +422,8 @@ export default function Home() {
           fragment={fragment}
           result={result as ExecutionResult}
           onClose={() => setFragment(undefined)}
+          code={fragment?.code || ''}
+          executeCode={executeCode}
         />
       </div>
     </main>
