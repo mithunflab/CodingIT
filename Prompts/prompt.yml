@@ -1,0 +1,1293 @@
+- name: Create a Landing Page
+  description: Generates a landing page based on business details.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.7
+    max_tokens: 4000
+  messages:
+    - role: system
+      content: You are a web developer specializing in creating modern, responsive landing pages. Focus on clean code, accessibility, and conversion optimization.
+    - role: user
+      content: |
+        Create a production-ready landing page for a {{business_type}} named {{business_name}} targeting {{target_audience}}. The primary call-to-action is "{{primary_action}}". Highlight these features: {{key_features}}. Use a {{color_scheme}} color scheme.
+        
+        Requirements:
+        - Responsive design (mobile-first)
+        - Modern CSS/HTML structure
+        - SEO optimized
+        - Fast loading
+        - Accessibility compliant
+  testData:
+    - input: |
+        {
+          "business_name": "Innovate Inc.",
+          "business_type": "SaaS",
+          "primary_action": "Get Started",
+          "target_audience": "startups",
+          "key_features": ["AI-powered analytics", "Seamless integration"],
+          "color_scheme": "modern-blue",
+          "model": "gpt-4o"
+        }
+      expected: A landing page for Innovate Inc. with a clear "Get Started" button.
+  evaluators:
+    - name: Output should contain business name
+      string:
+        contains: 'Innovate Inc.'
+  supportedModels:
+    - gpt-4o
+    - gpt-4o-mini
+    - claude-sonnet-4-20250514
+    - claude-3-5-sonnet-latest
+    - gemini-2.0-flash
+    - o1
+    - o1-mini
+
+- name: Build a Dashboard
+  description: Constructs a data visualization dashboard with real-time capabilities.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.6
+    max_tokens: 6000
+  messages:
+    - role: system
+      content: You are a data visualization expert who builds comprehensive, interactive dashboards. Focus on performance, user experience, and data accuracy.
+    - role: user
+      content: |
+        Build a {{dashboard_type}} dashboard. It should display {{data_sources}} using {{chart_types}}. The dashboard should support {{#if real_time}}real-time updates{{else}}batch updates{{/if}}. User roles are {{user_roles}}, and available filters are {{filters}}.
+        
+        Requirements:
+        - Interactive charts and visualizations
+        - Responsive design
+        - Role-based access control
+        - Export functionality
+        - Performance optimized for large datasets
+  testData:
+    - input: |
+        {
+          "dashboard_type": "analytics",
+          "data_sources": ["user metrics", "sales data"],
+          "chart_types": ["line", "bar"],
+          "real_time": true,
+          "user_roles": ["admin", "viewer"],
+          "filters": ["date range"],
+          "model": "claude-sonnet-4-20250514"
+        }
+      expected: An analytics dashboard with line and bar charts for user metrics and sales data.
+  evaluators:
+    - name: Output should mention dashboard type
+      string:
+        contains: 'analytics'
+  supportedModels:
+    - claude-sonnet-4-20250514
+    - claude-3-5-sonnet-latest
+    - gpt-4o
+    - gemini-2.0-flash
+    - o1
+
+- name: Create a Data Analysis Tool
+  description: Develops a comprehensive tool for data analysis and visualization.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.5
+    max_tokens: 8000
+  messages:
+    - role: system
+      content: You are a data scientist who creates sophisticated data analysis tools. Focus on statistical accuracy, algorithm implementation, and user-friendly interfaces.
+    - role: user
+      content: |
+        Create a tool for {{analysis_type}} analysis. It should accept {{data_format}} and produce {{output_format}}. Include these algorithms: {{algorithms}}. The tool should be {{#if interactive}}interactive{{else}}non-interactive{{/if}} and offer these export options: {{export_options}}.
+        
+        Requirements:
+        - Statistical accuracy and validation
+        - Multiple algorithm implementations
+        - Error handling and data validation
+        - Performance optimization
+        - Comprehensive documentation
+  testData:
+    - input: |
+        {
+          "analysis_type": "statistical",
+          "data_format": "csv",
+          "output_format": "charts",
+          "algorithms": ["regression"],
+          "interactive": true,
+          "export_options": ["png"],
+          "model": "o1"
+        }
+      expected: A statistical analysis tool that processes CSV files and generates charts.
+  evaluators:
+    - name: Output should specify analysis type
+      string:
+        contains: 'statistical'
+  supportedModels:
+    - o1
+    - claude-sonnet-4-20250514
+    - gpt-4o
+    - gemini-2.5-pro
+    - claude-opus-4-20250514
+
+- name: Build an E-commerce Store
+  description: Creates a full-featured online store for selling products or services.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.7
+    max_tokens: 8000
+  messages:
+    - role: system
+      content: You are an e-commerce developer specializing in secure, scalable online stores. Focus on user experience, security, and conversion optimization.
+    - role: user
+      content: |
+        Build an e-commerce store for {{store_type}}. Integrate {{payment_methods}}. The store will have these categories: {{product_categories}}. Include these features: {{features}}. Shipping options are {{shipping_options}}. The design style should be {{design_style}}.
+        
+        Requirements:
+        - Secure payment processing
+        - Inventory management
+        - Order tracking
+        - Mobile optimization
+        - SEO optimization
+        - Admin dashboard
+  testData:
+    - input: |
+        {
+          "store_type": "physical-products",
+          "payment_methods": ["stripe"],
+          "product_categories": ["apparel"],
+          "features": ["cart", "reviews"],
+          "shipping_options": ["standard"],
+          "design_style": "modern",
+          "model": "gpt-4o"
+        }
+      expected: An e-commerce store for physical products with Stripe integration.
+  evaluators:
+    - name: Output should include store type
+      string:
+        contains: 'physical-products'
+  supportedModels:
+    - gpt-4o
+    - gpt-4o-mini
+    - claude-sonnet-4-20250514
+    - gemini-2.0-flash
+    - o1
+
+- name: Create a Portfolio Website
+  description: Generates a professional portfolio website with modern design.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.6
+    max_tokens: 5000
+  messages:
+    - role: system
+      content: You are a web designer who creates stunning, professional portfolio websites. Focus on visual appeal, performance, and showcasing work effectively.
+    - role: user
+      content: |
+        Create a portfolio for a {{portfolio_type}}. It should have these sections: {{sections}}. Display projects in a {{project_display}} format. Include these contact methods: {{contact_methods}}. The site should {{#if animations}}include animations{{else}}be static{{/if}} and {{#if dark_mode}}have a dark mode{{else}}not have a dark mode{{/if}}.
+        
+        Requirements:
+        - Modern, professional design
+        - Fast loading and optimized images
+        - SEO optimized
+        - Responsive across all devices
+        - Clean, maintainable code
+  testData:
+    - input: |
+        {
+          "portfolio_type": "developer",
+          "sections": ["about", "projects"],
+          "project_display": "grid",
+          "contact_methods": ["email"],
+          "animations": true,
+          "dark_mode": true,
+          "model": "claude-3-5-sonnet-latest"
+        }
+      expected: A developer portfolio with a project grid and dark mode.
+  evaluators:
+    - name: Output should specify portfolio type
+      string:
+        contains: 'developer'
+  supportedModels:
+    - claude-3-5-sonnet-latest
+    - claude-sonnet-4-20250514
+    - gpt-4o
+    - gemini-2.0-flash
+
+- name: Build a Blog Platform
+  description: Creates a comprehensive platform for publishing and managing blog content.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.6
+    max_tokens: 7000
+  messages:
+    - role: system
+      content: You are a full-stack developer specializing in content management systems and blog platforms. Focus on performance, SEO, and user experience.
+    - role: user
+      content: |
+        Build a {{blog_type}} blog. It should have these content features: {{content_features}} and engagement features: {{engagement_features}}. Monetization options are {{monetization}}. The platform should be {{#if seo_optimized}}SEO-optimized{{else}}not SEO-optimized{{/if}} and have a {{#if responsive_design}}responsive design{{else}}fixed-width design{{/if}}.
+        
+        Requirements:
+        - Content management system
+        - User authentication and roles
+        - Comment moderation
+        - Social media integration
+        - Analytics integration
+        - Performance optimization
+  testData:
+    - input: |
+        {
+          "blog_type": "tech",
+          "content_features": ["markdown", "code-highlighting"],
+          "engagement_features": ["comments", "tags"],
+          "monetization": ["ads"],
+          "seo_optimized": true,
+          "responsive_design": true,
+          "model": "gpt-4o"
+        }
+      expected: A tech blog with markdown support and comments.
+  evaluators:
+    - name: Output should include blog type
+      string:
+        contains: 'tech'
+  supportedModels:
+    - gpt-4o
+    - claude-sonnet-4-20250514
+    - gemini-2.0-flash
+    - o1
+
+- name: Create a Chat Application
+  description: Develops a secure, real-time chat application with modern features.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.5
+    max_tokens: 8000
+  messages:
+    - role: system
+      content: You are a software engineer who builds secure, scalable chat applications. Focus on real-time performance, security, and user experience.
+    - role: user
+      content: |
+        Create a {{chat_type}} application with these features: {{features}}. Use {{authentication}} for authentication. Include these message features: {{message_features}}. The chat should {{#if encryption}}be end-to-end encrypted{{else}}not be encrypted{{/if}} and {{#if offline_support}}support offline mode{{else}}require an internet connection{{/if}}.
+        
+        Requirements:
+        - Real-time messaging
+        - Secure authentication
+        - Message persistence
+        - File sharing capabilities
+        - Push notifications
+        - Scalable architecture
+  testData:
+    - input: |
+        {
+          "chat_type": "team-collaboration",
+          "features": ["real-time", "file-sharing"],
+          "authentication": "email",
+          "message_features": ["threads", "reactions"],
+          "encryption": true,
+          "offline_support": true,
+          "model": "claude-sonnet-4-20250514"
+        }
+      expected: A team collaboration chat app with file sharing and E2E encryption.
+  evaluators:
+    - name: Output should specify chat type
+      string:
+        contains: 'team-collaboration'
+  supportedModels:
+    - claude-sonnet-4-20250514
+    - claude-3-5-sonnet-latest
+    - gpt-4o
+    - o1
+    - gemini-2.0-flash
+
+- name: Build a Task Management App
+  description: Creates a comprehensive application for managing tasks and projects.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.6
+    max_tokens: 7000
+  messages:
+    - role: system
+      content: You are a product developer who creates intuitive, powerful task management applications. Focus on productivity, collaboration, and workflow optimization.
+    - role: user
+      content: |
+        Build a {{app_scope}} task management app. It should have these task features: {{task_features}} and collaboration features: {{collaboration}}. Provide these views: {{views}}. Integrate with {{integrations}}. The app should {{#if reporting}}include reporting{{else}}not include reporting{{/if}}.
+        
+        Requirements:
+        - Intuitive drag-and-drop interface
+        - Real-time collaboration
+        - Notification system
+        - Time tracking
+        - Project templates
+        - Mobile responsiveness
+  testData:
+    - input: |
+        {
+          "app_scope": "project-management",
+          "task_features": ["due-dates", "subtasks"],
+          "collaboration": ["comments", "assignments"],
+          "views": ["kanban", "calendar"],
+          "integrations": ["github"],
+          "reporting": true,
+          "model": "gpt-4o"
+        }
+      expected: A project management app with Kanban and calendar views.
+  evaluators:
+    - name: Output should include app scope
+      string:
+        contains: 'project-management'
+  supportedModels:
+    - gpt-4o
+    - claude-sonnet-4-20250514
+    - gemini-2.0-flash
+    - o1
+
+- name: Create a Machine Learning Model Interface
+  description: Develops a sophisticated user interface for interacting with ML models.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.5
+    max_tokens: 8000
+  messages:
+    - role: system
+      content: You are an MLOps engineer who builds production-grade interfaces for machine learning models. Focus on model performance, user experience, and scalability.
+    - role: user
+      content: |
+        Create an interface for a {{model_type}} model. Input method is {{input_method}}, and output is displayed as {{output_display}}. Include these settings: {{model_settings}}. Preprocessing steps are: {{preprocessing}}. The interface should support {{#if real_time}}real-time inference{{else}}batch inference{{/if}}.
+        
+        Requirements:
+        - Model performance monitoring
+        - Input validation and preprocessing
+        - Error handling and fallbacks
+        - Batch processing capabilities
+        - Model versioning support
+        - Comprehensive logging
+  testData:
+    - input: |
+        {
+          "model_type": "image-classification",
+          "input_method": "file-upload",
+          "output_display": "text",
+          "model_settings": ["confidence-threshold"],
+          "preprocessing": ["resize"],
+          "real_time": true,
+          "model": "o1"
+        }
+      expected: An interface for an image classification model with file upload.
+  evaluators:
+    - name: Output should specify model type
+      string:
+        contains: 'image-classification'
+  supportedModels:
+    - o1
+    - claude-sonnet-4-20250514
+    - claude-opus-4-20250514
+    - gemini-2.5-pro
+    - gpt-4o
+
+- name: Build a Social Media Feed
+  description: Creates an engaging feed for a social media platform with advanced features.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.7
+    max_tokens: 7000
+  messages:
+    - role: system
+      content: You are a software engineer specializing in social media platforms. Focus on user engagement, content discovery, and scalable architecture.
+    - role: user
+      content: |
+        Build a feed for a {{platform_type}} platform. Users can create these post types: {{post_types}}. Include these interaction features: {{interaction_features}}. The feed algorithm is {{feed_algorithm}}. Provide these privacy settings: {{privacy_settings}}. The platform should {{#if moderation}}include content moderation{{else}}not include moderation{{/if}}.
+        
+        Requirements:
+        - Infinite scroll functionality
+        - Content recommendation engine
+        - Real-time updates
+        - Media optimization
+        - Advanced search and filtering
+        - Analytics and insights
+  testData:
+    - input: |
+        {
+          "platform_type": "content-creator",
+          "post_types": ["video", "image"],
+          "interaction_features": ["likes", "comments"],
+          "feed_algorithm": "engagement-based",
+          "privacy_settings": ["public"],
+          "moderation": true,
+          "model": "claude-3-5-sonnet-latest"
+        }
+      expected: A social media feed for a content creator platform with an engagement-based algorithm.
+  evaluators:
+    - name: Output should include platform type
+      string:
+        contains: 'content-creator'
+  supportedModels:
+    - claude-3-5-sonnet-latest
+    - claude-sonnet-4-20250514
+    - gpt-4o
+    - gemini-2.0-flash
+
+- name: Create a Weather Application
+  description: Develops a comprehensive weather application with advanced forecasting.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.6
+    max_tokens: 5000
+  messages:
+    - role: system
+      content: You are a mobile developer who creates intuitive, feature-rich weather applications. Focus on accurate data presentation, user experience, and performance.
+    - role: user
+      content: |
+        Create a weather app that shows {{data_scope}} data. It should have these location features: {{location_features}}. Include these visualizations: {{visualizations}}. Support these units: {{units}}. The app should {{#if notifications}}send notifications{{else}}not send notifications{{/if}} and {{#if offline_support}}work offline{{else}}require an internet connection{{/if}}.
+        
+        Requirements:
+        - Real-time weather data
+        - Location-based services
+        - Weather maps and radar
+        - Severe weather alerts
+        - Historical data tracking
+        - Widget support
+  testData:
+    - input: |
+        {
+          "data_scope": "forecast",
+          "location_features": ["search", "favorites"],
+          "visualizations": ["temperature-chart"],
+          "units": ["celsius"],
+          "notifications": true,
+          "offline_support": true,
+          "model": "gpt-4o-mini"
+        }
+      expected: A weather app with forecast data and temperature charts.
+  evaluators:
+    - name: Output should include data scope
+      string:
+        contains: 'forecast'
+  supportedModels:
+    - gpt-4o-mini
+    - gpt-4o
+    - claude-3-5-haiku-latest
+    - gemini-2.0-flash-lite
+    - claude-3-5-sonnet-latest
+
+- name: Build a REST API
+  description: Creates a robust, scalable REST API with comprehensive documentation.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.4
+    max_tokens: 8000
+  messages:
+    - role: system
+      content: You are a backend developer specializing in API design and development. Focus on security, performance, and developer experience.
+    - role: user
+      content: |
+        Build a REST API for {{api_purpose}}. It should have these endpoints: {{endpoints}}. Use {{database}} for data storage. Include {{authentication}} authentication. The API should support {{data_formats}} and have {{rate_limiting}} rate limiting. Documentation format is {{docs_format}}.
+        
+        Requirements:
+        - RESTful design principles
+        - Comprehensive error handling
+        - Input validation and sanitization
+        - Security best practices
+        - Performance optimization
+        - Automated testing
+  testData:
+    - input: |
+        {
+          "api_purpose": "user management",
+          "endpoints": ["users", "auth", "profiles"],
+          "database": "postgresql",
+          "authentication": "jwt",
+          "data_formats": ["json"],
+          "rate_limiting": "100/hour",
+          "docs_format": "openapi",
+          "model": "o1"
+        }
+      expected: A user management REST API with JWT authentication.
+  evaluators:
+    - name: Output should mention API purpose
+      string:
+        contains: 'user management'
+  supportedModels:
+    - o1
+    - claude-sonnet-4-20250514
+    - gpt-4o
+    - claude-opus-4-20250514
+    - gemini-2.5-pro
+
+- name: Create a Mobile App
+  description: Develops a cross-platform mobile application with native features.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.6
+    max_tokens: 8000
+  messages:
+    - role: system
+      content: You are a mobile developer specializing in cross-platform applications. Focus on performance, user experience, and platform-specific features.
+    - role: user
+      content: |
+        Create a {{app_type}} mobile app using {{framework}}. Include these features: {{features}}. Target platforms are {{platforms}}. The app should have {{navigation_type}} navigation and {{state_management}} for state management. Include {{offline_features}} offline capabilities.
+        
+        Requirements:
+        - Native performance optimization
+        - Platform-specific UI guidelines
+        - Push notifications
+        - Offline functionality
+        - App store optimization
+        - Comprehensive testing
+  testData:
+    - input: |
+        {
+          "app_type": "fitness-tracking",
+          "framework": "react-native",
+          "features": ["workout-logging", "progress-tracking"],
+          "platforms": ["ios", "android"],
+          "navigation_type": "tab",
+          "state_management": "redux",
+          "offline_features": ["data-sync"],
+          "model": "claude-sonnet-4-20250514"
+        }
+      expected: A fitness tracking mobile app with workout logging.
+  evaluators:
+    - name: Output should specify app type
+      string:
+        contains: 'fitness-tracking'
+  supportedModels:
+    - claude-sonnet-4-20250514
+    - claude-3-5-sonnet-latest
+    - gpt-4o
+    - gemini-2.0-flash
+    - o1
+
+- name: Build a Game
+  description: Creates an interactive game with engaging mechanics and graphics.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.7
+    max_tokens: 8000
+  messages:
+    - role: system
+      content: You are a game developer who creates engaging, interactive games. Focus on gameplay mechanics, user engagement, and performance optimization.
+    - role: user
+      content: |
+        Build a {{game_type}} game using {{game_engine}}. Include these mechanics: {{game_mechanics}}. The game should have {{graphics_style}} graphics and support {{multiplayer_type}} gameplay. Target platform is {{platform}}. Include {{monetization}} monetization features.
+        
+        Requirements:
+        - Smooth 60fps performance
+        - Intuitive controls
+        - Progressive difficulty
+        - Save/load functionality
+        - Sound and music integration
+        - Analytics and telemetry
+  testData:
+    - input: |
+        {
+          "game_type": "puzzle",
+          "game_engine": "javascript",
+          "game_mechanics": ["match-three", "power-ups"],
+          "graphics_style": "2d-cartoon",
+          "multiplayer_type": "single-player",
+          "platform": "web",
+          "monetization": ["ads"],
+          "model": "gpt-4o"
+        }
+      expected: A puzzle game with match-three mechanics.
+  evaluators:
+    - name: Output should specify game type
+      string:
+        contains: 'puzzle'
+  supportedModels:
+    - gpt-4o
+    - claude-sonnet-4-20250514
+    - gemini-2.0-flash
+    - claude-3-5-sonnet-latest
+
+- name: Create an Educational Platform
+  description: Builds a comprehensive learning management system for education.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.6
+    max_tokens: 8000
+  messages:
+    - role: system
+      content: You are an educational technology developer who creates effective learning platforms. Focus on pedagogy, accessibility, and student engagement.
+    - role: user
+      content: |
+        Create an educational platform for {{subject_area}}. Include these learning features: {{learning_features}}. Support {{user_types}} user types. Assessment methods are {{assessments}}. The platform should have {{content_delivery}} content delivery and {{progress_tracking}} progress tracking.
+        
+        Requirements:
+        - Adaptive learning paths
+        - Accessibility compliance
+        - Multi-media content support
+        - Real-time collaboration
+        - Comprehensive analytics
+        - Mobile responsiveness
+  testData:
+    - input: |
+        {
+          "subject_area": "programming",
+          "learning_features": ["interactive-coding", "video-tutorials"],
+          "user_types": ["students", "instructors"],
+          "assessments": ["quizzes", "projects"],
+          "content_delivery": "self-paced",
+          "progress_tracking": "detailed",
+          "model": "claude-3-5-sonnet-latest"
+        }
+      expected: A programming education platform with interactive coding.
+  evaluators:
+    - name: Output should mention subject area
+      string:
+        contains: 'programming'
+  supportedModels:
+    - claude-3-5-sonnet-latest
+    - claude-sonnet-4-20250514
+    - gpt-4o
+    - gemini-2.0-flash
+    - o1
+
+- name: Build a Real-time Collaboration Tool
+  description: Creates a platform for real-time team collaboration and productivity.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.5
+    max_tokens: 8000
+  messages:
+    - role: system
+      content: You are a software engineer specializing in real-time collaborative applications. Focus on synchronization, conflict resolution, and user experience.
+    - role: user
+      content: |
+        Build a real-time collaboration tool for {{collaboration_type}}. Include these features: {{features}}. Support {{file_types}} file types. The tool should have {{sync_method}} synchronization and {{conflict_resolution}} conflict resolution. Include {{communication_features}} communication features.
+        
+        Requirements:
+        - Real-time synchronization
+        - Operational transforms
+        - Offline capability
+        - Version history
+        - Permission management
+        - Cross-platform compatibility
+  testData:
+    - input: |
+        {
+          "collaboration_type": "document-editing",
+          "features": ["simultaneous-editing", "comments"],
+          "file_types": ["text", "markdown"],
+          "sync_method": "websocket",
+          "conflict_resolution": "automatic",
+          "communication_features": ["chat", "video-calls"],
+          "model": "claude-sonnet-4-20250514"
+        }
+      expected: A document editing collaboration tool with real-time sync.
+  evaluators:
+    - name: Output should specify collaboration type
+      string:
+        contains: 'document-editing'
+  supportedModels:
+    - claude-sonnet-4-20250514
+    - claude-3-5-sonnet-latest
+    - gpt-4o
+    - o1
+    - gemini-2.0-flash
+
+- name: Create an IoT Dashboard
+  description: Develops a dashboard for monitoring and controlling IoT devices.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.5
+    max_tokens: 7000
+  messages:
+    - role: system
+      content: You are an IoT developer who creates dashboards for device monitoring and control. Focus on real-time data, scalability, and user experience.
+    - role: user
+      content: |
+        Create an IoT dashboard for {{device_types}}. Display these metrics: {{metrics}}. Include {{control_features}} control features. The dashboard should support {{protocols}} protocols and have {{alerting}} alerting capabilities. Data storage uses {{data_storage}}.
+        
+        Requirements:
+        - Real-time data visualization
+        - Device status monitoring
+        - Remote control capabilities
+        - Historical data analysis
+        - Alert management
+        - Scalable architecture
+  testData:
+    - input: |
+        {
+          "device_types": ["sensors", "actuators"],
+          "metrics": ["temperature", "humidity"],
+          "control_features": ["remote-control", "scheduling"],
+          "protocols": ["mqtt", "http"],
+          "alerting": "email-sms",
+          "data_storage": "timeseries",
+          "model": "gpt-4o"
+        }
+      expected: An IoT dashboard for sensors and actuators with MQTT support.
+  evaluators:
+    - name: Output should include device types
+      string:
+        contains: 'sensors'
+  supportedModels:
+    - gpt-4o
+    - claude-sonnet-4-20250514
+    - gemini-2.0-flash
+    - o1
+
+- name: Build a Financial Trading Platform
+  description: Creates a sophisticated platform for financial trading and analysis.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.3
+    max_tokens: 9000
+  messages:
+    - role: system
+      content: You are a fintech developer specializing in trading platforms. Focus on security, performance, regulatory compliance, and real-time data processing.
+    - role: user
+      content: |
+        Build a trading platform for {{market_type}}. Include these trading features: {{trading_features}}. Support {{order_types}} order types. The platform should have {{analysis_tools}} analysis tools and {{risk_management}} risk management. Include {{data_feeds}} data feeds.
+        
+        Requirements:
+        - Ultra-low latency execution
+        - Regulatory compliance
+        - Risk management systems
+        - Real-time market data
+        - Advanced charting
+        - Audit trails
+  testData:
+    - input: |
+        {
+          "market_type": "cryptocurrency",
+          "trading_features": ["spot-trading", "margin-trading"],
+          "order_types": ["market", "limit", "stop"],
+          "analysis_tools": ["technical-indicators", "charts"],
+          "risk_management": ["position-limits", "stop-loss"],
+          "data_feeds": ["real-time-prices"],
+          "model": "o1"
+        }
+      expected: A cryptocurrency trading platform with margin trading.
+  evaluators:
+    - name: Output should specify market type
+      string:
+        contains: 'cryptocurrency'
+  supportedModels:
+    - o1
+    - claude-opus-4-20250514
+    - claude-sonnet-4-20250514
+    - gpt-4o
+    - gemini-2.5-pro
+
+- name: Create a Health & Fitness App
+  description: Develops a comprehensive health and fitness tracking application.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.6
+    max_tokens: 7000
+  messages:
+    - role: system
+      content: You are a health tech developer who creates apps for wellness and fitness. Focus on user motivation, data accuracy, and health privacy compliance.
+    - role: user
+      content: |
+        Create a health app that tracks {{health_metrics}}. Include these features: {{features}}. The app should have {{workout_types}} workout support and {{nutrition_tracking}} nutrition tracking. Include {{social_features}} social features and {{wearable_integration}} wearable integration.
+        
+        Requirements:
+        - HIPAA compliance
+        - Data privacy protection
+        - Accurate health calculations
+        - Motivational features
+        - Progress visualization
+        - Healthcare provider integration
+  testData:
+    - input: |
+        {
+          "health_metrics": ["steps", "heart-rate", "sleep"],
+          "features": ["goal-setting", "progress-tracking"],
+          "workout_types": ["cardio", "strength"],
+          "nutrition_tracking": "calorie-counting",
+          "social_features": ["challenges", "sharing"],
+          "wearable_integration": "fitness-trackers",
+          "model": "claude-3-5-sonnet-latest"
+        }
+      expected: A health app tracking steps, heart rate, and sleep.
+  evaluators:
+    - name: Output should include health metrics
+      string:
+        contains: 'steps'
+  supportedModels:
+    - claude-3-5-sonnet-latest
+    - claude-sonnet-4-20250514
+    - gpt-4o
+    - gemini-2.0-flash
+
+- name: Build an AI Assistant
+  description: Creates an intelligent conversational AI assistant with advanced capabilities.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.7
+    max_tokens: 8000
+  messages:
+    - role: system
+      content: You are an AI developer who creates intelligent conversational assistants. Focus on natural language understanding, context awareness, and helpful responses.
+    - role: user
+      content: |
+        Build an AI assistant for {{domain}}. Include these capabilities: {{capabilities}}. The assistant should support {{input_methods}} input methods and {{integration}} integrations. Personality should be {{personality_traits}} and include {{knowledge_areas}} knowledge areas.
+        
+        Requirements:
+        - Natural language processing
+        - Context awareness
+        - Multi-turn conversations
+        - Knowledge retrieval
+        - Task automation
+        - Privacy protection
+  testData:
+    - input: |
+        {
+          "domain": "customer-service",
+          "capabilities": ["question-answering", "task-automation"],
+          "input_methods": ["text", "voice"],
+          "integration": ["crm", "knowledge-base"],
+          "personality_traits": ["helpful", "professional"],
+          "knowledge_areas": ["product-info", "policies"],
+          "model": "claude-opus-4-20250514"
+        }
+      expected: A customer service AI assistant with CRM integration.
+  evaluators:
+    - name: Output should specify domain
+      string:
+        contains: 'customer-service'
+  supportedModels:
+    - claude-opus-4-20250514
+    - claude-sonnet-4-20250514
+    - gpt-4o
+    - o1
+    - gemini-2.5-pro
+
+- name: Create a Video Streaming Platform
+  description: Builds a scalable video streaming platform with advanced features.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.6
+    max_tokens: 8000
+  messages:
+    - role: system
+      content: You are a media technology developer specializing in video streaming platforms. Focus on scalability, quality, and user experience.
+    - role: user
+      content: |
+        Build a video streaming platform for {{content_type}}. Support {{video_quality}} video quality and {{streaming_protocols}} streaming protocols. Include these features: {{features}}. The platform should have {{monetization}} monetization and {{content_management}} content management.
+        
+        Requirements:
+        - Adaptive bitrate streaming
+        - CDN integration
+        - DRM protection
+        - Analytics and insights
+        - Multi-device support
+        - Live streaming capability
+  testData:
+    - input: |
+        {
+          "content_type": "educational-videos",
+          "video_quality": ["720p", "1080p"],
+          "streaming_protocols": ["hls", "dash"],
+          "features": ["playlists", "bookmarks"],
+          "monetization": "subscription",
+          "content_management": "creator-tools",
+          "model": "gpt-4o"
+        }
+      expected: An educational video streaming platform with HLS support.
+  evaluators:
+    - name: Output should specify content type
+      string:
+        contains: 'educational-videos'
+  supportedModels:
+    - gpt-4o
+    - claude-sonnet-4-20250514
+    - gemini-2.0-flash
+    - o1
+
+- name: Build a CRM System
+  description: Creates a comprehensive customer relationship management system.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.5
+    max_tokens: 8000
+  messages:
+    - role: system
+      content: You are a business software developer specializing in CRM systems. Focus on sales productivity, customer insights, and workflow automation.
+    - role: user
+      content: |
+        Build a CRM system for {{business_type}}. Include these modules: {{modules}}. Support {{sales_pipeline}} sales pipeline and {{automation_features}} automation. The system should have {{reporting}} reporting and {{integrations}} integrations.
+        
+        Requirements:
+        - Contact and lead management
+        - Sales pipeline tracking
+        - Email integration
+        - Reporting and analytics
+        - Mobile accessibility
+        - Data import/export
+  testData:
+    - input: |
+        {
+          "business_type": "b2b-services",
+          "modules": ["contacts", "deals", "tasks"],
+          "sales_pipeline": "customizable-stages",
+          "automation_features": ["email-sequences", "follow-ups"],
+          "reporting": "custom-dashboards",
+          "integrations": ["email", "calendar"],
+          "model": "claude-sonnet-4-20250514"
+        }
+      expected: A B2B services CRM with customizable sales pipeline.
+  evaluators:
+    - name: Output should specify business type
+      string:
+        contains: 'b2b-services'
+  supportedModels:
+    - claude-sonnet-4-20250514
+    - claude-3-5-sonnet-latest
+    - gpt-4o
+    - gemini-2.0-flash
+    - o1
+
+- name: Create a Marketplace Platform
+  description: Develops a multi-vendor marketplace with comprehensive features.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.6
+    max_tokens: 8000
+  messages:
+    - role: system
+      content: You are an e-commerce platform developer specializing in marketplace solutions. Focus on vendor management, transaction security, and user experience.
+    - role: user
+      content: |
+        Create a marketplace for {{marketplace_type}}. Support {{vendor_features}} vendor features and {{buyer_features}} buyer features. Include {{payment_processing}} payment processing and {{dispute_resolution}} dispute resolution. The platform should have {{search_discovery}} search and discovery.
+        
+        Requirements:
+        - Multi-vendor support
+        - Commission management
+        - Review and rating system
+        - Advanced search and filtering
+        - Mobile optimization
+        - Fraud prevention
+  testData:
+    - input: |
+        {
+          "marketplace_type": "digital-services",
+          "vendor_features": ["store-management", "analytics"],
+          "buyer_features": ["wishlist", "recommendations"],
+          "payment_processing": "escrow-system",
+          "dispute_resolution": "mediation-system",
+          "search_discovery": "ai-powered",
+          "model": "gpt-4o"
+        }
+      expected: A digital services marketplace with AI-powered search.
+  evaluators:
+    - name: Output should specify marketplace type
+      string:
+        contains: 'digital-services'
+  supportedModels:
+    - gpt-4o
+    - claude-sonnet-4-20250514
+    - gemini-2.0-flash
+    - o1
+
+- name: Build a Learning Management System
+  description: Creates a comprehensive LMS for online education and training.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.6
+    max_tokens: 8000
+  messages:
+    - role: system
+      content: You are an educational technology developer specializing in learning management systems. Focus on pedagogy, engagement, and learning outcomes.
+    - role: user
+      content: |
+        Build an LMS for {{education_type}}. Include these learning features: {{learning_features}}. Support {{content_types}} content types and {{assessment_methods}} assessment methods. The system should have {{progress_tracking}} progress tracking and {{collaboration_tools}} collaboration tools.
+        
+        Requirements:
+        - Course creation and management
+        - Student progress tracking
+        - Assessment and grading
+        - Discussion forums
+        - Certificate generation
+        - Mobile learning support
+  testData:
+    - input: |
+        {
+          "education_type": "corporate-training",
+          "learning_features": ["self-paced", "instructor-led"],
+          "content_types": ["video", "documents", "quizzes"],
+          "assessment_methods": ["tests", "assignments"],
+          "progress_tracking": "detailed-analytics",
+          "collaboration_tools": ["discussion-forums", "group-projects"],
+          "model": "claude-3-5-sonnet-latest"
+        }
+      expected: A corporate training LMS with detailed analytics.
+  evaluators:
+    - name: Output should specify education type
+      string:
+        contains: 'corporate-training'
+  supportedModels:
+    - claude-3-5-sonnet-latest
+    - claude-sonnet-4-20250514
+    - gpt-4o
+    - gemini-2.0-flash
+    - o1
+
+- name: Create an Event Management System
+  description: Builds a comprehensive platform for organizing and managing events.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.6
+    max_tokens: 7000
+  messages:
+    - role: system
+      content: You are an event technology developer who creates platforms for event management. Focus on user experience, scalability, and comprehensive feature sets.
+    - role: user
+      content: |
+        Create an event management system for {{event_types}}. Include these features: {{features}}. Support {{registration_types}} registration and {{payment_options}} payment options. The system should have {{communication_tools}} communication tools and {{analytics}} analytics.
+        
+        Requirements:
+        - Event creation and customization
+        - Attendee registration and management
+        - Payment processing
+        - Check-in and badge printing
+        - Event website generation
+        - Post-event analytics
+  testData:
+    - input: |
+        {
+          "event_types": ["conferences", "workshops"],
+          "features": ["ticketing", "scheduling"],
+          "registration_types": ["free", "paid"],
+          "payment_options": ["credit-card", "paypal"],
+          "communication_tools": ["email-campaigns", "notifications"],
+          "analytics": "attendance-tracking",
+          "model": "gpt-4o"
+        }
+      expected: A conference and workshop management system with ticketing.
+  evaluators:
+    - name: Output should include event types
+      string:
+        contains: 'conferences'
+  supportedModels:
+    - gpt-4o
+    - claude-sonnet-4-20250514
+    - gemini-2.0-flash
+    - claude-3-5-sonnet-latest
+
+- name: Build a Booking System
+  description: Creates a flexible booking and reservation management platform.
+  model: "{{model || 'allSupportedModels'}}"
+  modelParameters:
+    temperature: 0.6
+    max_tokens: 7000
+  messages:
+    - role: system
+      content: You are a software developer specializing in booking and reservation systems. Focus on availability management, user experience, and business operations.
+    - role: user
+      content: |
+        Build a booking system for {{service_type}}. Support {{booking_features}} booking features and {{scheduling_options}} scheduling options. Include {{payment_integration}} payment integration and {{notification_system}} notifications. The system should have {{calendar_management}} calendar management.
+        
+        Requirements:
+        - Real-time availability checking
+        - Automated confirmations
+        - Cancellation and rescheduling
+        - Resource management
+        - Customer communication
+        - Integration capabilities
+  testData:
+    - input: |
+        {
+          "service_type": "healthcare-appointments",
+          "booking_features": ["online-booking", "waitlist"],
+          "scheduling_options": ["recurring-appointments", "time-slots"],
+          "payment_integration": "stripe",
+          "notification_system": "email-sms",
+          "calendar_management": "provider-schedules",
+          "model": "claude-3-5-sonnet-latest"
+        }
+      expected: A healthcare appointment booking system with waitlist.
+  evaluators:
+    - name: Output should specify service type
+      string:
+        contains: 'healthcare-appointments'
+  supportedModels:
+    - claude-3-5-sonnet-latest
+    - claude-sonnet-4-20250514
+    - gpt-4o
+    - gemini-2.0-flash
+
+# All available models from codinit.dev
+allSupportedModels:
+  openai:
+    - o3
+    - o3-mini
+    - o4-mini
+    - gpt-4.1
+    - gpt-4.1-mini
+    - gpt-4.1-nano
+    - gpt-4.5-preview
+    - gpt-4o
+    - gpt-4o-mini
+    - o1
+    - o1-mini
+    - gpt-4-turbo
+  anthropic:
+    - claude-opus-4-20250514
+    - claude-sonnet-4-20250514
+    - claude-3-7-sonnet-latest
+    - claude-3-5-sonnet-latest
+    - claude-3-5-haiku-latest
+  google_generative:
+    - models/gemini-2.5-pro
+    - models/gemini-2.5-flash-lite-preview-06-17
+    - models/gemini-2.5-flash
+    - models/gemini-2.5-flash-preview-05-20
+    - models/gemini-2.5-pro-preview-05-06
+    - models/gemini-2.0-flash
+    - models/gemini-2.0-flash-lite
+    - models/gemini-1.5-pro
+    - models/gemini-1.5-flash
+  google_vertex:
+    - gemini-2.5-flash-preview-05-20
+    - gemini-2.5-pro-preview-05-06
+    - gemini-2.0-flash-001
+    - gemini-2.0-flash-lite-001
+    - gemini-1.5-pro-002
+    - gemini-1.5-flash-002
+  mistral:
+    - magistral-medium-latest
+    - magistral-small-latest
+    - mistral-large-latest
+    - mistral-small-latest
+  groq:
+    - llama-3.3-70b-versatile
+    - llama-3.2-90b-vision-preview
+    - llama-3.2-11b-vision-preview
+    - llama-3.2-3b-preview
+    - llama-3.2-1b-preview
+    - llama3-groq-70b-8192-tool-use-preview
+    - llama3-groq-8b-8192-tool-use-preview
+    - llama-3.1-70b-versatile
+    - llama-3.1-8b-instant
+    - mixtral-8x7b-32768
+    - gemma2-9b-it
+    - gemma-7b-it
+  fireworks:
+    - accounts/fireworks/models/llama-v3p3-70b-instruct
+    - accounts/fireworks/models/llama-v3p2-90b-vision-instruct
+    - accounts/fireworks/models/llama-v3p2-11b-vision-instruct
+    - accounts/fireworks/models/llama-v3p2-3b-instruct
+    - accounts/fireworks/models/llama-v3p2-1b-instruct
+    - accounts/fireworks/models/llama-v3p1-70b-instruct
+    - accounts/fireworks/models/llama-v3p1-8b-instruct
+    - accounts/fireworks/models/mixtral-8x7b-instruct
+    - accounts/fireworks/models/mixtral-8x22b-instruct
+    - accounts/fireworks/models/qwen2p5-72b-instruct
+  together:
+    - meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo
+    - meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo
+    - meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo
+    - meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo
+    - meta-llama/Llama-3.2-3B-Instruct-Turbo
+    - meta-llama/Llama-3.2-1B-Instruct-Turbo
+    - mistralai/Mixtral-8x7B-Instruct-v0.1
+    - mistralai/Mixtral-8x22B-Instruct-v0.1
+    - Qwen/Qwen2.5-72B-Instruct-Turbo
+  xai:
+    - grok-beta
+    - grok-vision-beta
+  deepseek:
+    - deepseek-chat
+    - deepseek-reasoner
+  ollama:
+    - llama3.2
+    - llama3.1
+    - mixtral
+    - gemma2
+    - qwen2.5
+    - codellama
+    - phi3
+
+# Model selection strategies based on optimization goals
+modelSelectionStrategies:
+  ultra_performance:
+    - o3
+    - claude-opus-4-20250514
+    - gpt-4.5-preview
+    - o1
+    - gemini-2.5-pro
+  performance_optimized:
+    - claude-sonnet-4-20250514
+    - gpt-4o
+    - claude-3-7-sonnet-latest
+    - gemini-2.0-flash-001
+    - o1-mini
+  balanced:
+    - claude-3-5-sonnet-latest
+    - gpt-4o-mini
+    - gemini-2.0-flash
+    - gpt-4.1
+    - mistral-large-latest
+  cost_optimized:
+    - claude-3-5-haiku-latest
+    - gpt-4.1-mini
+    - gemini-2.0-flash-lite
+    - gpt-4.1-nano
+    - magistral-small-latest
+  speed_optimized:
+    - claude-3-5-haiku-latest
+    - gpt-4.1-nano
+    - gemini-2.0-flash-lite-001
+    - llama-3.2-1b-preview
+    - gemma-7b-it
+  reasoning_optimized:
+    - o3
+    - o1
+    - claude-opus-4-20250514
+    - deepseek-reasoner
+    - grok-beta
+  vision_optimized:
+    - gpt-4o
+    - claude-sonnet-4-20250514
+    - gemini-2.0-flash
+    - llama-3.2-90b-vision-preview
+    - grok-vision-beta
+  coding_optimized:
+    - o1
+    - claude-sonnet-4-20250514
+    - gpt-4o
+    - codellama
+    - deepseek-chat
+  creative_optimized:
+    - claude-3-5-sonnet-latest
+    - gpt-4o
+    - llama-3.3-70b-versatile
+    - mixtral-8x22b-instruct
+    - qwen2p5-72b-instruct
+
+# Global model parameters that can be overridden per prompt
+globalModelParameters:
+  temperature: 0.7
+  max_tokens: 4000
+  top_p: 1.0
+  frequency_penalty: 0.0
+  presence_penalty: 0.0
+
+# Model capability matrix
+modelCapabilities:
+  multimodal:
+    - gpt-4o
+    - gpt-4o-mini
+    - claude-sonnet-4-20250514
+    - claude-opus-4-20250514
+    - gemini-2.0-flash
+    - gemini-2.5-pro
+    - llama-3.2-90b-vision-preview
+    - grok-vision-beta
+  reasoning:
+    - o3
+    - o1
+    - o1-mini
+    - claude-opus-4-20250514
+    - deepseek-reasoner
+  coding:
+    - o1
+    - claude-sonnet-4-20250514
+    - gpt-4o
+    - codellama
+    - deepseek-chat
+  large_context:
+    - claude-3-5-sonnet-latest
+    - claude-sonnet-4-20250514
+    - gemini-2.5-pro
+    - gpt-4-turbo
