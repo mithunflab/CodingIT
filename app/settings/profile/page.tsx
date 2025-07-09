@@ -22,7 +22,6 @@ import {
   getUserPreferences, 
   updateUserProfile, 
   updateUserPreferences,
-  UserProfile,
   UserPreferences
 } from '@/lib/user-settings'
 

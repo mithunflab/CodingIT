@@ -241,11 +241,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={onSelectAccount}
+            asChild
             className="h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Select Account"
+            aria-label="Join Waitlist"
           >
-            <User className="h-5 w-5" />
+            <a href="https://waitlist.codinit.dev" target="_blank" rel="noopener noreferrer">
+              <User className="h-5 w-5" />
+            </a>
           </Button>
           <Button
             variant="ghost"

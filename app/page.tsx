@@ -25,6 +25,7 @@ import { usePostHog } from 'posthog-js/react'
 import { SetStateAction, useCallback, useEffect, useState } from 'react'
 import { useLocalStorage } from 'usehooks-ts'
 import { useEnhancedChat } from '@/hooks/use-enhanced-chat'
+import { HeroPillSecond } from '@/components/announcement'
 
 export default function Home() {
   const supabase = createBrowserClient()
@@ -369,6 +370,10 @@ export default function Home() {
             onUndo={handleUndo}
           />
           
+          <div className="flex justify-center mb-4">
+            <HeroPillSecond />
+          </div>
+
           {isLoadingProject ? (
             <div className="flex items-center justify-center h-32">
               <div className="text-muted-foreground">Loading project...</div>
