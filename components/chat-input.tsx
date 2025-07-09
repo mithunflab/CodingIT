@@ -284,7 +284,7 @@ export function ChatInput({
       </div>
       <p className="text-xs text-muted-foreground mt-2 text-center">
         CodinIT.dev sponsored by{' '}
-        <a href="https://e2b.dev" target="_blank" className="text-[#ff8800]">
+        <a href="https://codinit.dev" target="_blank" className="text-[#ff8800]">
           ✶ E2B
         </a>
       </p>
