@@ -1,4 +1,5 @@
 import { DeployDialog } from './deploy-dialog'
+import { EnhancedCodeInterpreter } from './enhanced-code-interpreter'
 import { FragmentCode } from './fragment-code'
 import { FragmentPreview } from './fragment-preview'
 import { FragmentTerminal } from './fragment-terminal'
@@ -13,7 +14,7 @@ import {
 import { FragmentSchema } from '@/lib/schema'
 import { ExecutionResult } from '@/lib/types'
 import { DeepPartial } from 'ai'
-import { ChevronsRight, LoaderCircle, Terminal } from 'lucide-react'
+import { ChevronsRight, LoaderCircle, Terminal, CodeIcon } from 'lucide-react'
 import { Dispatch, SetStateAction } from 'react'
 
 export function Preview({
@@ -31,8 +32,8 @@ export function Preview({
 }: {
   teamID: string | undefined
   accessToken: string | undefined
-  selectedTab: 'code' | 'fragment' | 'terminal'
-  onSelectedTabChange: Dispatch<SetStateAction<'code' | 'fragment' | 'terminal'>>
+  selectedTab: 'code' | 'fragment' | 'terminal' | 'interpreter'
+  onSelectedTabChange: Dispatch<SetStateAction<'code' | 'fragment' | 'terminal' | 'interpreter'>>
   isChatLoading: boolean
   isPreviewLoading: boolean
   fragment?: DeepPartial<FragmentSchema>
@@ -53,7 +54,7 @@ export function Preview({
       <Tabs
         value={selectedTab}
         onValueChange={(value) =>
-          onSelectedTabChange(value as 'code' | 'fragment' | 'terminal')
+          onSelectedTabChange(value as 'code' | 'fragment' | 'terminal' | 'interpreter')
         }
         className="h-full flex flex-col items-start justify-start"
       >
@@ -101,6 +102,13 @@ export function Preview({
                 )}
               </TabsTrigger>
               <TabsTrigger
+                className="font-normal text-xs py-1 px-2 gap-1 flex items-center"
+                value="interpreter"
+              >
+                <CodeIcon className="h-3 w-3" />
+                Interpreter
+              </TabsTrigger>
+              <TabsTrigger
                 disabled={!isTerminalAvailable}
                 className="font-normal text-xs py-1 px-2 gap-1 flex items-center"
                 value="terminal"
@@ -136,6 +144,13 @@ export function Preview({
                   executeCode={executeCode}
                 />
               )}
+            </TabsContent>
+            <TabsContent value="interpreter" className="h-full">
+              <EnhancedCodeInterpreter
+                result={result && result.template === 'code-interpreter-v1' ? result : undefined}
+                code={code}
+                executeCode={executeCode}
+              />
             </TabsContent>
             <TabsContent value="terminal" className="h-full">
               {result && (
