@@ -102,6 +102,7 @@ export function Preview({
                 )}
               </TabsTrigger>
               <TabsTrigger
+                disabled={isPreviewLoading || !result || result.template !== 'code-interpreter-v1'}
                 className="font-normal text-xs py-1 px-2 gap-1 flex items-center"
                 value="interpreter"
               >
