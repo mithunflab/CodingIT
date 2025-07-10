@@ -210,8 +210,8 @@ function CodeCellComponent({
   const handleEditorDidMount = useCallback((editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
     monacoRef.current = editor
     
-    // Configure Python language support
-    monaco.languages.typescript.javascriptDefaults.setEagerModelSync(true)
+    // Configure Python language support (if needed)
+    // Add Python-specific settings here if supported by Monaco editor
   }, [])
 
   return (
