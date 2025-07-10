@@ -169,9 +169,13 @@ export default function IntegrationsSettings() {
           throw new Error('GitHub OAuth not configured. Please check environment variables.')
         }
 
+        const redirectUri = process.env.NEXT_PUBLIC_SITE_URL 
+          ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/github`
+          : `${window.location.origin}/api/auth/github`
+
         const config: GitHubOAuthConfig = {
           clientId: process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID,
-          redirectUri: `${window.location.origin}/api/auth/github`,
+          redirectUri: redirectUri,
           scopes: getGitHubScopes(),
         }
 
