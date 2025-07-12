@@ -55,7 +55,6 @@ export function FileTree({ files, onSelectFile, onCreateFile, onDeleteFile }: Fi
                 variant="ghost" 
                 size="icon" 
                 className="h-6 w-6"
-                onClick={() => setCreateType('file')}
               >
                 <Plus className="h-3 w-3" />
               </Button>
