@@ -112,6 +112,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   React.useEffect(() => {
     const supabase = createBrowserClient();
+    
+    // Skip authentication setup if Supabase is not available (development mode)
+    if (!supabase) {
+      return;
+    }
+    
     const fetchChatHistory = async () => {
       const projects = await getProjects();
       const history = projects.map((project: Project) => ({

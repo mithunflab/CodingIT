@@ -287,9 +287,11 @@ export default function Home() {
   }, [])
 
   function logout() {
-    supabase
-      ? supabase.auth.signOut()
-      : console.warn('Supabase is not initialized')
+    if (supabase) {
+      supabase.auth.signOut()
+    } else {
+      console.warn('Supabase is not initialized')
+    }
   }
 
   function handleLanguageModelChange(e: LLMModelConfig) {

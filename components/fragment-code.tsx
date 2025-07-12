@@ -57,6 +57,47 @@ export function FragmentCode() {
     }
   }
 
+  async function handleCreateFile(path: string, isDirectory: boolean) {
+    try {
+      // For directories, we just update the local state
+      // For files, we create an empty file
+      if (!isDirectory) {
+        await fetch('/api/files/content', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ path: `/${path}`, content: '' }),
+        })
+        // Refresh file tree
+        const response = await fetch('/api/files')
+        const data = await response.json()
+        setFileTree(data)
+      }
+    } catch (error) {
+      console.error('Error creating file:', error)
+    }
+  }
+
+  async function handleDeleteFile(path: string) {
+    try {
+      await fetch(`/api/files/content?path=${path}`, {
+        method: 'DELETE',
+      })
+      // Refresh file tree
+      const response = await fetch('/api/files')
+      const data = await response.json()
+      setFileTree(data)
+      // Clear editor if deleted file was selected
+      if (selectedFile === path) {
+        setSelectedFile(null)
+        setCode('')
+      }
+    } catch (error) {
+      console.error('Error deleting file:', error)
+    }
+  }
+
   function download(filename: string, content: string) {
     const blob = new Blob([content], { type: 'text/plain' })
     const url = window.URL.createObjectURL(blob)
@@ -73,7 +114,12 @@ export function FragmentCode() {
   return (
     <div className="flex h-full">
       <ScrollArea className="w-1/4 border-r">
-        <FileTree files={fileTree} onSelectFile={handleSelectFile} />
+        <FileTree 
+          files={fileTree} 
+          onSelectFile={handleSelectFile}
+          onCreateFile={handleCreateFile}
+          onDeleteFile={handleDeleteFile}
+        />
       </ScrollArea>
       <div className="flex flex-col flex-1 overflow-x-auto">
         {selectedFile && (
