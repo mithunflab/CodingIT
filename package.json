@@ -1,8 +1,9 @@
 {
-  "name": "codinit",
-  "version": "0.1.0",
+  "name": "codinit-app",
+  "version": "0.0.9",
   "private": true,
   "scripts": {
+    "postinstall": "patch-package",
     "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
@@ -46,6 +47,7 @@
     "ai": "latest",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "codinit": "1.0.1",
     "core-js": "^3.38.0",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.0",
@@ -76,6 +78,7 @@
     "@types/uuid": "^10.0.0",
     "eslint": "^8",
     "eslint-config-next": "14.2.4",
+    "patch-package": "^8.0.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.5.4"

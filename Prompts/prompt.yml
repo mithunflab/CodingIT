@@ -1,9 +1,112 @@
+# Define reusable model parameter sets using YAML anchors
+modelParameters_default: &default_model_parameters
+  temperature: 0.7
+  max_tokens: 4000
+
+modelParameters_dashboard: &dashboard_model_parameters
+  temperature: 0.6
+  max_tokens: 6000
+
+modelParameters_data_analysis: &data_analysis_model_parameters
+  temperature: 0.5
+  max_tokens: 8000
+
+modelParameters_ecommerce: &ecommerce_model_parameters
+  temperature: 0.7
+  max_tokens: 8000
+
+modelParameters_portfolio: &portfolio_model_parameters
+  temperature: 0.6
+  max_tokens: 5000
+
+modelParameters_blog: &blog_model_parameters
+  temperature: 0.6
+  max_tokens: 7000
+
+modelParameters_chat: &chat_model_parameters
+  temperature: 0.5
+  max_tokens: 8000
+
+modelParameters_task_management: &task_management_model_parameters
+  temperature: 0.6
+  max_tokens: 7000
+
+modelParameters_ml_interface: &ml_interface_model_parameters
+  temperature: 0.5
+  max_tokens: 8000
+
+modelParameters_social_media: &social_media_model_parameters
+  temperature: 0.7
+  max_tokens: 7000
+
+modelParameters_weather: &weather_model_parameters
+  temperature: 0.6
+  max_tokens: 5000
+
+modelParameters_rest_api: &rest_api_model_parameters
+  temperature: 0.4
+  max_tokens: 8000
+
+modelParameters_mobile_app: &mobile_app_model_parameters
+  temperature: 0.6
+  max_tokens: 8000
+
+modelParameters_game: &game_model_parameters
+  temperature: 0.7
+  max_tokens: 8000
+
+modelParameters_educational: &educational_model_parameters
+  temperature: 0.6
+  max_tokens: 8000
+
+modelParameters_collaboration: &collaboration_model_parameters
+  temperature: 0.5
+  max_tokens: 8000
+
+modelParameters_iot: &iot_model_parameters
+  temperature: 0.5
+  max_tokens: 7000
+
+modelParameters_financial: &financial_model_parameters
+  temperature: 0.3
+  max_tokens: 9000
+
+modelParameters_health: &health_model_parameters
+  temperature: 0.6
+  max_tokens: 7000
+
+modelParameters_ai_assistant: &ai_assistant_model_parameters
+  temperature: 0.7
+  max_tokens: 8000
+
+modelParameters_video_streaming: &video_streaming_model_parameters
+  temperature: 0.6
+  max_tokens: 8000
+
+modelParameters_crm: &crm_model_parameters
+  temperature: 0.5
+  max_tokens: 8000
+
+modelParameters_marketplace: &marketplace_model_parameters
+  temperature: 0.6
+  max_tokens: 8000
+
+modelParameters_lms: &lms_model_parameters
+  temperature: 0.6
+  max_tokens: 8000
+
+modelParameters_event: &event_model_parameters
+  temperature: 0.6
+  max_tokens: 7000
+
+modelParameters_booking: &booking_model_parameters
+  temperature: 0.6
+  max_tokens: 7000
+
 - name: Create a Landing Page
   description: Generates a landing page based on business details.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.7
-    max_tokens: 4000
+  model: "{{model || 'balanced'}}" # Using a strategy for model selection
+  modelParameters: *default_model_parameters
   messages:
     - role: system
       content: You are a web developer specializing in creating modern, responsive landing pages. Focus on clean code, accessibility, and conversion optimization.
@@ -33,21 +136,13 @@
     - name: Output should contain business name
       string:
         contains: 'Innovate Inc.'
-  supportedModels:
-    - gpt-4o
-    - gpt-4o-mini
-    - claude-sonnet-4-20250514
-    - claude-3-5-sonnet-latest
-    - gemini-2.0-flash
-    - o1
-    - o1-mini
+  # Supported models now reference a strategy, or can be explicitly listed if unique
+  supportedModels: *balanced # Example: Using a strategy
 
 - name: Build a Dashboard
   description: Constructs a data visualization dashboard with real-time capabilities.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.6
-    max_tokens: 6000
+  model: "{{model || 'performance_optimized'}}"
+  modelParameters: *dashboard_model_parameters
   messages:
     - role: system
       content: You are a data visualization expert who builds comprehensive, interactive dashboards. Focus on performance, user experience, and data accuracy.
@@ -77,19 +172,12 @@
     - name: Output should mention dashboard type
       string:
         contains: 'analytics'
-  supportedModels:
-    - claude-sonnet-4-20250514
-    - claude-3-5-sonnet-latest
-    - gpt-4o
-    - gemini-2.0-flash
-    - o1
+  supportedModels: *performance_optimized
 
 - name: Create a Data Analysis Tool
   description: Develops a comprehensive tool for data analysis and visualization.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.5
-    max_tokens: 8000
+  model: "{{model || 'reasoning_optimized'}}"
+  modelParameters: *data_analysis_model_parameters
   messages:
     - role: system
       content: You are a data scientist who creates sophisticated data analysis tools. Focus on statistical accuracy, algorithm implementation, and user-friendly interfaces.
@@ -119,19 +207,12 @@
     - name: Output should specify analysis type
       string:
         contains: 'statistical'
-  supportedModels:
-    - o1
-    - claude-sonnet-4-20250514
-    - gpt-4o
-    - gemini-2.5-pro
-    - claude-opus-4-20250514
+  supportedModels: *reasoning_optimized
 
 - name: Build an E-commerce Store
   description: Creates a full-featured online store for selling products or services.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.7
-    max_tokens: 8000
+  model: "{{model || 'performance_optimized'}}"
+  modelParameters: *ecommerce_model_parameters
   messages:
     - role: system
       content: You are an e-commerce developer specializing in secure, scalable online stores. Focus on user experience, security, and conversion optimization.
@@ -162,19 +243,12 @@
     - name: Output should include store type
       string:
         contains: 'physical-products'
-  supportedModels:
-    - gpt-4o
-    - gpt-4o-mini
-    - claude-sonnet-4-20250514
-    - gemini-2.0-flash
-    - o1
+  supportedModels: *performance_optimized
 
 - name: Create a Portfolio Website
   description: Generates a professional portfolio website with modern design.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.6
-    max_tokens: 5000
+  model: "{{model || 'balanced'}}"
+  modelParameters: *portfolio_model_parameters
   messages:
     - role: system
       content: You are a web designer who creates stunning, professional portfolio websites. Focus on visual appeal, performance, and showcasing work effectively.
@@ -204,18 +278,12 @@
     - name: Output should specify portfolio type
       string:
         contains: 'developer'
-  supportedModels:
-    - claude-3-5-sonnet-latest
-    - claude-sonnet-4-20250514
-    - gpt-4o
-    - gemini-2.0-flash
+  supportedModels: *balanced
 
 - name: Build a Blog Platform
   description: Creates a comprehensive platform for publishing and managing blog content.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.6
-    max_tokens: 7000
+  model: "{{model || 'balanced'}}"
+  modelParameters: *blog_model_parameters
   messages:
     - role: system
       content: You are a full-stack developer specializing in content management systems and blog platforms. Focus on performance, SEO, and user experience.
@@ -246,18 +314,12 @@
     - name: Output should include blog type
       string:
         contains: 'tech'
-  supportedModels:
-    - gpt-4o
-    - claude-sonnet-4-20250514
-    - gemini-2.0-flash
-    - o1
+  supportedModels: *balanced
 
 - name: Create a Chat Application
   description: Develops a secure, real-time chat application with modern features.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.5
-    max_tokens: 8000
+  model: "{{model || 'performance_optimized'}}"
+  modelParameters: *chat_model_parameters
   messages:
     - role: system
       content: You are a software engineer who builds secure, scalable chat applications. Focus on real-time performance, security, and user experience.
@@ -288,19 +350,12 @@
     - name: Output should specify chat type
       string:
         contains: 'team-collaboration'
-  supportedModels:
-    - claude-sonnet-4-20250514
-    - claude-3-5-sonnet-latest
-    - gpt-4o
-    - o1
-    - gemini-2.0-flash
+  supportedModels: *performance_optimized
 
 - name: Build a Task Management App
   description: Creates a comprehensive application for managing tasks and projects.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.6
-    max_tokens: 7000
+  model: "{{model || 'balanced'}}"
+  modelParameters: *task_management_model_parameters
   messages:
     - role: system
       content: You are a product developer who creates intuitive, powerful task management applications. Focus on productivity, collaboration, and workflow optimization.
@@ -331,18 +386,12 @@
     - name: Output should include app scope
       string:
         contains: 'project-management'
-  supportedModels:
-    - gpt-4o
-    - claude-sonnet-4-20250514
-    - gemini-2.0-flash
-    - o1
+  supportedModels: *balanced
 
 - name: Create a Machine Learning Model Interface
   description: Develops a sophisticated user interface for interacting with ML models.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.5
-    max_tokens: 8000
+  model: "{{model || 'reasoning_optimized'}}"
+  modelParameters: *ml_interface_model_parameters
   messages:
     - role: system
       content: You are an MLOps engineer who builds production-grade interfaces for machine learning models. Focus on model performance, user experience, and scalability.
@@ -373,19 +422,12 @@
     - name: Output should specify model type
       string:
         contains: 'image-classification'
-  supportedModels:
-    - o1
-    - claude-sonnet-4-20250514
-    - claude-opus-4-20250514
-    - gemini-2.5-pro
-    - gpt-4o
+  supportedModels: *reasoning_optimized
 
 - name: Build a Social Media Feed
   description: Creates an engaging feed for a social media platform with advanced features.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.7
-    max_tokens: 7000
+  model: "{{model || 'balanced'}}"
+  modelParameters: *social_media_model_parameters
   messages:
     - role: system
       content: You are a software engineer specializing in social media platforms. Focus on user engagement, content discovery, and scalable architecture.
@@ -416,18 +458,12 @@
     - name: Output should include platform type
       string:
         contains: 'content-creator'
-  supportedModels:
-    - claude-3-5-sonnet-latest
-    - claude-sonnet-4-20250514
-    - gpt-4o
-    - gemini-2.0-flash
+  supportedModels: *balanced
 
 - name: Create a Weather Application
   description: Develops a comprehensive weather application with advanced forecasting.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.6
-    max_tokens: 5000
+  model: "{{model || 'cost_optimized'}}"
+  modelParameters: *weather_model_parameters
   messages:
     - role: system
       content: You are a mobile developer who creates intuitive, feature-rich weather applications. Focus on accurate data presentation, user experience, and performance.
@@ -458,19 +494,12 @@
     - name: Output should include data scope
       string:
         contains: 'forecast'
-  supportedModels:
-    - gpt-4o-mini
-    - gpt-4o
-    - claude-3-5-haiku-latest
-    - gemini-2.0-flash-lite
-    - claude-3-5-sonnet-latest
+  supportedModels: *cost_optimized
 
 - name: Build a REST API
   description: Creates a robust, scalable REST API with comprehensive documentation.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.4
-    max_tokens: 8000
+  model: "{{model || 'coding_optimized'}}"
+  modelParameters: *rest_api_model_parameters
   messages:
     - role: system
       content: You are a backend developer specializing in API design and development. Focus on security, performance, and developer experience.
@@ -502,19 +531,12 @@
     - name: Output should mention API purpose
       string:
         contains: 'user management'
-  supportedModels:
-    - o1
-    - claude-sonnet-4-20250514
-    - gpt-4o
-    - claude-opus-4-20250514
-    - gemini-2.5-pro
+  supportedModels: *coding_optimized
 
 - name: Create a Mobile App
   description: Develops a cross-platform mobile application with native features.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.6
-    max_tokens: 8000
+  model: "{{model || 'balanced'}}"
+  modelParameters: *mobile_app_model_parameters
   messages:
     - role: system
       content: You are a mobile developer specializing in cross-platform applications. Focus on performance, user experience, and platform-specific features.
@@ -546,19 +568,12 @@
     - name: Output should specify app type
       string:
         contains: 'fitness-tracking'
-  supportedModels:
-    - claude-sonnet-4-20250514
-    - claude-3-5-sonnet-latest
-    - gpt-4o
-    - gemini-2.0-flash
-    - o1
+  supportedModels: *balanced
 
 - name: Build a Game
   description: Creates an interactive game with engaging mechanics and graphics.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.7
-    max_tokens: 8000
+  model: "{{model || 'creative_optimized'}}"
+  modelParameters: *game_model_parameters
   messages:
     - role: system
       content: You are a game developer who creates engaging, interactive games. Focus on gameplay mechanics, user engagement, and performance optimization.
@@ -590,18 +605,12 @@
     - name: Output should specify game type
       string:
         contains: 'puzzle'
-  supportedModels:
-    - gpt-4o
-    - claude-sonnet-4-20250514
-    - gemini-2.0-flash
-    - claude-3-5-sonnet-latest
+  supportedModels: *creative_optimized
 
 - name: Create an Educational Platform
   description: Builds a comprehensive learning management system for education.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.6
-    max_tokens: 8000
+  model: "{{model || 'balanced'}}"
+  modelParameters: *educational_model_parameters
   messages:
     - role: system
       content: You are an educational technology developer who creates effective learning platforms. Focus on pedagogy, accessibility, and student engagement.
@@ -632,19 +641,12 @@
     - name: Output should mention subject area
       string:
         contains: 'programming'
-  supportedModels:
-    - claude-3-5-sonnet-latest
-    - claude-sonnet-4-20250514
-    - gpt-4o
-    - gemini-2.0-flash
-    - o1
+  supportedModels: *balanced
 
 - name: Build a Real-time Collaboration Tool
   description: Creates a platform for real-time team collaboration and productivity.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.5
-    max_tokens: 8000
+  model: "{{model || 'performance_optimized'}}"
+  modelParameters: *collaboration_model_parameters
   messages:
     - role: system
       content: You are a software engineer specializing in real-time collaborative applications. Focus on synchronization, conflict resolution, and user experience.
@@ -675,19 +677,12 @@
     - name: Output should specify collaboration type
       string:
         contains: 'document-editing'
-  supportedModels:
-    - claude-sonnet-4-20250514
-    - claude-3-5-sonnet-latest
-    - gpt-4o
-    - o1
-    - gemini-2.0-flash
+  supportedModels: *performance_optimized
 
 - name: Create an IoT Dashboard
   description: Develops a dashboard for monitoring and controlling IoT devices.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.5
-    max_tokens: 7000
+  model: "{{model || 'balanced'}}"
+  modelParameters: *iot_model_parameters
   messages:
     - role: system
       content: You are an IoT developer who creates dashboards for device monitoring and control. Focus on real-time data, scalability, and user experience.
@@ -718,18 +713,12 @@
     - name: Output should include device types
       string:
         contains: 'sensors'
-  supportedModels:
-    - gpt-4o
-    - claude-sonnet-4-20250514
-    - gemini-2.0-flash
-    - o1
+  supportedModels: *balanced
 
 - name: Build a Financial Trading Platform
   description: Creates a sophisticated platform for financial trading and analysis.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.3
-    max_tokens: 9000
+  model: "{{model || 'ultra_performance'}}"
+  modelParameters: *financial_model_parameters
   messages:
     - role: system
       content: You are a fintech developer specializing in trading platforms. Focus on security, performance, regulatory compliance, and real-time data processing.
@@ -760,19 +749,12 @@
     - name: Output should specify market type
       string:
         contains: 'cryptocurrency'
-  supportedModels:
-    - o1
-    - claude-opus-4-20250514
-    - claude-sonnet-4-20250514
-    - gpt-4o
-    - gemini-2.5-pro
+  supportedModels: *ultra_performance
 
 - name: Create a Health & Fitness App
   description: Develops a comprehensive health and fitness tracking application.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.6
-    max_tokens: 7000
+  model: "{{model || 'balanced'}}"
+  modelParameters: *health_model_parameters
   messages:
     - role: system
       content: You are a health tech developer who creates apps for wellness and fitness. Focus on user motivation, data accuracy, and health privacy compliance.
@@ -803,18 +785,12 @@
     - name: Output should include health metrics
       string:
         contains: 'steps'
-  supportedModels:
-    - claude-3-5-sonnet-latest
-    - claude-sonnet-4-20250514
-    - gpt-4o
-    - gemini-2.0-flash
+  supportedModels: *balanced
 
 - name: Build an AI Assistant
   description: Creates an intelligent conversational AI assistant with advanced capabilities.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.7
-    max_tokens: 8000
+  model: "{{model || 'reasoning_optimized'}}"
+  modelParameters: *ai_assistant_model_parameters
   messages:
     - role: system
       content: You are an AI developer who creates intelligent conversational assistants. Focus on natural language understanding, context awareness, and helpful responses.
@@ -845,19 +821,12 @@
     - name: Output should specify domain
       string:
         contains: 'customer-service'
-  supportedModels:
-    - claude-opus-4-20250514
-    - claude-sonnet-4-20250514
-    - gpt-4o
-    - o1
-    - gemini-2.5-pro
+  supportedModels: *reasoning_optimized
 
 - name: Create a Video Streaming Platform
   description: Builds a scalable video streaming platform with advanced features.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.6
-    max_tokens: 8000
+  model: "{{model || 'performance_optimized'}}"
+  modelParameters: *video_streaming_model_parameters
   messages:
     - role: system
       content: You are a media technology developer specializing in video streaming platforms. Focus on scalability, quality, and user experience.
@@ -888,18 +857,12 @@
     - name: Output should specify content type
       string:
         contains: 'educational-videos'
-  supportedModels:
-    - gpt-4o
-    - claude-sonnet-4-20250514
-    - gemini-2.0-flash
-    - o1
+  supportedModels: *performance_optimized
 
 - name: Build a CRM System
   description: Creates a comprehensive customer relationship management system.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.5
-    max_tokens: 8000
+  model: "{{model || 'balanced'}}"
+  modelParameters: *crm_model_parameters
   messages:
     - role: system
       content: You are a business software developer specializing in CRM systems. Focus on sales productivity, customer insights, and workflow automation.
@@ -930,19 +893,12 @@
     - name: Output should specify business type
       string:
         contains: 'b2b-services'
-  supportedModels:
-    - claude-sonnet-4-20250514
-    - claude-3-5-sonnet-latest
-    - gpt-4o
-    - gemini-2.0-flash
-    - o1
+  supportedModels: *balanced
 
 - name: Create a Marketplace Platform
   description: Develops a multi-vendor marketplace with comprehensive features.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.6
-    max_tokens: 8000
+  model: "{{model || 'performance_optimized'}}"
+  modelParameters: *marketplace_model_parameters
   messages:
     - role: system
       content: You are an e-commerce platform developer specializing in marketplace solutions. Focus on vendor management, transaction security, and user experience.
@@ -973,18 +929,12 @@
     - name: Output should specify marketplace type
       string:
         contains: 'digital-services'
-  supportedModels:
-    - gpt-4o
-    - claude-sonnet-4-20250514
-    - gemini-2.0-flash
-    - o1
+  supportedModels: *performance_optimized
 
 - name: Build a Learning Management System
   description: Creates a comprehensive LMS for online education and training.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.6
-    max_tokens: 8000
+  model: "{{model || 'balanced'}}"
+  modelParameters: *lms_model_parameters
   messages:
     - role: system
       content: You are an educational technology developer specializing in learning management systems. Focus on pedagogy, engagement, and learning outcomes.
@@ -1015,19 +965,12 @@
     - name: Output should specify education type
       string:
         contains: 'corporate-training'
-  supportedModels:
-    - claude-3-5-sonnet-latest
-    - claude-sonnet-4-20250514
-    - gpt-4o
-    - gemini-2.0-flash
-    - o1
+  supportedModels: *balanced
 
 - name: Create an Event Management System
   description: Builds a comprehensive platform for organizing and managing events.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.6
-    max_tokens: 7000
+  model: "{{model || 'balanced'}}"
+  modelParameters: *event_model_parameters
   messages:
     - role: system
       content: You are an event technology developer who creates platforms for event management. Focus on user experience, scalability, and comprehensive feature sets.
@@ -1058,18 +1001,12 @@
     - name: Output should include event types
       string:
         contains: 'conferences'
-  supportedModels:
-    - gpt-4o
-    - claude-sonnet-4-20250514
-    - gemini-2.0-flash
-    - claude-3-5-sonnet-latest
+  supportedModels: *balanced
 
 - name: Build a Booking System
   description: Creates a flexible booking and reservation management platform.
-  model: "{{model || 'allSupportedModels'}}"
-  modelParameters:
-    temperature: 0.6
-    max_tokens: 7000
+  model: "{{model || 'balanced'}}"
+  modelParameters: *booking_model_parameters
   messages:
     - role: system
       content: You are a software developer specializing in booking and reservation systems. Focus on availability management, user experience, and business operations.
@@ -1100,11 +1037,7 @@
     - name: Output should specify service type
       string:
         contains: 'healthcare-appointments'
-  supportedModels:
-    - claude-3-5-sonnet-latest
-    - claude-sonnet-4-20250514
-    - gpt-4o
-    - gemini-2.0-flash
+  supportedModels: *balanced
 
 # All available models from codinit.dev
 allSupportedModels:
@@ -1200,55 +1133,55 @@ allSupportedModels:
 
 # Model selection strategies based on optimization goals
 modelSelectionStrategies:
-  ultra_performance:
+  ultra_performance: &ultra_performance
     - o3
     - claude-opus-4-20250514
     - gpt-4.5-preview
     - o1
     - gemini-2.5-pro
-  performance_optimized:
+  performance_optimized: &performance_optimized
     - claude-sonnet-4-20250514
     - gpt-4o
     - claude-3-7-sonnet-latest
     - gemini-2.0-flash-001
     - o1-mini
-  balanced:
+  balanced: &balanced
     - claude-3-5-sonnet-latest
     - gpt-4o-mini
     - gemini-2.0-flash
     - gpt-4.1
     - mistral-large-latest
-  cost_optimized:
+  cost_optimized: &cost_optimized
     - claude-3-5-haiku-latest
     - gpt-4.1-mini
     - gemini-2.0-flash-lite
     - gpt-4.1-nano
     - magistral-small-latest
-  speed_optimized:
+  speed_optimized: &speed_optimized
     - claude-3-5-haiku-latest
     - gpt-4.1-nano
     - gemini-2.0-flash-lite-001
     - llama-3.2-1b-preview
     - gemma-7b-it
-  reasoning_optimized:
+  reasoning_optimized: &reasoning_optimized
     - o3
     - o1
     - claude-opus-4-20250514
     - deepseek-reasoner
     - grok-beta
-  vision_optimized:
+  vision_optimized: &vision_optimized
     - gpt-4o
     - claude-sonnet-4-20250514
     - gemini-2.0-flash
     - llama-3.2-90b-vision-preview
     - grok-vision-beta
-  coding_optimized:
+  coding_optimized: &coding_optimized
     - o1
     - claude-sonnet-4-20250514
     - gpt-4o
     - codellama
     - deepseek-chat
-  creative_optimized:
+  creative_optimized: &creative_optimized
     - claude-3-5-sonnet-latest
     - gpt-4o
     - llama-3.3-70b-versatile
