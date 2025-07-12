@@ -37,7 +37,7 @@ let tablesExist = false
 async function ensureTablesExist(): Promise<boolean> {
   if (tablesChecked) return tablesExist
   
-  if (!supabase!) {
+  if (!supabase) {
     tablesChecked = true
     tablesExist = false
     return false
@@ -45,7 +45,7 @@ async function ensureTablesExist(): Promise<boolean> {
 
   try {
     // Quick check for critical tables
-    const { error } = await supabase!.from('projects').select('id').limit(1)
+    const { error } = await supabase.from('projects').select('id').limit(1)
     
     tablesChecked = true
     tablesExist = !error || error.code !== 'PGRST106'
