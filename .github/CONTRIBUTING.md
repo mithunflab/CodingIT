@@ -19,7 +19,7 @@ CodinIT.dev is an open-source AI-powered code generator, and we welcome contribu
 
 ## 📜 Code of Conduct
 
-This project and everyone participating in it is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [conduct@codinit.dev](mailto:gerome.e24@gmail.com).
+This project and everyone participating in it is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [gerome.e24@gmail.com](mailto:gerome.e24@gmail.com).
 
 ## 🤝 How Can I Contribute?
 
@@ -27,7 +27,7 @@ This project and everyone participating in it is governed by our [Code of Conduc
 
 Found a bug? Please help us fix it:
 
-1. **Check existing issues** - Search our [GitHub issues](https://github.com/Gerome-Elassaad/CodinIT/issues) first
+1. **Check existing issues** - Search our [GitHub issues](https://github./Gerome-Elassaad/CodingIT/issues) first
 2. **Use the bug report template** - Provide detailed information using our bug report template
 3. **Include reproduction steps** - Clear steps help us fix bugs faster
 4. **Add relevant labels** - Help us categorize the issue
@@ -84,8 +84,8 @@ Improve the user experience:
 
 1. **Fork and clone the repository**
    ```bash
-   git clone https://github./Gerome-Elassaad/codinit.git
-   cd codinit
+   git clone https://github.com/Gerome-Elassaad/CodingIT.git
+   cd CodingIT
    ```
 
 2. **Install dependencies**
@@ -160,7 +160,7 @@ npm run test:watch
 ## 📁 Project Structure
 
 ```
-codinit/
+CodingIT/
 ├── app/                    # Next.js 13+ app directory
 │   ├── api/               # API routes
 │   │   ├── chat/          # AI chat endpoints
@@ -333,7 +333,7 @@ import { validateEmail } from '@/lib/utils';
 
 describe('validateEmail', () => {
   it('should validate correct email addresses', () => {
-    expect(validateEmail('user@codinit.dev')).toBe(true);
+    expect(validateEmail('user@codingit.dev')).toBe(true);
     expect(validateEmail('invalid-email')).toBe(false);
   });
 });
@@ -471,7 +471,7 @@ We use labels to categorize and prioritize issues:
 
 **⚠️ DO NOT** open public issues for security vulnerabilities.
 
-Instead, email us at [security@codinit.dev](mailto:security@codinit.dev) with:
+Instead, email us at [security@codingit.dev](mailto:security@codingit.dev) with:
 
 1. **Description** - Detail of the vulnerability
 2. **Impact** - Potential impact and affected users
@@ -538,11 +538,11 @@ We believe in recognizing our contributors:
 
 ### Where to Get Help
 
-- **🐛 Bugs**: [GitHub Issues](https://github./Gerome-Elassaad/codinit/codinit/issues)
-- **💬 Discussions**: [GitHub Discussions](https://github./Gerome-Elassaad/codinit/codinit/discussions)
-- **📧 Email**: [support@codinit.dev](mailto:support@codinit.dev)
-- **💭 Discord**: [Join our community](https://discord.gg/codinit)
-- **📖 Documentation**: [docs.codinit.dev](https://docs.codinit.dev)
+- **🐛 Bugs**: [GitHub Issues](https://github.com/Gerome-Elassaad/CodingIT/issues)
+- **💬 Discussions**: [GitHub Discussions](https://github.com/Gerome-Elassaad/CodingIT/discussions)
+- **📧 Email**: [support@codingit.dev](mailto:support@codingit.dev)
+- **💭 Discord**: [Join our community](https://discord.gg/codingit)
+- **📖 Documentation**: [docs.codingit.dev](https://docs.codingit.dev)
 
 ### Communication Guidelines
 
