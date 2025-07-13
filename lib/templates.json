@@ -83,5 +83,13 @@
     "files": ["app.py", "components/inference.py", "components/ui.py", "data/test_data.json"],
     "instructions": "A production-ready Gradio app. Use Gradio Blocks or Interface, always named 'demo'. Input/output examples must be executable. Avoid placeholder text, mock inputs, or speculative logic.",
     "port": 7860
+  },
+  "bolt.diy": {
+    "name": "Bolt.DIY",
+    "lib": [],
+    "file": "script.py",
+    "files": [],
+    "instructions": "A generic sandbox environment with bolt.diy.",
+    "port": null
   }
 }

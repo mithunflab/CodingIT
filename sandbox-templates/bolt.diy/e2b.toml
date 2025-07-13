@@ -1,0 +1,19 @@
+id = "bolt.diy"
+# This is a config for E2B sandbox template.
+# You can use 'template_id' (7y5gslsgy6mvfv166455) or 'template_name (bolt.diy) from this config to spawn a sandbox:
+
+# Python SDK
+# from e2b import Sandbox
+# sandbox = Sandbox(template='bolt.diy')
+
+# JS SDK
+# import { Sandbox } from 'e2b'
+# const sandbox = await Sandbox.create({ template: 'bolt.diy' })
+
+template_id = "7y5gslsgy6mvfv166455"
+dockerfile = "e2b.Dockerfile"
+template_name = "bolt.diy"
+start_cmd = "pnpm run dev"
+cpu_count = 4
+memory_mb = 4_096
+team_id = "460355b3-4f64-48f9-9a16-4442817f79f5"

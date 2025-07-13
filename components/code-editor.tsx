@@ -1,6 +1,5 @@
 import Editor, { Monaco } from '@monaco-editor/react'
-import { useState, useRef } from 'react'
-import { GenerateCodeDialog } from './generate-code-dialog'
+import { useRef } from 'react'
 import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api'
 import { useTheme } from 'next-themes'
 
@@ -13,7 +12,6 @@ export function CodeEditor({
   lang: string
   onChange: (value: string | undefined) => void
 }) {
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
   const { theme } = useTheme()
   const editorRef = useRef<monacoEditor.editor.IStandaloneCodeEditor | null>(
     null,
@@ -24,12 +22,7 @@ export function CodeEditor({
     monaco: Monaco,
   ) {
     editorRef.current = editor
-    
-    // Enhanced keyboard shortcuts
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, () => {
-      setIsDialogOpen(true)
-    })
-    
+
     // Quick save shortcut (Ctrl/Cmd + S)
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       // Trigger save event - the parent component should handle this
@@ -48,55 +41,9 @@ export function CodeEditor({
     })
   }
 
-  async function handleGenerateCode(prompt: string) {
-    if (!editorRef.current) return
-
-    const editor = editorRef.current
-    const selection = editor.getSelection()
-    if (!selection) return
-
-    const selectedCode = editor.getModel()?.getValueInRange(selection) || ''
-
-    const response = await fetch('/api/generate-code', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        code: selectedCode,
-        prompt,
-      }),
-    })
-
-    if (!response.body) {
-      return
-    }
-
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let newCode = ''
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) {
-        break
-      }
-      newCode += decoder.decode(value)
-      editor.executeEdits('ai-replace', [
-        {
-          range: selection,
-          text: newCode,
-        },
-      ])
-    }
-
-    setIsDialogOpen(false)
-  }
-
   return (
-    <>
-      <Editor
-        height="100%"
+    <Editor
+      height="100%"
         language={lang}
         value={code}
         onChange={onChange}
@@ -146,11 +93,5 @@ export function CodeEditor({
           },
         }}
       />
-      <GenerateCodeDialog
-        open={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        onSubmit={handleGenerateCode}
-      />
-    </>
   )
 }

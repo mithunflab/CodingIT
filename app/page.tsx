@@ -44,7 +44,8 @@ export default function Home() {
   const [result, setResult] = useState<ExecutionResult>()
   const [messages, setMessages] = useState<Message[]>([])
   const [fragment, setFragment] = useState<DeepPartial<FragmentSchema>>()
-  const [currentTab, setCurrentTab] = useState<'code' | 'fragment' | 'terminal' | 'interpreter'>('code')
+  const [currentTab, setCurrentTab] = useState<'code' | 'fragment' | 'terminal' | 'interpreter' | 'editor'>('code')
+  const [selectedFile, setSelectedFile] = useState<{ path: string; content: string } | null>(null)
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
   const [isAuthDialogOpen, setAuthDialog] = useState(false)
   const [authView, setAuthView] = useState<ViewType>('sign_in')
@@ -335,6 +336,16 @@ export default function Home() {
     setCurrentPreview({ fragment: undefined, result: undefined })
   }
 
+  async function handleSaveFile(path: string, content: string) {
+    await fetch('/api/files/content', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ path, content }),
+    })
+  }
+
   return (
     <main className="flex min-h-screen max-h-screen">
       {supabase && (
@@ -431,6 +442,8 @@ export default function Home() {
           onClose={() => setFragment(undefined)}
           code={fragment?.code || ''}
           executeCode={executeCode}
+          selectedFile={selectedFile}
+          onSave={handleSaveFile}
         />
       </div>
     </main>

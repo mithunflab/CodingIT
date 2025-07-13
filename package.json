@@ -1,7 +1,7 @@
 {
   "name": "codinit-app",
   "version": "0.0.9",
-  "private": true,
+  "private": false,
   "scripts": {
     "postinstall": "patch-package",
     "dev": "next dev --turbo",
@@ -50,6 +50,7 @@
     "core-js": "^3.38.0",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.0",
+    "geist": "^1.4.2",
     "lucide-react": "^0.396.0",
     "next": "^14.2.30",
     "next-themes": "^0.3.0",
@@ -59,6 +60,7 @@
     "prismjs": "^1.30.0",
     "react": "^18",
     "react-dom": "^18",
+    "react-resizable-panels": "^3.0.3",
     "react-textarea-autosize": "^8.5.3",
     "simple-icons": "^14.12.3",
     "tailwind-merge": "^2.5.2",
@@ -67,6 +69,8 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@swc/cli": "^0.7.8",
+    "@swc/core": "^1.12.11",
     "@trivago/prettier-plugin-sort-imports": "^4.3.0",
     "@types/next": "^8.0.7",
     "@types/node": "^22.2.0",

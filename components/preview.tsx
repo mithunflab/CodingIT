@@ -1,5 +1,6 @@
 import { DeployDialog } from './deploy-dialog'
 import { EnhancedCodeInterpreter } from './enhanced-code-interpreter'
+import { CodeEditor } from './code-editor'
 import { FragmentCode } from './fragment-code'
 import { FragmentPreview } from './fragment-preview'
 import { FragmentTerminal } from './fragment-terminal'
@@ -16,6 +17,7 @@ import { ExecutionResult } from '@/lib/types'
 import { DeepPartial } from 'ai'
 import { ChevronsRight, LoaderCircle, Terminal, CodeIcon } from 'lucide-react'
 import { Dispatch, SetStateAction } from 'react'
+import { IDE } from './ide'
 
 export function Preview({
   teamID,
@@ -29,11 +31,15 @@ export function Preview({
   onClose,
   code,
   executeCode,
+  selectedFile,
+  onSave,
 }: {
   teamID: string | undefined
   accessToken: string | undefined
-  selectedTab: 'code' | 'fragment' | 'terminal' | 'interpreter'
-  onSelectedTabChange: Dispatch<SetStateAction<'code' | 'fragment' | 'terminal' | 'interpreter'>>
+  selectedTab: 'code' | 'fragment' | 'terminal' | 'interpreter' | 'editor'
+  onSelectedTabChange: Dispatch<
+    SetStateAction<'code' | 'fragment' | 'terminal' | 'interpreter' | 'editor'>
+  >
   isChatLoading: boolean
   isPreviewLoading: boolean
   fragment?: DeepPartial<FragmentSchema>
@@ -41,6 +47,8 @@ export function Preview({
   onClose: () => void
   code: string
   executeCode: (code: string) => Promise<void>
+  selectedFile: { path: string; content: string } | null
+  onSave: (path: string, content: string) => void
 }) {
   if (!fragment) {
     return null
@@ -54,7 +62,9 @@ export function Preview({
       <Tabs
         value={selectedTab}
         onValueChange={(value) =>
-          onSelectedTabChange(value as 'code' | 'fragment' | 'terminal' | 'interpreter')
+          onSelectedTabChange(
+            value as 'code' | 'fragment' | 'terminal' | 'interpreter' | 'editor'
+          )
         }
         className="h-full flex flex-col items-start justify-start"
       >
@@ -75,7 +85,7 @@ export function Preview({
             </Tooltip>
           </TooltipProvider>
           <div className="flex justify-center">
-            <TabsList className="px-1 py-0 border h-8">
+            <TabsList className="px-1 py-0 border">
               <TabsTrigger
                 className="font-normal text-xs py-1 px-2 gap-1 flex items-center"
                 value="code"
@@ -117,6 +127,13 @@ export function Preview({
                 <Terminal className="h-3 w-3" />
                 Terminal
               </TabsTrigger>
+              <TabsTrigger
+                className="font-normal text-xs py-1 px-2 gap-1 flex items-center"
+                value="editor"
+              >
+                <CodeIcon className="h-3 w-3" />
+                Editor
+              </TabsTrigger>
             </TabsList>
           </div>
           {result && (
@@ -155,12 +172,15 @@ export function Preview({
             </TabsContent>
             <TabsContent value="terminal" className="h-full">
               {result && (
-                <FragmentTerminal 
+                <FragmentTerminal
                   result={result as ExecutionResult}
                   teamID={teamID}
                   accessToken={accessToken}
                 />
               )}
+            </TabsContent>
+            <TabsContent value="editor" className="h-full">
+              <IDE />
             </TabsContent>
           </div>
         )}
