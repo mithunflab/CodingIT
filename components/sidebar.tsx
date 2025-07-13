@@ -67,7 +67,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleDeleteChat = async (chatId: string) => {
-    await deleteProject(chatId);
+    const supabase = createBrowserClient();
+    await deleteProject(supabase, chatId);
     setChatHistory(chatHistory.filter(chat => chat.id !== chatId));
   };
 
@@ -119,7 +120,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
     
     const fetchChatHistory = async () => {
-      const projects = await getProjects();
+      const projects = await getProjects(supabase);
       const history = projects.map((project: Project) => ({
         id: project.id,
         title: project.title,
