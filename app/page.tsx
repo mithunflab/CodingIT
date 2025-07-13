@@ -72,7 +72,7 @@ export default function Home() {
   })
 
   const handleChatSelected = async (chatId: string) => {
-    const project = await getProject(chatId);
+    const project = await getProject(supabase, chatId);
     if (project) {
       setCurrentProject(project);
     }
@@ -143,7 +143,7 @@ export default function Home() {
       }
 
       setIsLoadingProject(true)
-      const projectMessages = await getProjectMessages(currentProject.id)
+      const projectMessages = await getProjectMessages(supabase, currentProject.id)
       setMessages(projectMessages)
       setIsLoadingProject(false)
     }
@@ -158,7 +158,7 @@ export default function Home() {
       const lastMessage = messages[messages.length - 1]
       const sequenceNumber = messages.length - 1
 
-      await saveMessage(currentProject.id, lastMessage, sequenceNumber)
+      await saveMessage(supabase, currentProject.id, lastMessage, sequenceNumber)
     }
 
     if (messages.length > 0 && currentProject && session) {
@@ -226,9 +226,11 @@ export default function Home() {
     // Create new project if none exists
     if (!currentProject) {
       const title = await generateProjectTitle(chatInput)
-      const newProject = await createProject(title, selectedTemplate === 'auto' ? undefined : selectedTemplate)
-      if (newProject) {
-        setCurrentProject(newProject)
+      if (supabase) {
+        const newProject = await createProject(supabase, title, selectedTemplate === 'auto' ? undefined : selectedTemplate)
+        if (newProject) {
+          setCurrentProject(newProject)
+        }
       }
     }
 
