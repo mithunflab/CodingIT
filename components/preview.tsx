@@ -152,7 +152,7 @@ export function Preview({
         {fragment && (
           <div className="overflow-y-auto w-full h-full">
             <TabsContent value="code" className="h-full">
-              <FragmentCode />
+              <FragmentCode files={[{ name: 'index.tsx', content: fragment?.code ?? '' }]} />
             </TabsContent>
             <TabsContent value="fragment" className="h-full">
               {result && (

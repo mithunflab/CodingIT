@@ -2,6 +2,7 @@ import Editor, { Monaco } from '@monaco-editor/react'
 import { useRef } from 'react'
 import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api'
 import { useTheme } from 'next-themes'
+import './code-theme.css'
 
 export function CodeEditor({
   code,

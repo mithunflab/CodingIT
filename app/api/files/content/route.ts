@@ -1,82 +1,65 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { Sandbox } from '@e2b/code-interpreter'
 
-export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams
-  const sandboxId = searchParams.get('sandboxId')
-  const path = searchParams.get('path')
+const E2B_API_KEY = process.env.E2B_API_KEY
+if (!E2B_API_KEY) {
+  throw new Error('E2B_API_KEY environment variable not found')
+}
 
-  if (!sandboxId || !path) {
-    return NextResponse.json(
-      { error: 'sandboxId and path are required' },
-      { status: 400 },
-    )
-  }
+const sandboxTimeout = 10 * 60 * 1000
 
+async function getSandbox(sessionID: string) {
+  const sandbox = await Sandbox.create({
+    apiKey: E2B_API_KEY,
+    metadata: {
+      sessionID,
+    },
+    timeoutMs: sandboxTimeout,
+  })
+  return sandbox
+}
+
+export async function GET(req: Request) {
   try {
-    const sandbox = await Sandbox.connect(sandboxId)
+    const { searchParams } = new URL(req.url)
+    const sessionID = searchParams.get('sessionID')
+    const path = searchParams.get('path')
+
+    if (!sessionID || !path) {
+      return NextResponse.json(
+        { error: 'sessionID and path are required' },
+        { status: 400 },
+      )
+    }
+
+    const sandbox = await getSandbox(sessionID)
     const content = await sandbox.files.read(path)
-    return new NextResponse(content, {
-      headers: {
-        'Content-Type': 'text/plain',
-      },
-    })
-  } catch (error) {
-    console.error('Error fetching file content:', error)
+    return NextResponse.json({ content })
+  } catch (error: any) {
     return NextResponse.json(
-      { error: 'Failed to fetch file content' },
+      { error: error.message || 'An unexpected error occurred' },
       { status: 500 },
     )
   }
 }
 
-export async function POST(request: NextRequest) {
-  const {
-    sandboxId,
-    path,
-    content,
-  }: { sandboxId: string; path: string; content: string } = await request.json()
-
-  if (!sandboxId || !path || content === undefined) {
-    return NextResponse.json(
-      { error: 'sandboxId, path, and content are required' },
-      { status: 400 },
-    )
-  }
-
+export async function POST(req: Request) {
   try {
-    const sandbox = await Sandbox.connect(sandboxId)
+    const { sessionID, path, content } = await req.json()
+
+    if (!sessionID || !path || content === undefined) {
+      return NextResponse.json(
+        { error: 'sessionID, path and content are required' },
+        { status: 400 },
+      )
+    }
+
+    const sandbox = await getSandbox(sessionID)
     await sandbox.files.write(path, content)
     return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Error saving file content:', error)
+  } catch (error: any) {
     return NextResponse.json(
-      { error: 'Failed to save file content' },
-      { status: 500 },
-    )
-  }
-}
-
-export async function DELETE(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams
-  const sandboxId = searchParams.get('sandboxId')
-  const path = searchParams.get('path')
-
-  if (!sandboxId || !path) {
-    return NextResponse.json(
-      { error: 'sandboxId and path are required' },
-      { status: 400 },
-    )
-  }
-
-  try {
-    const sandbox = await Sandbox.connect(sandboxId)
-    await sandbox.files.remove(path)
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Error deleting file:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete file' },
+      { error: error.message || 'An unexpected error occurred' },
       { status: 500 },
     )
   }

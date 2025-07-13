@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 
 // Dynamically import Monaco Editor to avoid SSR issues
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { 
@@ -296,17 +296,26 @@ export function EnhancedCodeInterpreter({
 }: {
   result?: ExecutionResultInterpreter
   code: string
-  executeCode: (code: string) => Promise<void>
+  executeCode: (code: string) => Promise<any>
 }) {
   const [cells, setCells] = useState<CodeCell[]>([
     {
       id: '1',
       code: initialCode || '# Welcome to the Enhanced Code Interpreter\nprint("Hello, World!")',
-      results: result?.cellResults,
-      stdout: result?.stdout,
-      stderr: result?.stderr
     }
   ])
+
+  useEffect(() => {
+    if (result) {
+      setCells(cells.map(cell => ({
+        ...cell,
+        results: result.cellResults,
+        stdout: result.stdout,
+        stderr: result.stderr,
+        error: result.error,
+      })))
+    }
+  }, [result])
 
   const [activeTab, setActiveTab] = useState('notebook')
 
@@ -334,19 +343,22 @@ export function EnhancedCodeInterpreter({
     const cell = cells.find(c => c.id === id)
     if (!cell) return
 
-    // Mark cell as executing
     setCells(cells.map(c => 
-      c.id === id ? { ...c, isExecuting: true, error: undefined } : c
+      c.id === id ? { ...c, isExecuting: true, error: undefined, results: [], stdout: [], stderr: [] } : c
     ))
 
     try {
-      // Execute the code
-      await executeCode(cell.code)
+      const result = await executeCode(cell.code)
       
-      // For now, we'll need to handle the result through the existing system
-      // In a real implementation, we'd want to get the result directly
       setCells(cells.map(c => 
-        c.id === id ? { ...c, isExecuting: false } : c
+        c.id === id ? { 
+          ...c, 
+          isExecuting: false, 
+          results: result.results,
+          stdout: result.stdout,
+          stderr: result.stderr,
+          error: result.error,
+        } : c
       ))
     } catch (error) {
       setCells(cells.map(c => 

@@ -16,7 +16,7 @@ import { LLMModelConfig } from '@/lib/models'
 import modelsList from '@/lib/models.json'
 import { FragmentSchema, fragmentSchema as schema } from '@/lib/schema'
 import { createBrowserClient } from '@/lib/supabase-client'
-import templates, { TemplateId } from '@/lib/templates'
+import templates, { TemplateId, Templates } from '@/lib/templates'
 import { ExecutionResult } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { DeepPartial } from 'ai'
@@ -51,16 +51,22 @@ export default function Home() {
   const [authView, setAuthView] = useState<ViewType>('sign_in')
   const [isRateLimited, setIsRateLimited] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [executionResult, setExecutionResult] = useState<ExecutionResult | undefined>(undefined)
   
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [isLoadingProject, setIsLoadingProject] = useState(false)
 
   const { session, userTeam } = useAuth(setAuthDialog, setAuthView)
 
-  const { executeCode } = useEnhancedChat({
+  const currentTemplate =
+    selectedTemplate === 'auto'
+      ? templates
+      : ({ [selectedTemplate]: templates[selectedTemplate] } as Templates)
+
+  const { executeCode: enhancedExecuteCode } = useEnhancedChat({
     userID: session?.user?.id,
     teamID: userTeam?.id,
-    template: templates,
+    template: currentTemplate,
     model: modelsList.models.find(m => m.id === languageModel.model)!,
     config: languageModel,
   })
@@ -82,10 +88,6 @@ export default function Home() {
   const currentModel = filteredModels.find(
     (model) => model.id === languageModel.model,
   )
-  const currentTemplate =
-    selectedTemplate === 'auto'
-      ? templates
-      : { [selectedTemplate]: templates[selectedTemplate] }
   const lastMessage = messages[messages.length - 1]
 
   useEffect(() => {
@@ -336,14 +338,9 @@ export default function Home() {
     setCurrentPreview({ fragment: undefined, result: undefined })
   }
 
-  async function handleSaveFile(path: string, content: string) {
-    await fetch('/api/files/content', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ path, content }),
-    })
+  const executeCode = async (code: string) => {
+    const result = await enhancedExecuteCode(code)
+    setExecutionResult(result)
   }
 
   return (
@@ -430,7 +427,7 @@ export default function Home() {
             />
           </ChatInput>
         </div>
-        <Preview
+          <Preview
           teamID={userTeam?.id}
           accessToken={session?.access_token}
           selectedTab={currentTab}
@@ -438,13 +435,13 @@ export default function Home() {
           isChatLoading={isLoading}
           isPreviewLoading={isPreviewLoading}
           fragment={fragment}
-          result={result as ExecutionResult}
+          result={executionResult || result as ExecutionResult}
           onClose={() => setFragment(undefined)}
           code={fragment?.code || ''}
           executeCode={executeCode}
-          selectedFile={selectedFile}
-          onSave={handleSaveFile}
-        />
+          selectedFile={selectedFile} onSave={function (path: string, content: string): void {
+            throw new Error('Function not implemented.')
+          } }        />
       </div>
     </main>
   )

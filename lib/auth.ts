@@ -34,6 +34,7 @@ export function useAuth(
   const [session, setSession] = useState<Session | null>(null)
   const [userTeam, setUserTeam] = useState<UserTeam | undefined>(undefined)
   const [recovery, setRecovery] = useState(false)
+  const [loading, setLoading] = useState(true)
   const posthog = usePostHog()
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export function useAuth(
         })
         posthog.capture('sign_in')
       }
+      setLoading(false)
     })
 
     const {
@@ -103,5 +105,6 @@ export function useAuth(
   return {
     session,
     userTeam,
+    loading,
   }
 }

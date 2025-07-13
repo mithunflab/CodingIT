@@ -28,33 +28,41 @@ async function listFilesRecursively(
   return nodes
 }
 
+const E2B_API_KEY = process.env.E2B_API_KEY
+if (!E2B_API_KEY) {
+  throw new Error('E2B_API_KEY environment variable not found')
+}
+
+const sandboxTimeout = 10 * 60 * 1000
+
+async function getSandbox(sessionID: string) {
+  const sandbox = await Sandbox.create({
+    apiKey: E2B_API_KEY,
+    metadata: {
+      sessionID,
+    },
+    timeoutMs: sandboxTimeout,
+  })
+  return sandbox
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
-  const sandboxId = searchParams.get('sandboxId')
+  const sessionID = searchParams.get('sessionID')
 
-  let sandbox: Sandbox | undefined
+  if (!sessionID) {
+    return NextResponse.json(
+      { error: 'sessionID is required' },
+      { status: 400 },
+    )
+  }
 
   try {
-    if (sandboxId) {
-      sandbox = await Sandbox.connect(sandboxId)
-    } else {
-      sandbox = await Sandbox.create('nextjs-developer')
-    }
-
+    const sandbox = await getSandbox(sessionID)
     const fileTree = await listFilesRecursively(sandbox, '/')
-    
-    // Only kill the sandbox if it was created in this request
-    if (!sandboxId && sandbox) {
-      await sandbox.kill()
-    }
-
     return NextResponse.json(fileTree)
   } catch (error) {
     console.error('Error fetching file tree:', error)
-    // Ensure sandbox is killed in case of an error during file listing
-    if (!sandboxId && sandbox) {
-      await sandbox.kill()
-    }
     return NextResponse.json(
       { error: 'Failed to fetch file tree' },
       { status: 500 },

@@ -124,23 +124,15 @@ export function useEnhancedChat(chatConfig: EnhancedChatConfig) {
         }
 
         const result = await response.json()
-        
-        const lastMessage = messages[messages.length - 1]
-        if (lastMessage) {
-          const updatedMessage = {
-            ...lastMessage,
-            result: result,
-          }
-          setMessages([...messages.slice(0, -1), updatedMessage])
-        }
-
+        return result
       } catch (error: any) {
         trackError(error.message)
+        return { error: error.message }
       } finally {
         setIsExecuting(false)
       }
     },
-    [isExecuting, chatConfig.userID, trackError, messages, setMessages],
+    [isExecuting, chatConfig.userID, trackError],
   )
 
   useEffect(() => {
