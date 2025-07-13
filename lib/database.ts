@@ -1,7 +1,10 @@
+import { SupabaseClient } from '@supabase/supabase-js'
 import { createBrowserClient } from './supabase-client'
 import { Message } from './messages'
 
-const supabase = createBrowserClient()
+// The supabase client will be passed as an argument to functions.
+// A browser client is created here for convenience on the client-side.
+const browserSupabase = createBrowserClient()
 
 export interface Project {
   id: string
@@ -34,9 +37,9 @@ let tablesChecked = false
 let tablesExist = false
 
 // Check if tables exist once, then cache result
-async function ensureTablesExist(): Promise<boolean> {
-  if (tablesChecked) return tablesExist
-  
+async function ensureTablesExist(supabase: SupabaseClient<any, "public", any>): Promise<boolean> {
+  if (tablesChecked) return tablesExist;
+
   if (!supabase) {
     tablesChecked = true
     tablesExist = false
@@ -46,7 +49,7 @@ async function ensureTablesExist(): Promise<boolean> {
   try {
     // Quick check for critical tables
     const { error } = await supabase.from('projects').select('id').limit(1)
-    
+
     tablesChecked = true
     tablesExist = !error || error.code !== 'PGRST106'
     
@@ -65,11 +68,12 @@ async function ensureTablesExist(): Promise<boolean> {
 
 // Wrapper to prevent API calls when tables don't exist
 async function safeApiCall<T>(
+  supabase: SupabaseClient<any, "public", any>,
   operation: () => Promise<T>,
   fallback: T,
   operationName: string
 ): Promise<T> {
-  if (!(await ensureTablesExist())) {
+  if (!(await ensureTablesExist(supabase))) {
     console.warn(`Skipping ${operationName} - tables do not exist`)
     return fallback
   }
@@ -87,16 +91,17 @@ async function safeApiCall<T>(
 // =============================================
 
 export async function createProject(
+  supabase: SupabaseClient<any, "public", any>,
   title: string, 
   templateId?: string,
   description?: string,
   teamId?: string
 ): Promise<Project | null> {
-  return safeApiCall(async () => {
-    const { data: { user } } = await supabase!.auth.getUser()
+  return safeApiCall(supabase, async () => {
+    const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('User not authenticated')
 
-    const { data, error } = await supabase!
+    const { data, error } = await supabase
       .from('projects')
       .insert({
         user_id: user.id,
@@ -117,10 +122,11 @@ export async function createProject(
 }
 
 export async function getProjects(
+  supabase: SupabaseClient<any, "public", any> | null = browserSupabase,
   includeArchived: boolean = false,
   teamId?: string
 ): Promise<Project[]> {
-  return safeApiCall(async () => {
+  return safeApiCall(supabase!, async () => {
     const { data: { user } } = await supabase!.auth.getUser()
     if (!user) return []
 
@@ -145,8 +151,11 @@ export async function getProjects(
   }, [], 'getProjects')
 }
 
-export async function getProject(projectId: string): Promise<Project | null> {
-  return safeApiCall(async () => {
+export async function getProject(
+  supabase: SupabaseClient<any, "public", any> | null = browserSupabase,
+  projectId: string
+): Promise<Project | null> {
+  return safeApiCall(supabase!, async () => {
     const { data, error } = await supabase!
       .from('projects')
       .select('*')
@@ -159,10 +168,11 @@ export async function getProject(projectId: string): Promise<Project | null> {
 }
 
 export async function updateProject(
+  supabase: SupabaseClient<any, "public", any> | null = browserSupabase,
   id: string, 
   updates: Partial<Project>
 ): Promise<boolean> {
-  return safeApiCall(async () => {
+  return safeApiCall(supabase!, async () => {
     const { error } = await supabase!
       .from('projects')
       .update({ ...updates, updated_at: new Date().toISOString() })
@@ -173,8 +183,12 @@ export async function updateProject(
   }, false, 'updateProject')
 }
 
-export async function deleteProject(id: string, permanent: boolean = false): Promise<boolean> {
-  return safeApiCall(async () => {
+export async function deleteProject(
+  supabase: SupabaseClient<any, "public", any> | null = browserSupabase,
+  id: string, 
+  permanent: boolean = false
+): Promise<boolean> {
+  return safeApiCall(supabase!, async () => {
     if (permanent) {
       const { error } = await supabase!
         .from('projects')
@@ -200,11 +214,12 @@ export async function deleteProject(id: string, permanent: boolean = false): Pro
 // =============================================
 
 export async function saveMessage(
+  supabase: SupabaseClient<any, "public", any> | null = browserSupabase,
   projectId: string, 
   message: Message, 
   sequenceNumber: number
 ): Promise<boolean> {
-  return safeApiCall(async () => {
+  return safeApiCall(supabase!, async () => {
     const { error } = await supabase!
       .from('messages')
       .insert({
@@ -228,8 +243,11 @@ export async function saveMessage(
   }, false, 'saveMessage')
 }
 
-export async function getProjectMessages(projectId: string): Promise<Message[]> {
-  return safeApiCall(async () => {
+export async function getProjectMessages(
+  supabase: SupabaseClient<any, "public", any> | null = browserSupabase,
+  projectId: string
+): Promise<Message[]> {
+  return safeApiCall(supabase!, async () => {
     const { data, error } = await supabase!
       .from('messages')
       .select('*')
@@ -247,8 +265,11 @@ export async function getProjectMessages(projectId: string): Promise<Message[]> 
   }, [], 'getProjectMessages')
 }
 
-export async function clearProjectMessages(projectId: string): Promise<boolean> {
-  return safeApiCall(async () => {
+export async function clearProjectMessages(
+  supabase: SupabaseClient<any, "public", any> | null = browserSupabase,
+  projectId: string
+): Promise<boolean> {
+  return safeApiCall(supabase!, async () => {
     const { error } = await supabase!
       .from('messages')
       .delete()
