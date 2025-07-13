@@ -46,8 +46,22 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${GeistSans.variable} ${GeistMono.variable}`}
     >
-      <body>
-        <ThemeProvider
+<head>
+  {/* Google tag (gtag.js) */}
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-8NNCCEN53X"></script>
+  <script
+    dangerouslySetInnerHTML={{
+      __html: `
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-8NNCCEN53X');
+      `,
+    }}
+  />
+</head>
+  <body>
+    <ThemeProvider
           attribute="class"
           defaultTheme="dark"
           enableSystem
