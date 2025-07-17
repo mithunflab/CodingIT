@@ -15,7 +15,7 @@ import { Message, toAISDKMessages, toMessageImage } from '@/lib/messages'
 import { LLMModelConfig } from '@/lib/models'
 import modelsList from '@/lib/models.json'
 import { FragmentSchema, fragmentSchema as schema } from '@/lib/schema'
-import { createBrowserClient } from '@/lib/supabase-client'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import templates, { TemplateId, Templates } from '@/lib/templates'
 import { ExecutionResult } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -28,7 +28,7 @@ import { useEnhancedChat } from '@/hooks/use-enhanced-chat'
 import { HeroPillSecond } from '@/components/announcement'
 
 export default function Home() {
-  const supabase = createBrowserClient()
+  const supabase = createSupabaseBrowserClient()
   const [chatInput, setChatInput] = useLocalStorage('chat', '')
   const [files, setFiles] = useState<File[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<'auto' | TemplateId>('auto')

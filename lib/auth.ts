@@ -1,11 +1,11 @@
-import { createBrowserClient } from './supabase-client'
+import { createSupabaseBrowserClient } from './supabase-browser'
 import { ViewType } from '@/components/auth'
 import { randomString } from './utils'
-import { Session } from '@supabase/supabase-js'
+import { Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { usePostHog } from 'posthog-js/react'
 import { useState, useEffect } from 'react'
 
-const supabase = createBrowserClient();
+const supabase = createSupabaseBrowserClient();
 
 type UserTeam = {
   email: string
@@ -43,7 +43,7 @@ export function useAuth(
       return setSession({ user: { email: 'demo@codinit.dev' } } as Session)
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       setSession(session)
       if (session) {
         getUserTeam(session).then(setUserTeam)
@@ -63,7 +63,7 @@ export function useAuth(
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       setSession(session)
 
       if (_event === 'PASSWORD_RECOVERY') {

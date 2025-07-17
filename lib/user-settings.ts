@@ -1,8 +1,8 @@
-import { createBrowserClient } from './supabase-client'
+import { createSupabaseBrowserClient } from './supabase-browser'
 
 // Lazy getter for supabase instance
 function getSupabase() {
-  return createBrowserClient()
+  return createSupabaseBrowserClient()
 }
 
 export interface UserProfile {

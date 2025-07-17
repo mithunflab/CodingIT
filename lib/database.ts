@@ -1,10 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js'
-import { createBrowserClient } from './supabase-client'
+import { createSupabaseBrowserClient } from './supabase-browser'
 import { Message } from './messages'
 
 // The supabase client will be passed as an argument to functions.
 // A browser client is created here for convenience on the client-side.
-const browserSupabase = createBrowserClient()
+const browserSupabase = createSupabaseBrowserClient()
 
 export interface Project {
   id: string

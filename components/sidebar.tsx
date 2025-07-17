@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { X, MessageCircle, Search, Gift, Settings, HelpCircle, CreditCard, User, LogOut, MoreHorizontal, Menu, Plus, Trash2, CornerUpLeft } from 'lucide-react';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
+import type { User as SupabaseUser, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { createBrowserClient } from '@/lib/supabase-client';
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser';
 import { getProjects, Project, deleteProject } from '@/lib/database';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -67,7 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleDeleteChat = async (chatId: string) => {
-    const supabase = createBrowserClient();
+    const supabase = createSupabaseBrowserClient();
     await deleteProject(supabase, chatId);
     setChatHistory(chatHistory.filter(chat => chat.id !== chatId));
   };
@@ -112,7 +112,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   React.useEffect(() => {
-    const supabase = createBrowserClient();
+    const supabase = createSupabaseBrowserClient();
     
     // Skip authentication setup if Supabase is not available (development mode)
     if (!supabase) {
@@ -138,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     };
     getUser();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchChatHistory();

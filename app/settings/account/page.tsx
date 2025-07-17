@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AlertTriangle, Camera, Mail, Shield, Loader2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
-import { createBrowserClient } from '@/lib/supabase-client'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { 
   getUserPreferences, 
   getUserSecuritySettings,
@@ -24,7 +24,7 @@ import {
 export default function AccountSettings() {
   const { session } = useAuth(() => {}, () => {})
   const { toast } = useToast()
-  const supabase = createBrowserClient()
+  const supabase = createSupabaseBrowserClient()
   
   // Form state
   const [email, setEmail] = useState('')
