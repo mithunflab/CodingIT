@@ -149,7 +149,7 @@ export default function Home() {
     }
 
     loadProjectMessages()
-  }, [currentProject])
+  }, [currentProject, supabase])
 
   useEffect(() => {
     async function saveMessagesToDb() {
@@ -164,7 +164,7 @@ export default function Home() {
     if (messages.length > 0 && currentProject && session) {
       saveMessagesToDb()
     }
-  }, [messages, currentProject, session])
+  }, [messages, currentProject, session, supabase])
 
   useEffect(() => {
     if (object) {
@@ -223,20 +223,18 @@ export default function Home() {
       stop()
     }
 
-    // Create new project if none exists
-    if (!currentProject) {
-      const title = await generateProjectTitle(chatInput)
-      if (supabase) {
-        const newProject = await createProject(supabase, title, selectedTemplate === 'auto' ? undefined : selectedTemplate)
-        if (newProject) {
-          setCurrentProject(newProject)
-        }
-      }
-    }
+    // Clear input and files immediately for better UX
+    const currentInput = chatInput
+    const currentFiles = [...files]
+    setChatInput('')
+    setFiles([])
+    setCurrentTab('code')
 
-    const content: Message['content'] = [{ type: 'text', text: chatInput }]
-    const images = await toMessageImage(files)
-
+    // Create message content immediately
+    const content: Message['content'] = [{ type: 'text', text: currentInput }]
+    
+    // Process images asynchronously
+    const images = await toMessageImage(currentFiles)
     if (images.length > 0) {
       images.forEach((image) => {
         content.push({ type: 'image', image })
@@ -250,6 +248,7 @@ export default function Home() {
     const updatedMessages = [...messages, newMessage]
     setMessages(updatedMessages)
 
+    // Start submission immediately
     submit({
       userID: session?.user?.id,
       teamID: userTeam?.id,
@@ -259,9 +258,20 @@ export default function Home() {
       config: languageModel,
     })
 
-    setChatInput('')
-    setFiles([])
-    setCurrentTab('code')
+    // Handle project creation asynchronously without blocking
+    if (!currentProject) {
+      try {
+        const title = await generateProjectTitle(currentInput)
+        if (supabase) {
+          const newProject = await createProject(supabase, title, selectedTemplate === 'auto' ? undefined : selectedTemplate)
+          if (newProject) {
+            setCurrentProject(newProject)
+          }
+        }
+      } catch (error) {
+        console.error('Error creating project:', error)
+      }
+    }
 
     posthog.capture('chat_submit', {
       template: selectedTemplate,

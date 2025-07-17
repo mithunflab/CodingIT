@@ -6,6 +6,7 @@ import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import Script from 'next/script'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://codingit.vercel.app'),
@@ -50,17 +51,18 @@ export default function RootLayout({
     >
 <head>
   {/* Google tag (gtag.js) */}
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-8NNCCEN53X"></script>
-  <script
-    dangerouslySetInnerHTML={{
-      __html: `
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-CV2G2EG0KJ');
-      `,
-    }}
+  <Script
+    src="https://www.googletagmanager.com/gtag/js?id=G-8NNCCEN53X"
+    strategy="afterInteractive"
   />
+  <Script id="google-analytics" strategy="afterInteractive">
+    {`
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-CV2G2EG0KJ');
+    `}
+  </Script>
 </head>
   <body>
     <SpeedInsights />

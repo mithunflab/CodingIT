@@ -35,32 +35,23 @@ if (!E2B_API_KEY) {
 
 const sandboxTimeout = 10 * 60 * 1000
 
-async function getSandbox(sessionID: string, template?: string) {
-  const sandbox = await Sandbox.create(template || 'code-interpreter-v1', {
-    apiKey: E2B_API_KEY,
-    metadata: {
-      sessionID,
-      template: template || 'code-interpreter-v1',
-    },
-    timeoutMs: sandboxTimeout,
-  })
-  return sandbox
-}
-
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
-  const sessionID = searchParams.get('sessionID')
-  const template = searchParams.get('template')
+  const sandboxId = searchParams.get('sandboxId')
 
-  if (!sessionID) {
+  if (!sandboxId) {
     return NextResponse.json(
-      { error: 'sessionID is required' },
+      { error: 'sandboxId is required' },
       { status: 400 },
     )
   }
 
   try {
-    const sandbox = await getSandbox(sessionID, template || undefined)
+    // Connect to existing sandbox by ID
+    const sandbox = await Sandbox.connect(sandboxId, {
+      apiKey: E2B_API_KEY,
+    })
+
     const fileTree = await listFilesRecursively(sandbox, '/')
     return NextResponse.json(fileTree)
   } catch (error) {

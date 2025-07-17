@@ -8,33 +8,24 @@ if (!E2B_API_KEY) {
 
 const sandboxTimeout = 10 * 60 * 1000
 
-async function getSandbox(sessionID: string, template?: string) {
-  const sandbox = await Sandbox.create(template || 'code-interpreter-v1', {
-    apiKey: E2B_API_KEY,
-    metadata: {
-      sessionID,
-      template: template || 'code-interpreter-v1',
-    },
-    timeoutMs: sandboxTimeout,
-  })
-  return sandbox
-}
-
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
-    const sessionID = searchParams.get('sessionID')
+    const sandboxId = searchParams.get('sandboxId')
     const path = searchParams.get('path')
-    const template = searchParams.get('template')
 
-    if (!sessionID || !path) {
+    if (!sandboxId || !path) {
       return NextResponse.json(
-        { error: 'sessionID and path are required' },
+        { error: 'sandboxId and path are required' },
         { status: 400 },
       )
     }
 
-    const sandbox = await getSandbox(sessionID, template || undefined)
+    // Connect to existing sandbox by ID
+    const sandbox = await Sandbox.connect(sandboxId, {
+      apiKey: E2B_API_KEY,
+    })
+
     const content = await sandbox.files.read(path)
     return NextResponse.json({ content })
   } catch (error: any) {
@@ -47,16 +38,20 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { sessionID, path, content, template } = await req.json()
+    const { sandboxId, path, content } = await req.json()
 
-    if (!sessionID || !path || content === undefined) {
+    if (!sandboxId || !path || content === undefined) {
       return NextResponse.json(
-        { error: 'sessionID, path and content are required' },
+        { error: 'sandboxId, path and content are required' },
         { status: 400 },
       )
     }
 
-    const sandbox = await getSandbox(sessionID, template || undefined)
+    // Connect to existing sandbox by ID
+    const sandbox = await Sandbox.connect(sandboxId, {
+      apiKey: E2B_API_KEY,
+    })
+
     await sandbox.files.write(path, content)
     return NextResponse.json({ success: true })
   } catch (error: any) {

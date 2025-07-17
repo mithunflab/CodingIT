@@ -1,9 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { FileTree, FileSystemNode } from '@/components/file-tree'
 import { CodeView } from '@/components/code-view'
+import { GitHubImport } from '@/components/github-import'
 import { useAuth } from '@/lib/auth'
+import { Button } from './ui/button'
+import { Github, FolderOpen } from 'lucide-react'
 import Spinner from './ui/spinner'
 
 export function IDE() {
@@ -13,8 +16,9 @@ export function IDE() {
     path: string
     content: string
   } | null>(null)
+  const [showGitHubImport, setShowGitHubImport] = useState(false)
 
-  async function fetchFiles() {
+  const fetchFiles = useCallback(async () => {
     if (!session) return
     try {
       const response = await fetch(`/api/files?sessionID=${session.user.id}`)
@@ -29,13 +33,13 @@ export function IDE() {
       console.error('Error fetching files:', error)
       setFiles([])
     }
-  }
+  }, [session])
 
   useEffect(() => {
     if (session) {
       fetchFiles()
     }
-  }, [session])
+  }, [session, fetchFiles])
 
   if (loading) {
     return (
@@ -63,18 +67,119 @@ export function IDE() {
     })
   }
 
+  async function handleCreateFile(path: string, isDirectory: boolean) {
+    if (!session) return
+    try {
+      const response = await fetch('/api/files', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionID: session.user.id,
+          path,
+          isDirectory,
+          content: isDirectory ? '' : '// New file\n'
+        }),
+      })
+      if (response.ok) {
+        await fetchFiles()
+      }
+    } catch (error) {
+      console.error('Error creating file:', error)
+    }
+  }
+
+  async function handleDeleteFile(path: string) {
+    if (!session) return
+    try {
+      const response = await fetch('/api/files', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionID: session.user.id,
+          path,
+        }),
+      })
+      if (response.ok) {
+        await fetchFiles()
+        if (selectedFile?.path === path) {
+          setSelectedFile(null)
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting file:', error)
+    }
+  }
+
+  async function handleImportRepository(repo: any, repoFiles: any[]) {
+    if (!session) return
+    try {
+      // Import each file from the repository
+      for (const file of repoFiles) {
+        await fetch('/api/files/content', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sessionID: session.user.id,
+            path: `/${repo.name}/${file.path}`,
+            content: file.content,
+          }),
+        })
+      }
+      
+      // Refresh the file tree
+      await fetchFiles()
+      setShowGitHubImport(false)
+    } catch (error) {
+      console.error('Error importing repository:', error)
+    }
+  }
+
+  if (showGitHubImport) {
+    return (
+      <div className="h-full p-4 overflow-auto">
+        <GitHubImport
+          onImport={handleImportRepository}
+          onClose={() => setShowGitHubImport(false)}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-full">
       <div className="w-1/4 border-r overflow-auto">
-        <div className="p-2 border-b">
-          <button
+        <div className="p-2 border-b space-y-2">
+          <Button
             onClick={fetchFiles}
-            className="w-full p-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700"
+            className="w-full"
+            variant="outline"
+            size="sm"
           >
+            <FolderOpen className="h-4 w-4 mr-2" />
             Refresh Files
-          </button>
+          </Button>
+          <Button
+            onClick={() => setShowGitHubImport(true)}
+            className="w-full"
+            variant="outline"
+            size="sm"
+          >
+            <Github className="h-4 w-4 mr-2" />
+            Import from GitHub
+          </Button>
         </div>
-        <FileTree files={files} onSelectFile={handleSelectFile} />
+        <FileTree 
+          files={files} 
+          onSelectFile={handleSelectFile}
+          onCreateFile={handleCreateFile}
+          onDeleteFile={handleDeleteFile}
+        />
       </div>
       <div className="w-3/4">
         {selectedFile ? (

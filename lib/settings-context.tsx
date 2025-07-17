@@ -1,4 +1,3 @@
-// File: lib/settings-context.tsx
 'use client'
 
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'

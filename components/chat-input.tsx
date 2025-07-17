@@ -142,10 +142,8 @@ export function ChatInput({
   function onEnter(e: React.KeyboardEvent<HTMLFormElement>) {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
-      if (e.currentTarget.checkValidity()) {
+      if (input.trim() && !isLoading && !isErrored) {
         handleSubmit(e)
-      } else {
-        e.currentTarget.reportValidity()
       }
     }
   }
@@ -202,7 +200,7 @@ export function ChatInput({
             className="text-normal px-3 resize-none ring-0 bg-inherit w-full m-0 outline-none"
             required={true}
             placeholder={placeholder}
-            disabled={isErrored}
+            disabled={isErrored || isLoading}
             value={input}
             onChange={handleInputChange}
             onPaste={isMultiModal ? handlePaste : undefined}
@@ -246,7 +244,7 @@ export function ChatInput({
                   <Tooltip delayDuration={0}>
                     <TooltipTrigger asChild>
                       <Button
-                        disabled={isErrored}
+                        disabled={isErrored || isLoading || !input.trim()}
                         variant="default"
                         size="icon"
                         type="submit"

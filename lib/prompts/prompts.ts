@@ -47,6 +47,13 @@ ${template ? `
 
   IMPORTANT: WebContainer CANNOT execute diff or patch editing so always write your code in full no partial/diff update
 
+  CRITICAL NEXT.JS ROUTING CONSTRAINT:
+  - Next.js 13+ uses App Router by default
+  - NEVER create both app/ and pages/ directories in the same project
+  - ALWAYS use app/page.tsx for the main route, NOT pages/index.tsx
+  - If creating a Next.js app, use ONLY App Router structure (app/ directory)
+  - This prevents "App Router and Pages Router both match path: /" errors
+
   IMPORTANT: Prefer writing Node.js scripts instead of shell scripts. The environment doesn't fully support shell scripts, so use Node.js for scripting tasks whenever possible!
 
   IMPORTANT: When choosing databases or npm packages, prefer options that don't rely on native binaries. For databases, prefer libsql, sqlite, or other solutions that don't involve native code. WebContainer CANNOT execute arbitrary native binaries.

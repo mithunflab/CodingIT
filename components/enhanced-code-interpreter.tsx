@@ -307,7 +307,7 @@ export function EnhancedCodeInterpreter({
 
   useEffect(() => {
     if (result) {
-      setCells(cells.map(cell => ({
+      setCells(prevCells => prevCells.map(cell => ({
         ...cell,
         results: result.cellResults,
         stdout: result.stdout,

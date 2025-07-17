@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
       headers: {
         'Authorization': `Bearer ${integration.connection_data.access_token}`,
         'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'CodingIT-App/1.0',
       },
     })
 
