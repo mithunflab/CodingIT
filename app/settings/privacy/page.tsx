@@ -279,7 +279,7 @@ export default function PrivacySettings() {
             </div>
             <Switch
               checked={privacySettings.analytics_enabled}
-              onCheckedChange={(checked) => handleUpdateSetting('analytics_enabled', checked)}
+              onCheckedChange={(checked: boolean) => handleUpdateSetting('analytics_enabled', checked)}
               disabled={isUpdating}
             />
           </div>
@@ -296,7 +296,7 @@ export default function PrivacySettings() {
             </div>
             <Switch
               checked={privacySettings.marketing_emails}
-              onCheckedChange={(checked) => handleUpdateSetting('marketing_emails', checked)}
+              onCheckedChange={(checked: boolean) => handleUpdateSetting('marketing_emails', checked)}
               disabled={isUpdating}
             />
           </div>
@@ -313,7 +313,7 @@ export default function PrivacySettings() {
             </div>
             <Switch
               checked={privacySettings.data_sharing}
-              onCheckedChange={(checked) => handleUpdateSetting('data_sharing', checked)}
+              onCheckedChange={(checked: boolean) => handleUpdateSetting('data_sharing', checked)}
               disabled={isUpdating}
             />
           </div>
@@ -330,7 +330,7 @@ export default function PrivacySettings() {
             </div>
             <Switch
               checked={privacySettings.activity_tracking}
-              onCheckedChange={(checked) => handleUpdateSetting('activity_tracking', checked)}
+              onCheckedChange={(checked: boolean) => handleUpdateSetting('activity_tracking', checked)}
               disabled={isUpdating}
             />
           </div>
@@ -347,7 +347,7 @@ export default function PrivacySettings() {
             </div>
             <Switch
               checked={privacySettings.personalization}
-              onCheckedChange={(checked) => handleUpdateSetting('personalization', checked)}
+              onCheckedChange={(checked: boolean) => handleUpdateSetting('personalization', checked)}
               disabled={isUpdating}
             />
           </div>
@@ -441,7 +441,7 @@ export default function PrivacySettings() {
                 Read our complete privacy policy for detailed information about data handling
               </p>
               <a 
-                href="/privacy-policy" 
+                href="https://codinit.dev/privacy-policy" 
                 className="text-sm text-primary hover:underline"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -456,7 +456,7 @@ export default function PrivacySettings() {
                 Review our terms of service and user agreement
               </p>
               <a 
-                href="/terms" 
+                href="https://codinit.dev/terms" 
                 className="text-sm text-primary hover:underline"
                 target="_blank"
                 rel="noopener noreferrer"

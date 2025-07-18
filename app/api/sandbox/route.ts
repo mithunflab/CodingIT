@@ -75,6 +75,12 @@ export async function POST(req: Request) {
     )
   }
 
+  await sbx.commands.run(fragment.install_dependencies_command, {
+    envs: {
+      PORT: (fragment.port || 80).toString(),
+    },
+  })
+
   return new Response(
     JSON.stringify({
       sbxId: sbx?.sandboxId,

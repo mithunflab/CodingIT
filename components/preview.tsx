@@ -55,13 +55,12 @@ export function Preview({
   }
 
   const isLinkAvailable = result?.template !== 'code-interpreter-v1'
-  const isTerminalAvailable = result && result.template !== 'code-interpreter-v1'
 
   return (
     <div className="absolute md:relative z-10 top-0 left-0 shadow-2xl md:rounded-tl-3xl md:rounded-bl-3xl md:border-l md:border-y bg-popover h-full w-full overflow-auto">
       <Tabs
         value={selectedTab}
-        onValueChange={(value) =>
+        onValueChange={(value: string) =>
           onSelectedTabChange(
             value as 'code' | 'fragment' | 'terminal' | 'interpreter' | 'editor'
           )
@@ -112,7 +111,7 @@ export function Preview({
                 )}
               </TabsTrigger>
               <TabsTrigger
-                disabled={isPreviewLoading || !result || result.template !== 'code-interpreter-v1'}
+                disabled={isPreviewLoading || !result}
                 className="font-normal text-xs py-1 px-2 gap-1 flex items-center"
                 value="interpreter"
               >
@@ -120,7 +119,7 @@ export function Preview({
                 Interpreter
               </TabsTrigger>
               <TabsTrigger
-                disabled={!isTerminalAvailable}
+                disabled={isPreviewLoading || !result}
                 className="font-normal text-xs py-1 px-2 gap-1 flex items-center"
                 value="terminal"
               >
@@ -128,6 +127,7 @@ export function Preview({
                 Terminal
               </TabsTrigger>
               <TabsTrigger
+                disabled={isPreviewLoading || !result}
                 className="font-normal text-xs py-1 px-2 gap-1 flex items-center"
                 value="editor"
               >
@@ -152,7 +152,7 @@ export function Preview({
         {fragment && (
           <div className="overflow-y-auto w-full h-full">
             <TabsContent value="code" className="h-full">
-              <FragmentCode files={[{ name: 'index.tsx', content: fragment?.code ?? '' }]} />
+              <FragmentCode files={[{ name: 'pages/index.tsx', content: fragment?.code ?? '' }]} />
             </TabsContent>
             <TabsContent value="fragment" className="h-full">
               {result && (

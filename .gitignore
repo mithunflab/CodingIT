@@ -18,6 +18,10 @@
 /.next/
 /out/
 
+.claude
+
+claude.md
+
 .env
 
 # production
@@ -46,3 +50,5 @@ gcp.json
 .vercel
 
 supabase
+
+.env
