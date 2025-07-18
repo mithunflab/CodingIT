@@ -979,7 +979,18 @@ Return JSON with: {explanation, debuggingSteps, alternatives, prevention}`
     
     return scores[severity as keyof typeof scores] || 2
   }
+
+  // Debug session management (implement later)
+  getDebugSession(sessionId: string): any {
+    // For now, return null - implement session management later
+    return null
+  }
+
+  getActiveSessions(): any[] {
+    // For now, return empty array - implement session management later
+    return []
+  }
 }
 
-// Export singleton instance
+// Export singleton instance  
 export const errorAnalyzer = new ErrorAnalyzer()

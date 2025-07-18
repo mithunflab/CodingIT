@@ -65,6 +65,7 @@ export interface DeploymentProvider {
 export interface DeploymentResult {
   success: boolean
   deploymentId: string
+  provider: string
   url?: string
   previewUrl?: string
   error?: string
@@ -362,6 +363,7 @@ export class DeploymentEngine {
       const errorResult: DeploymentResult = {
         success: false,
         deploymentId,
+        provider: config.provider.name,
         error: error instanceof Error ? error.message : String(error),
         logs: deployment.logs,
         buildTime: deployment.buildTime,
@@ -841,6 +843,7 @@ gatherUsageStats = false
     return {
       success: finalStatus.readyState === 'READY',
       deploymentId,
+      provider: 'Vercel',
       url: finalStatus.url,
       previewUrl: finalStatus.alias?.[0],
       logs: deployment.logs,
@@ -909,6 +912,7 @@ gatherUsageStats = false
     return {
       success: finalStatus.state === 'ready',
       deploymentId,
+      provider: 'Netlify',
       url: finalStatus.ssl_url || finalStatus.url,
       previewUrl: finalStatus.deploy_ssl_url,
       logs: deployment.logs,
@@ -1007,6 +1011,7 @@ gatherUsageStats = false
     return {
       success: true,
       deploymentId,
+      provider: 'Railway',
       url: deployResult.data.deploymentCreate.url,
       logs: deployment.logs,
       buildTime: deployment.buildTime,
@@ -1078,6 +1083,7 @@ gatherUsageStats = false
     return {
       success: true,
       deploymentId,
+      provider: 'Render',
       url: `https://${service.name}.onrender.com`,
       logs: deployment.logs,
       buildTime: deployment.buildTime,
@@ -1158,6 +1164,7 @@ gatherUsageStats = false
     return {
       success: true,
       deploymentId,
+      provider: 'Fly.io',
       url: `https://${app.name}.fly.dev`,
       logs: deployment.logs,
       buildTime: deployment.buildTime,
@@ -1473,7 +1480,7 @@ CMD ["python", "app.py"]`
   }
 
   private async createZipFromFiles(files: Record<string, string>): Promise<Buffer> {
-    const JSZip = require('jszip')
+    const JSZip = (await import('jszip')).default
     const zip = new JSZip()
     
     Object.entries(files).forEach(([path, content]) => {

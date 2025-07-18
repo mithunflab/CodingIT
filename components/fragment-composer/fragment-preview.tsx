@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { FragmentSchema } from '@/lib/schema'
-import { Templates } from '@/lib/templates'
+import type { TemplateId } from '@/lib/templates'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -24,7 +24,7 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 interface FragmentPreviewProps {
   fragment: Partial<FragmentSchema>
-  template: keyof Templates
+  template: TemplateId
 }
 
 export function FragmentPreview({ fragment, template }: FragmentPreviewProps) {
@@ -300,7 +300,7 @@ export function FragmentPreview({ fragment, template }: FragmentPreviewProps) {
     </div>
   )
 
-  const getLanguageFromTemplate = (template: keyof Templates): string => {
+  const getLanguageFromTemplate = (template: TemplateId): string => {
     switch (template) {
       case 'streamlit-developer':
       case 'gradio-developer':

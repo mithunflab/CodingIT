@@ -1,7 +1,7 @@
 'use client'
 
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react'
-import { Templates } from '@/lib/templates'
+import { TemplatesDataObject } from '@/lib/templates'
 import { Editor } from '@monaco-editor/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -23,7 +23,7 @@ interface CodeEditorProps {
   value: string
   onChange: (value: string) => void
   language: string
-  template: keyof Templates
+  template: keyof TemplatesDataObject
   onDragOver: (event: React.DragEvent) => void
   onDrop: (event: React.DragEvent) => void
 }

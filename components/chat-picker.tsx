@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { LLMModel, LLMModelConfig } from '@/lib/models'
-import { TemplateId, Templates } from '@/lib/templates'
+import { TemplateId, TemplatesDataObject } from '@/lib/templates'
 import 'core-js/features/object/group-by.js'
 import { Sparkles } from 'lucide-react'
 import Image from 'next/image'
@@ -21,7 +21,7 @@ export function ChatPicker({
   languageModel,
   onLanguageModelChange,
 }: {
-  templates: Templates
+  templates: TemplatesDataObject
   selectedTemplate: 'auto' | TemplateId
   onSelectedTemplateChange: (template: 'auto' | TemplateId) => void
   models: LLMModel[]

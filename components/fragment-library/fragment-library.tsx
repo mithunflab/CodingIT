@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { FragmentSchema } from '@/lib/schema'
-import { Templates } from '@/lib/templates'
+import type { TemplateId } from '@/lib/templates'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -301,12 +301,12 @@ export function FragmentLibrary({
   const [selectedFragment, setSelectedFragment] = useState<LibraryFragment | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
-  const [selectedTemplate, setSelectedTemplate] = useState<keyof Templates | 'All'>('All')
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateId | 'All'>('All')
   const [sortBy, setSortBy] = useState<'popular' | 'recent' | 'rating'>('popular')
   const [fragments, setFragments] = useState<LibraryFragment[]>(mockFragments)
 
   const categories = ['All', 'Data Analysis', 'Web Development', 'Machine Learning', 'Utilities', 'Templates']
-  const templates: (keyof Templates | 'All')[] = ['All', 'streamlit-developer', 'nextjs-developer', 'vue-developer', 'gradio-developer', 'code-interpreter-v1']
+  const templates: (TemplateId | 'All')[] = ['All', 'streamlit-developer', 'nextjs-developer', 'vue-developer', 'gradio-developer', 'code-interpreter-v1']
 
   const filteredFragments = fragments.filter(fragment => {
     const matchesSearch = fragment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -428,7 +428,7 @@ export function FragmentLibrary({
                 <label className="text-sm font-medium mb-2 block">Template</label>
                 <select
                   value={selectedTemplate}
-                  onChange={(e) => setSelectedTemplate(e.target.value as keyof Templates | 'All')}
+                  onChange={(e) => setSelectedTemplate(e.target.value as TemplateId | 'All')}
                   className="w-full px-3 py-2 border rounded-md text-sm"
                 >
                   {templates.map(template => (

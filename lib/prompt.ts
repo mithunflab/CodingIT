@@ -1,4 +1,4 @@
-import { Templates, templatesToPrompt } from '@/lib/templates'
+import { TemplatesDataObject, templatesToPrompt } from '@/lib/templates'
 
 const PERSONA = `You are CodinIT, an AI assistant specializing in building production-grade applications using the e2b.dev fragments template and E2B WebContainer environment. Build complete, functional applications across multiple programming languages and frameworks.`
 
@@ -241,7 +241,7 @@ Response Format
 - Optimize for E2B execution environment
 `
 
-export function toPrompt(template: Templates) {
+export function toPrompt(template: TemplatesDataObject) {
   const availableTemplates = `
 Fragment Templates
 

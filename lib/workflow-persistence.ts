@@ -126,10 +126,13 @@ export class WorkflowPersistence {
   private supabase: ReturnType<typeof createClient<Database>>
 
   constructor() {
-    this.supabase = createClient<Database>(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_ANON_KEY!
-    )
+    const supabaseUrl = process.env.SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Supabase URL and service key are required.')
+    }
+    this.supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
   }
 
   // Workflow CRUD operations

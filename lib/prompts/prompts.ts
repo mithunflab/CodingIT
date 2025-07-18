@@ -1,5 +1,5 @@
 import type { DesignScheme } from '@/lib/design-scheme';
-import { TemplateConfig } from '@/lib/templates';
+import { BaseTemplateConfig } from '@/lib/templates';
 import { stripIndents } from '@/lib/stripIndent';
 
 const allowedHTMLElements: string[] = [
@@ -14,7 +14,7 @@ export const getSystemPrompt = (
     credentials?: { anonKey?: string; supabaseUrl?: string };
   },
   designScheme?: DesignScheme,
-  template?: TemplateConfig,
+  template?: BaseTemplateConfig,
 ) => `
 You are CodinIT, an expert AI assistant and exceptional senior software developer with vast knowledge across multiple programming languages, frameworks, and best practices.
 

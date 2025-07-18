@@ -1,29 +1,22 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Templates } from '@/lib/templates'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   Search, 
   Type, 
   Square, 
-  Circle, 
   Image, 
   BarChart, 
   Sliders, 
   MousePointer,
   Code,
-  Layers,
   Package,
-  Zap,
   Database,
   FileText,
-  Settings,
   Plus
 } from 'lucide-react'
 

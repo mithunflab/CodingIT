@@ -61,13 +61,12 @@ export function DeploymentDashboard({ fragment, onClose }: DeploymentDashboardPr
     }
   }, [fragment.title])
 
-  // Load deployment history
   useEffect(() => {
     loadDeploymentHistory()
     loadActiveDeployments()
   }, [loadDeploymentHistory, loadActiveDeployments])
 
-  const handleDeploy = async (config: DeploymentConfig) => {
+  const handleDeploy = async (fragmentArg: FragmentSchema, config: DeploymentConfig) => {
     setIsDeploying(true)
     setDeploymentConfig(config)
     
@@ -76,12 +75,12 @@ export function DeploymentDashboard({ fragment, onClose }: DeploymentDashboardPr
       const { deploymentEngine } = await import('@/lib/deployment/deployment-engine')
       
       // Start deployment
-      const result = await deploymentEngine.deployFragment(fragment, config)
+      const result = await deploymentEngine.deployFragment(fragmentArg, config)
       
       // Update history
       const newHistory = [result, ...deploymentHistory].slice(0, 10)
       setDeploymentHistory(newHistory)
-      localStorage.setItem(`deployment_history_${fragment.title}`, JSON.stringify(newHistory))
+      localStorage.setItem(`deployment_history_${fragmentArg.title}`, JSON.stringify(newHistory))
       
       if (result.success) {
         toast({

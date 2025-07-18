@@ -24,6 +24,8 @@ claude.md
 
 .env
 
+.mcp.json 
+
 # production
 /build
 

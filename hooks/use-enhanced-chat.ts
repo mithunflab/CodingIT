@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useChat } from 'ai/react'
-import { Templates } from '@/lib/templates'
+import { TemplatesDataObject } from '@/lib/templates'
 import { LLMModel, LLMModelConfig } from '@/lib/models'
 
 export interface Message {
@@ -15,7 +15,7 @@ export interface Message {
 interface EnhancedChatConfig {
   userID?: string
   teamID?: string
-  template: Templates
+  template: TemplatesDataObject
   model: LLMModel
   config: LLMModelConfig
   onFinish?: (message: Message) => void

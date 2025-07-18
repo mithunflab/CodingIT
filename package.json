@@ -1,6 +1,6 @@
 {
   "name": "codinit-app",
-  "version": "0.0.9",
+  "version": "0.0.28",
   "private": false,
   "scripts": {
     "postinstall": "patch-package",
@@ -24,6 +24,7 @@
     "@huggingface/hub": "^2.3.0",
     "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-accordion": "^1.2.11",
+    "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-avatar": "^1.1.0",
     "@radix-ui/react-collapsible": "^1.1.11",
     "@radix-ui/react-dialog": "^1.1.1",
@@ -42,6 +43,7 @@
     "@radix-ui/react-visually-hidden": "^1.1.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.50.3",
+    "@tailwindcss/typography": "github:tailwindcss/typography",
     "@upstash/ratelimit": "^2.0.1",
     "@vercel/analytics": "^1.5.0",
     "@vercel/kv": "^2.0.0",
@@ -54,13 +56,13 @@
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.0",
     "geist": "^1.4.2",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.396.0",
     "next": "^14.2.30",
     "next-themes": "^0.3.0",
     "node-fetch": "^3.3.2",
     "ollama-ai-provider": "latest",
     "posthog-js": "^1.158.3",
-    "prismjs": "^1.30.0",
     "react": "^18",
     "react-dom": "^18",
     "react-resizable-panels": "^3.0.3",
@@ -71,6 +73,10 @@
     "tailwindcss-animate": "^1.0.7",
     "usehooks-ts": "^3.1.0",
     "zod": "^3.23.8"
+  },
+  "overrides": {
+    "prismjs": "^1.30.0",
+    "highlight.js": "11.9.0"
   },
   "devDependencies": {
     "@swc/cli": "^0.7.8",

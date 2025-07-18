@@ -16,7 +16,7 @@ import { LLMModelConfig } from '@/lib/models'
 import modelsList from '@/lib/models.json'
 import { FragmentSchema, fragmentSchema as schema } from '@/lib/schema'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import templates, { TemplateId, Templates } from '@/lib/templates'
+import templates, { TemplateId } from '@/lib/templates'
 import { ExecutionResult } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { DeepPartial } from 'ai'
@@ -26,6 +26,7 @@ import { SetStateAction, useCallback, useEffect, useState } from 'react'
 import { useLocalStorage } from 'usehooks-ts'
 import { useEnhancedChat } from '@/hooks/use-enhanced-chat'
 import { HeroPillSecond } from '@/components/announcement'
+import templatesData from '@/lib/templates'
 
 export default function Home() {
   const supabase = createSupabaseBrowserClient()
@@ -61,14 +62,14 @@ export default function Home() {
   const currentTemplate =
     selectedTemplate === 'auto'
       ? templates
-      : ({ [selectedTemplate]: templates[selectedTemplate] } as Templates)
+      : templates[selectedTemplate as keyof typeof templates]
 
   const { executeCode: enhancedExecuteCode } = useEnhancedChat({
     userID: session?.user?.id,
     teamID: userTeam?.id,
-    template: currentTemplate,
     model: modelsList.models.find(m => m.id === languageModel.model)!,
     config: languageModel,
+    template: templatesData,
   })
 
   const handleChatSelected = async (chatId: string) => {
