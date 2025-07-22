@@ -33,14 +33,13 @@ const E2B_API_KEY = process.env.E2B_API_KEY
 const sandboxTimeout = 10 * 60 * 1000
 
 export async function GET(request: NextRequest) {
+  if (!E2B_API_KEY) {
+    return NextResponse.json(
+      { error: 'E2B_API_KEY environment variable not found' },
+      { status: 500 },
+    )
+  }
   try {
-    if (!E2B_API_KEY) {
-      return NextResponse.json(
-        { error: 'E2B_API_KEY environment variable not found' },
-        { status: 500 },
-      )
-    }
-
     const searchParams = request.nextUrl.searchParams
     const sandboxId = searchParams.get('sandboxId')
 
