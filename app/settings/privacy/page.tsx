@@ -36,7 +36,7 @@ export default function PrivacySettings() {
   const { session } = useAuth(() => {}, () => {})
   const { toast } = useToast()
   
-  // State
+
   const [privacySettings, setPrivacySettings] = useState<PrivacySettings>({
     analytics_enabled: true,
     marketing_emails: false,
@@ -49,7 +49,7 @@ export default function PrivacySettings() {
   const [isExporting, setIsExporting] = useState(false)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
 
-  // Load privacy settings on mount
+
   useEffect(() => {
     if (!session?.user?.id) return
 
@@ -87,17 +87,17 @@ export default function PrivacySettings() {
 
     setIsUpdating(true)
     try {
-      // Update local state immediately for better UX
+
       setPrivacySettings(prev => ({ ...prev, [key]: value }))
 
-      // Map privacy settings to user preferences where applicable
+
       if (key === 'marketing_emails') {
         const success = await updateUserPreferences(session.user.id, {
           marketing_emails: value
         })
 
         if (!success) {
-          // Revert on failure
+
           setPrivacySettings(prev => ({ ...prev, [key]: !value }))
           throw new Error('Failed to update preference')
         }
@@ -124,10 +124,10 @@ export default function PrivacySettings() {
 
     setIsExporting(true)
     try {
-      // In a real implementation, this would call an API to generate and download user data
+
       await new Promise(resolve => setTimeout(resolve, 3000)) // Simulate export process
       
-      // Simulate download of exported data
+
       const dataExport = {
         user_id: session.user.id,
         email: session.user.email,
@@ -173,7 +173,7 @@ export default function PrivacySettings() {
 
     setIsDeletingAccount(true)
     try {
-      // In a real implementation, this would call an API to delete the user account
+
       await new Promise(resolve => setTimeout(resolve, 2000)) // Simulate deletion process
       
       toast({
@@ -217,7 +217,7 @@ export default function PrivacySettings() {
         </p>
       </div>
 
-      {/* Data Protection */}
+      
       <Card>
         <CardHeader>
           <CardTitle>Data Protection</CardTitle>
@@ -258,7 +258,7 @@ export default function PrivacySettings() {
         </CardContent>
       </Card>
 
-      {/* Privacy Controls */}
+      
       <Card>
         <CardHeader>
           <CardTitle>Privacy Controls</CardTitle>
@@ -354,7 +354,7 @@ export default function PrivacySettings() {
         </CardContent>
       </Card>
 
-      {/* Data Management */}
+      
       <Card>
         <CardHeader>
           <CardTitle>Data Management</CardTitle>
@@ -412,7 +412,7 @@ export default function PrivacySettings() {
         </CardContent>
       </Card>
 
-      {/* Contact Information */}
+      
       <Card>
         <CardHeader>
           <CardTitle>Privacy Contact</CardTitle>

@@ -20,7 +20,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Connect to existing sandbox
     const sandbox = await Sandbox.connect(sbxId, {
       ...(teamID && accessToken
         ? {

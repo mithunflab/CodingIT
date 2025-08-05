@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { WorkflowSchema, WorkflowExecution, FragmentNode, Connection } from './workflow-engine'
+import { WorkflowSchema, WorkflowExecution } from './workflow-engine'
 
 export interface Database {
   public: {
@@ -130,22 +130,14 @@ export class WorkflowPersistence {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.warn('Supabase configuration is incomplete. Some features may not work.')
-      // Create a mock client to prevent build errors
-      this.supabase = {
-        from: () => ({
-          select: () => ({ single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }) }),
-          insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }) }) }),
-          update: () => ({ eq: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }) }) }) }),
-          delete: () => ({ eq: () => Promise.resolve({ error: new Error('Supabase not configured') }) }),
-          eq: () => ({ single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }) }),
-          order: () => ({ range: () => Promise.resolve({ data: [], error: new Error('Supabase not configured'), count: 0 }) }),
-          range: () => Promise.resolve({ data: [], error: new Error('Supabase not configured'), count: 0 })
-        })
-      } as any
-      return
+      throw new Error('Supabase configuration is incomplete. Please set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.')
     }
-    this.supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
+    
+    try {
+      this.supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
+    } catch (error) {
+      throw new Error(`Failed to initialize Supabase client: ${error instanceof Error ? error.message : String(error)}`)
+    }
   }
 
   // Workflow CRUD operations
@@ -153,6 +145,10 @@ export class WorkflowPersistence {
     workflow: Omit<WorkflowSchema, 'id' | 'created_at' | 'updated_at'>,
     teamId?: string
   ): Promise<WorkflowSchema> {
+    if (!teamId) {
+      throw new Error('Team ID is required to create a workflow')
+    }
+
     const workflowData = {
       name: workflow.name,
       description: workflow.description,
@@ -175,6 +171,10 @@ export class WorkflowPersistence {
 
     if (error) {
       throw new Error(`Failed to create workflow: ${error.message}`)
+    }
+
+    if (!data) {
+      throw new Error('No data returned from workflow creation')
     }
 
     return this.mapDbRowToWorkflow(data)

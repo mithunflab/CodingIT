@@ -121,7 +121,6 @@ export default function IntegrationsSettings() {
         description: "GitHub connected successfully!",
       })
       window.history.replaceState({}, '', window.location.pathname)
-      // Force reload integrations after successful OAuth
       loadIntegrations()
     }
 
@@ -185,7 +184,6 @@ export default function IntegrationsSettings() {
         return
       }
 
-      // For other services (simulated for now)
       console.log(`Connecting ${serviceId} for user:`, session.user.id)
       
       const success = await upsertUserIntegration(session.user.id, serviceId, {

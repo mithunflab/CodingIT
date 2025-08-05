@@ -224,17 +224,14 @@ export default function Home() {
       stop()
     }
 
-    // Clear input and files immediately for better UX
     const currentInput = chatInput
     const currentFiles = [...files]
     setChatInput('')
     setFiles([])
     setCurrentTab('code')
 
-    // Create message content immediately
     const content: Message['content'] = [{ type: 'text', text: currentInput }]
     
-    // Process images asynchronously
     const images = await toMessageImage(currentFiles)
     if (images.length > 0) {
       images.forEach((image) => {
@@ -249,7 +246,6 @@ export default function Home() {
     const updatedMessages = [...messages, newMessage]
     setMessages(updatedMessages)
 
-    // Start submission immediately
     submit({
       userID: session?.user?.id,
       teamID: userTeam?.id,
@@ -259,7 +255,6 @@ export default function Home() {
       config: languageModel,
     })
 
-    // Handle project creation asynchronously without blocking
     if (!currentProject) {
       try {
         const title = await generateProjectTitle(currentInput)
@@ -374,7 +369,6 @@ export default function Home() {
         />
       )}
 
-      {/* Main content with left margin to account for collapsed sidebar */}
       <div className={cn(
         "grid w-full md:grid-cols-2 transition-all duration-300",
         session ? "ml-16" : ""

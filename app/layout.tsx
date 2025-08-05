@@ -50,7 +50,6 @@ export default function RootLayout({
       className={`${GeistSans.variable} ${GeistMono.variable}`}
     >
 <head>
-  {/* Google tag (gtag.js) */}
   <Script
     src="https://www.googletagmanager.com/gtag/js?id=G-8NNCCEN53X"
     strategy="afterInteractive"

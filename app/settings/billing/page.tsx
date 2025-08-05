@@ -49,21 +49,21 @@ export default function BillingSettings() {
   const { session, userTeam } = useAuth(() => {}, () => {})
   const { toast } = useToast()
   
-  // State
+
   const [billingInfo, setBillingInfo] = useState<BillingInfo | null>(null)
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
 
-  // Load billing information
+
   useEffect(() => {
     if (!session?.user?.id || !userTeam?.id) return
 
     const loadBillingInfo = async () => {
       setIsLoading(true)
       try {
-        // In a real implementation, you would fetch billing info from Stripe/payment provider
-        // For now, we'll use the team tier information and simulate billing data
+
+
         const mockBillingInfo: BillingInfo = {
           subscription: {
             plan: userTeam.tier || 'free',
@@ -122,7 +122,7 @@ export default function BillingSettings() {
   const handleUpgradePlan = async () => {
     setIsUpdating(true)
     try {
-      // In a real implementation, this would redirect to Stripe checkout
+
       await new Promise(resolve => setTimeout(resolve, 2000)) // Simulate API call
       
       toast({
@@ -148,7 +148,7 @@ export default function BillingSettings() {
 
     setIsUpdating(true)
     try {
-      // In a real implementation, this would call your API to cancel subscription
+
       await new Promise(resolve => setTimeout(resolve, 1500)) // Simulate API call
       
       if (billingInfo) {
@@ -180,7 +180,7 @@ export default function BillingSettings() {
   const handleUpdatePaymentMethod = async () => {
     setIsUpdating(true)
     try {
-      // In a real implementation, this would redirect to Stripe customer portal
+
       await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate redirect
       
       toast({
@@ -269,7 +269,7 @@ export default function BillingSettings() {
         </p>
       </div>
 
-      {/* Current Plan */}
+      
       <Card>
         <CardHeader>
           <CardTitle>Current Plan</CardTitle>
@@ -327,7 +327,7 @@ export default function BillingSettings() {
             </div>
           </div>
 
-          {/* Usage Information */}
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
@@ -362,7 +362,7 @@ export default function BillingSettings() {
         </CardContent>
       </Card>
 
-      {/* Payment Method */}
+      
       {billingInfo?.payment_method && (
         <Card>
           <CardHeader>
@@ -399,7 +399,7 @@ export default function BillingSettings() {
         </Card>
       )}
 
-      {/* Billing History */}
+      
       <Card>
         <CardHeader>
           <CardTitle>Billing History</CardTitle>
@@ -452,7 +452,7 @@ export default function BillingSettings() {
         </CardContent>
       </Card>
 
-      {/* Billing Contact */}
+      
       <Card>
         <CardHeader>
           <CardTitle>Billing Contact</CardTitle>

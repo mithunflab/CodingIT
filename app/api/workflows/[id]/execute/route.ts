@@ -4,8 +4,6 @@ import { workflowPersistence } from '@/lib/workflow-persistence'
 import { workflowEngine } from '@/lib/workflow-engine'
 
 export const dynamic = 'force-dynamic'
-
-// POST /api/workflows/[id]/execute - Execute workflow
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -23,7 +21,6 @@ export async function POST(
     const body = await request.json()
     const { inputData = {}, triggerType = 'manual' } = body
 
-    // Get workflow
     const workflow = await workflowPersistence.getWorkflow(params.id)
     if (!workflow) {
       return NextResponse.json(
@@ -32,14 +29,12 @@ export async function POST(
       )
     }
 
-    // Execute workflow in background
     const execution = await workflowEngine.executeWorkflow(
       workflow,
       inputData,
       triggerType
     )
 
-    // Save execution to database
     await workflowPersistence.createExecution(execution)
 
     return NextResponse.json({
@@ -56,7 +51,6 @@ export async function POST(
   }
 }
 
-// GET /api/workflows/[id]/execute - Get execution status
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -75,7 +69,6 @@ export async function GET(
     const executionId = searchParams.get('execution_id')
 
     if (executionId) {
-      // Get specific execution
       const execution = await workflowPersistence.getExecution(executionId)
       if (!execution) {
         return NextResponse.json(
@@ -85,7 +78,6 @@ export async function GET(
       }
       return NextResponse.json(execution)
     } else {
-      // Get all executions for workflow
       const limit = parseInt(searchParams.get('limit') || '50')
       const offset = parseInt(searchParams.get('offset') || '0')
       

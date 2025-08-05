@@ -36,7 +36,6 @@ export default function DeploymentsPage() {
   const [isDeploying, setIsDeploying] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Load deployments
   useEffect(() => {
     if (session?.user?.id) {
       loadDeployments()
@@ -78,10 +77,8 @@ export default function DeploymentsPage() {
 
       const result = await response.json()
       
-      // Add to deployments list
       setDeployments(prev => [result, ...prev])
       
-      // Start polling for status updates
       pollDeploymentStatus(result.deploymentId)
       
       toast({
@@ -113,7 +110,6 @@ export default function DeploymentsPage() {
         
         const status = await response.json()
         
-        // Update active deployments
         setActiveDeployments(prev => {
           const filtered = prev.filter(d => d.deploymentId !== deploymentId)
           if (status.status === 'building' || status.status === 'deploying') {
@@ -123,7 +119,6 @@ export default function DeploymentsPage() {
         })
         
         if (status.status === 'success' || status.status === 'failed') {
-          // Update deployments list
           setDeployments(prev => prev.map(d => 
             d.deploymentId === deploymentId 
               ? { ...d, status: status.status, url: status.url }
@@ -162,7 +157,6 @@ export default function DeploymentsPage() {
 
       if (!response.ok) throw new Error('Failed to cancel deployment')
 
-      // Remove from active deployments
       setActiveDeployments(prev => prev.filter(d => d.deploymentId !== deploymentId))
       
       toast({
@@ -259,7 +253,6 @@ export default function DeploymentsPage() {
         </Button>
       </div>
 
-      {/* Active Deployments */}
       {activeDeployments.length > 0 && (
         <Card className="mb-6">
           <CardHeader>

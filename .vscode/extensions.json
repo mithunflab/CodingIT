@@ -1,3 +1,6 @@
 {
-  "recommendations": ["21st.21st-extension"]
+  "recommendations": [
+    "21st.21st-extension",
+    "bradlc.vscode-tailwindcss"
+  ]
 }

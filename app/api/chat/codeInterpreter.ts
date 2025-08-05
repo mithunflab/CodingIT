@@ -16,15 +16,7 @@ export async function evaluateCode(
 
   const sandbox = await getSandbox(sessionID);
 
-  // Execute the code in a Jupyter Notebook in the sandbox.
-  // https://e2b.dev/docs/code-interpreter/execution
-  const execution = await sandbox.runCode(code, {
-    // We can also use callbacks to handle streaming stdout, stderr, and results from the sandbox.
-    // This is useful if you want to stream the results to client directly.
-    // onStdout,
-    // onStderr,
-    // onResult,
-  });
+  const execution = await sandbox.runCode(code, {});
 
   return {
     results: execution.results,

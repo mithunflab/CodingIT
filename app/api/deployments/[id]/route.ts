@@ -4,7 +4,6 @@ import { deploymentEngine } from '@/lib/deployment/deployment-engine'
 
 export const dynamic = 'force-dynamic'
 
-// GET /api/deployments/[id] - Get deployment status
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -36,7 +35,6 @@ export async function GET(
   }
 }
 
-// DELETE /api/deployments/[id] - Cancel deployment
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }

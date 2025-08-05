@@ -29,19 +29,16 @@ export default function ProfileSettings() {
   const { session } = useAuthContext()
   const { toast } = useToast()
   
-  // Form state
   const [fullName, setFullName] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [workDescription, setWorkDescription] = useState('')
   const [aiAssistance, setAiAssistance] = useState(true)
   const [smartSuggestions, setSmartSuggestions] = useState(false)
   
-  // Loading states
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isUpdatingPreferences, setIsUpdatingPreferences] = useState(false)
 
-  // Load user data on mount
   useEffect(() => {
     if (!session?.user?.id) return
 

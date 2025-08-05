@@ -71,7 +71,6 @@ export default function SettingsLayout({
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar Navigation */}
           <div className="lg:col-span-1">
             <nav className="space-y-1">
               {settingsNavigation.map((item) => {
@@ -95,7 +94,6 @@ export default function SettingsLayout({
             </nav>
           </div>
 
-          {/* Main Content */}
           <div className="lg:col-span-3">
             {children}
           </div>

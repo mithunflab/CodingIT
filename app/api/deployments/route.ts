@@ -5,7 +5,6 @@ import { FragmentSchema } from '@/lib/schema'
 
 export const dynamic = 'force-dynamic'
 
-// POST /api/deployments - Deploy fragment
 export async function POST(request: NextRequest) {
   try {
     const supabase = createServerClient(true)
@@ -25,7 +24,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate fragment schema
     const fragmentData = fragment as FragmentSchema
     if (!fragmentData.template || !fragmentData.code) {
       return NextResponse.json(
@@ -34,7 +32,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Start deployment in background
     const deploymentResult = await deploymentEngine.deployFragment(fragmentData, config)
 
     return NextResponse.json(deploymentResult)
@@ -47,7 +44,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/deployments - List deployments
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServerClient(true)
@@ -65,7 +61,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ deployments: history })
     }
 
-    // For now, return empty array since we don't have user-specific deployment tracking
     return NextResponse.json({ deployments: [] })
   } catch (error) {
     console.error('Error listing deployments:', error)

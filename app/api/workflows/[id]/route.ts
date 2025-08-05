@@ -3,8 +3,6 @@ import { createServerClient } from '@/lib/supabase-server'
 import { workflowPersistence } from '@/lib/workflow-persistence'
 
 export const dynamic = 'force-dynamic'
-
-// GET /api/workflows/[id] - Get specific workflow
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -38,7 +36,6 @@ export async function GET(
   }
 }
 
-// PUT /api/workflows/[id] - Update workflow
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -77,7 +74,6 @@ export async function PUT(
   }
 }
 
-// DELETE /api/workflows/[id] - Delete workflow
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }

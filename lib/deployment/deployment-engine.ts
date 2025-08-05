@@ -906,7 +906,7 @@ gatherUsageStats = false
         'Authorization': `Bearer ${process.env.NETLIFY_TOKEN}`,
         'Content-Type': 'application/zip'
       },
-      body: await this.createZipFromFiles(files)
+      body: new Uint8Array(await this.createZipFromFiles(files))
     })
     
     if (!deployResponse.ok) {

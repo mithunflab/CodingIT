@@ -1,5 +1,7 @@
-import { ExecutionResult } from './types'
 import { FragmentSchema } from './schema'
+import { Sandbox } from '@e2b/code-interpreter'
+import { TemplateId } from './templates'
+import { fragmentNodeMapper } from './fragment-node-mapper'
 
 export interface WorkflowSchema {
   id: string
@@ -106,9 +108,9 @@ export class WorkflowEngine {
   async executeWorkflow(
     workflow: WorkflowSchema,
     inputData: Record<string, any> = {},
-    triggerType: 'manual' | 'scheduled' | 'webhook' | 'event' = 'manual'
+    _triggerType: 'manual' | 'scheduled' | 'webhook' | 'event' = 'manual'
   ): Promise<WorkflowExecution> {
-    const executionId = `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const executionId = `exec_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
     
     const execution: WorkflowExecution = {
       id: executionId,
@@ -361,34 +363,87 @@ export class WorkflowEngine {
   }
 
   private async executeFragment(node: FragmentNode, inputs: Record<string, any>): Promise<any> {
-    // This would integrate with the existing fragment execution system
-    // For now, we'll simulate execution
+    const sandboxTimeout = node.config.resources.timeout || 300000 // 5 minutes default
     
-    const fragment: Partial<FragmentSchema> = {
-      template: node.config.template as any,
-      code: `// Auto-generated code for node ${node.id}\n// Inputs: ${JSON.stringify(inputs, null, 2)}`,
+    if (!process.env.E2B_API_KEY) {
+      throw new Error('E2B_API_KEY environment variable not found')
     }
-
-    // Simulate fragment execution with timeout
-    return new Promise((resolve, reject) => {
-      const timeout = node.config.resources.timeout || 30000
+    
+    try {
+      // Convert node to fragment using the mapper
+      const fragment = fragmentNodeMapper.nodeToFragment(node)
       
-      const timer = setTimeout(() => {
-        reject(new Error(`Node execution timeout after ${timeout}ms`))
-      }, timeout)
+      // Override code with processed inputs if needed  
+      if (!fragment.code || fragment.code.trim() === '') {
+        throw new Error(`No code configured for workflow node ${node.id}`)
+      }
 
-      // Simulate async execution
-      setTimeout(() => {
-        clearTimeout(timer)
-        resolve({
-          status: 'success',
-          output: `Result from node ${node.id}`,
-          inputs,
-          timestamp: new Date().toISOString()
-        })
-      }, Math.random() * 1000 + 500) // Random delay 500-1500ms
-    })
+      // Create sandbox with the specified template
+      const sbx = await Sandbox.create(fragment.template, {
+        metadata: {
+          template: fragment.template,
+          nodeId: node.id,
+          workflowExecution: 'true'
+        },
+        timeoutMs: sandboxTimeout
+      })
+
+      try {
+        // Install additional dependencies if needed
+        if (node.config.environment.INSTALL_COMMAND) {
+          await sbx.commands.run(node.config.environment.INSTALL_COMMAND)
+        }
+
+        // Write code to filesystem
+        await sbx.files.write(fragment.file_path, fragment.code)
+
+        let result: any
+
+        // Execute based on template type
+        if (fragment.template === 'code-interpreter-v1') {
+          // For code interpreter, run the code directly
+          const execution = await sbx.runCode(fragment.code)
+          result = {
+            status: execution.error ? 'error' : 'success',
+            output: execution.results,
+            stdout: execution.logs.stdout,
+            stderr: execution.logs.stderr,
+            error: execution.error,
+            inputs,
+            timestamp: new Date().toISOString()
+          }
+        } else {
+          // For web-based templates, start the server and get URL
+          const port = fragment.port || 3000
+          await sbx.commands.run(`cd /home/user && ${node.config.environment.START_COMMAND || 'npm start'}`, {
+            envs: {
+              PORT: port.toString(),
+              ...node.config.environment
+            }
+          })
+
+          result = {
+            status: 'success',
+            output: `https://${sbx.getHost(port)}`,
+            url: `https://${sbx.getHost(port)}`,
+            sandboxId: sbx.sandboxId,
+            inputs,
+            timestamp: new Date().toISOString()
+          }
+        }
+
+        return result
+      } finally {
+        // Keep sandbox running for web templates, kill for code interpreter
+        if (fragment.template === 'code-interpreter-v1') {
+          await sbx.kill()
+        }
+      }
+    } catch (error) {
+      throw new Error(`Failed to execute fragment: ${error instanceof Error ? error.message : String(error)}`)
+    }
   }
+
 
   private addLog(execution: WorkflowExecution, nodeId: string, type: ExecutionLogEntry['type'], message: string, data?: any): void {
     execution.executionLog.push({

@@ -23,7 +23,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Analyze error in background
     const errorContext = {
       fragment: { code, template: 'code-interpreter-v1' },
       template: 'code-interpreter-v1' as any,
@@ -43,7 +42,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/debug - Get debug session
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServerClient()
@@ -67,7 +65,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(debugSession)
     }
 
-    // Return active debug sessions
     const sessions = errorAnalyzer.getActiveSessions()
     return NextResponse.json({ sessions })
   } catch (error) {

@@ -4,8 +4,6 @@ import { workflowPersistence } from '@/lib/workflow-persistence'
 import { workflowEngine } from '@/lib/workflow-engine'
 
 export const dynamic = 'force-dynamic'
-
-// GET /api/workflows - List user's workflows
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServerClient(true)
@@ -34,7 +32,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/workflows - Create new workflow
 export async function POST(request: NextRequest) {
   try {
     const supabase = createServerClient(true)

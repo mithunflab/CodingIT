@@ -25,7 +25,6 @@ export async function GET(req: Request) {
       )
     }
 
-    // Connect to existing sandbox by ID
     const sandbox = await Sandbox.connect(sandboxId, {
       apiKey: E2B_API_KEY,
     })
@@ -51,7 +50,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Connect to existing sandbox by ID
     const sandbox = await Sandbox.connect(sandboxId, {
       apiKey: E2B_API_KEY,
     })

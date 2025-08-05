@@ -26,7 +26,6 @@ export default function AccountSettings() {
   const { toast } = useToast()
   const supabase = createSupabaseBrowserClient()
   
-  // Form state
   const [email, setEmail] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -36,14 +35,12 @@ export default function AccountSettings() {
   const [securityAlerts, setSecurityAlerts] = useState(true)
   const [avatarUrl, setAvatarUrl] = useState('')
   
-  // Loading states
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false)
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
 
-  // Load user data on mount
   useEffect(() => {
     if (!session?.user?.id) return
 
@@ -56,7 +53,6 @@ export default function AccountSettings() {
           getUserSecuritySettings(session.user.id)
         ])
 
-        // Set email from session
         setEmail(session.user.email || '')
 
         if (profile) {
@@ -140,14 +136,12 @@ export default function AccountSettings() {
 
       if (error) throw error
 
-      // Update security settings to track password change
       if (session?.user?.id) {
         await updateUserSecuritySettings(session.user.id, {
           last_password_change: new Date().toISOString()
         })
       }
 
-      // Clear form
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
@@ -205,8 +199,6 @@ export default function AccountSettings() {
 
     setIsUpdatingSettings(true)
     try {
-      // For now, just toggle the setting
-      // In a real implementation, you'd integrate with an authenticator service
       const success = await updateUserSecuritySettings(session.user.id, {
         two_factor_enabled: !twoFactorEnabled
       })

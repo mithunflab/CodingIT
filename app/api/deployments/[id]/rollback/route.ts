@@ -4,7 +4,6 @@ import { deploymentEngine } from '@/lib/deployment/deployment-engine'
 
 export const dynamic = 'force-dynamic'
 
-// POST /api/deployments/[id]/rollback - Rollback deployment
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }

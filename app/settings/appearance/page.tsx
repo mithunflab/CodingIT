@@ -61,13 +61,13 @@ export default function AppearanceSettings() {
   const { session } = useAuth(() => {}, () => {})
   const { toast } = useToast()
   
-  // State
+
   const [selectedTheme, setSelectedTheme] = useState<'light' | 'dark' | 'system'>('system')
   const [selectedFont, setSelectedFont] = useState<'inter' | 'jetbrains-mono' | 'cal-sans'>('inter')
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
 
-  // Load user preferences on mount
+
   useEffect(() => {
     if (!session?.user?.id) return
 
@@ -80,7 +80,7 @@ export default function AppearanceSettings() {
           setSelectedTheme(preferences.theme)
           setSelectedFont(preferences.font_family)
           
-          // Sync with theme system
+
           if (theme !== preferences.theme) {
             setTheme(preferences.theme)
           }
@@ -105,11 +105,11 @@ export default function AppearanceSettings() {
 
     setIsUpdating(true)
     try {
-      // Update local state immediately for better UX
+
       setSelectedTheme(newTheme)
       setTheme(newTheme)
 
-      // Save to database
+
       const success = await updateUserPreferences(session.user.id, {
         theme: newTheme
       })
@@ -120,7 +120,7 @@ export default function AppearanceSettings() {
           description: "Theme updated successfully.",
         })
       } else {
-        // Revert on failure
+
         setSelectedTheme(selectedTheme)
         setTheme(selectedTheme)
         throw new Error('Failed to save theme preference')
@@ -142,13 +142,13 @@ export default function AppearanceSettings() {
 
     setIsUpdating(true)
     try {
-      // Update local state immediately
+
       setSelectedFont(newFont)
       
-      // Apply font to document
+
       document.documentElement.style.fontFamily = getFontFamily(newFont)
 
-      // Save to database
+
       const success = await updateUserPreferences(session.user.id, {
         font_family: newFont
       })
@@ -159,7 +159,7 @@ export default function AppearanceSettings() {
           description: "Font updated successfully.",
         })
       } else {
-        // Revert on failure
+
         setSelectedFont(selectedFont)
         document.documentElement.style.fontFamily = getFontFamily(selectedFont)
         throw new Error('Failed to save font preference')
@@ -189,7 +189,7 @@ export default function AppearanceSettings() {
     }
   }
 
-  // Apply font on load
+
   useEffect(() => {
     if (!isLoading) {
       document.documentElement.style.fontFamily = getFontFamily(selectedFont)

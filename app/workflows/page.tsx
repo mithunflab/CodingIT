@@ -23,7 +23,6 @@ export default function WorkflowsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
 
-  // Load workflows
   useEffect(() => {
     if (session?.user?.id) {
       loadWorkflows()
