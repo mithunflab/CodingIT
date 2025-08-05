@@ -210,7 +210,8 @@ export class FragmentNodeMapper {
    * Convert a fragment to a workflow node
    */
   fragmentToNode(fragment: FragmentSchema, position: { x: number; y: number }): FragmentNode {
-    const templateConfig = this.templateConfigs[fragment.template]
+    const templateId = fragment.template as TemplateId
+    const templateConfig = this.templateConfigs[templateId]
     if (!templateConfig) {
       throw new Error(`Unsupported template: ${fragment.template}`)
     }
@@ -224,7 +225,7 @@ export class FragmentNodeMapper {
       inputs: templateConfig.inputs,
       outputs: templateConfig.outputs,
       config: {
-        template: fragment.template,
+        template: templateId,
         environment: {
           CODE: fragment.code,
           FILE_PATH: fragment.file_path,
@@ -256,7 +257,7 @@ export class FragmentNodeMapper {
       has_additional_dependencies: Boolean(env.DEPENDENCIES && env.DEPENDENCIES.trim()),
       install_dependencies_command: env.INSTALL_COMMAND || '',
       port: env.PORT ? parseInt(env.PORT, 10) : null,
-      file_path: env.FILE_PATH || this.getDefaultFilePath(node.config.template),
+      file_path: env.FILE_PATH || (this.isTemplateSupported(node.config.template) ? this.getDefaultFilePath(node.config.template) : 'main.py'),
       code: env.CODE || ''
     }
   }

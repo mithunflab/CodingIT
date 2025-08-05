@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Sandbox, FileType } from '@e2b/code-interpreter'
 import { FileSystemNode } from '@/components/file-tree'
 
+export const dynamic = 'force-dynamic'
+
 async function listFilesRecursively(
   sandbox: Sandbox,
   path: string,
@@ -29,8 +31,6 @@ async function listFilesRecursively(
 }
 
 const E2B_API_KEY = process.env.E2B_API_KEY
-
-const sandboxTimeout = 10 * 60 * 1000
 
 export async function GET(request: NextRequest) {
   if (!E2B_API_KEY) {

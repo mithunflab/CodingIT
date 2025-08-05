@@ -7,8 +7,7 @@
     "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "migrate:workflows": "node scripts/check-workflow-migration.js"
+    "lint": "next lint"
   },
   "dependencies": {
     "@21st-extension/react": "^0.5.14",
