@@ -55,3 +55,4 @@ gcp.json
 supabase
 
 .env
+schemas

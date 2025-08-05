@@ -103,6 +103,7 @@ modelParameters_booking: &booking_model_parameters
   temperature: 0.6
   max_tokens: 7000
 
+prompts:
 - name: Create a Landing Page
   description: Generates a landing page based on business details.
   model: "{{model || 'balanced'}}" # Using a strategy for model selection
