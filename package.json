@@ -19,6 +19,7 @@
     "@ai-sdk/mistral": "latest",
     "@ai-sdk/openai": "latest",
     "@e2b/code-interpreter": "^1.0.2",
+    "@flags-sdk/growthbook": "^0.1.0",
     "@google-cloud/aiplatform": "^4.2.0",
     "@google-cloud/storage": "^7.16.0",
     "@huggingface/hub": "^2.3.0",
@@ -53,6 +54,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "flags": "^4.0.1",
     "framer-motion": "^12.23.0",
     "geist": "^1.4.2",
     "jszip": "^3.10.1",
@@ -75,7 +77,8 @@
   },
   "overrides": {
     "prismjs": "^1.30.0",
-    "highlight.js": "11.9.0"
+    "highlight.js": "11.9.0",
+    "tmp": "^0.2.3"
   },
   "devDependencies": {
     "@swc/cli": "^0.7.8",
