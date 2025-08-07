@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.29] - 2025-01-26
+## [v0.0.30] - Changelog Updates
 
 ### 🚀 Added
 - **Workflow System Integration**: Complete AI-powered workflow creation and execution system
@@ -83,7 +83,44 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [0.0.28] - Previous Release
+## [v0.0.31] - Previous Release
 - Base application functionality
 - Fragment execution system
 - Template support for multiple frameworks
+
+---
+
+ ## 📝 [v0.0.33] Changelog Updated
+
+  The changelog now includes:
+
+#### 🔧 Fixed Section:
+
+  - Complete account settings page rewrite
+  - Authentication hook fixes
+  - Race condition elimination
+  - Memory leak resolution
+  - Error handling improvements
+
+#### 🚀 Enhanced Section:
+
+  - Security improvements with stronger validation
+  - UX enhancements with better state management
+  - Form validation improvements
+
+#### ♿ Accessibility Section:
+
+  - WCAG compliance features
+  - ARIA labels and screen reader support
+  - Proper form associations
+
+#### 🛠️ Technical Improvements:
+
+  - Code quality enhancements
+  - TypeScript validation
+  - Component lifecycle management
+
+#### 🧹 Maintenance:
+
+  - Build system validation
+  - Linting and compilation success

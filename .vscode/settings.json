@@ -16,5 +16,6 @@
   ],
   "files.associations": {
     "*.css": "tailwindcss"
-  }
+  },
+  "CodeGPT.apiKey": "CodeGPT Plus Beta"
 }

@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/components/ui/use-toast'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AlertTriangle, Camera, Mail, Shield, Loader2 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '@/lib/auth'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { 
@@ -22,9 +22,15 @@ import {
 } from '@/lib/user-settings'
 
 export default function AccountSettings() {
-  const { session } = useAuth(() => {}, () => {})
+  const [authDialog, setAuthDialog] = useState(false)
+  const [authView, setAuthView] = useState('sign_in')
+  const { session } = useAuth(
+    (value: boolean) => setAuthDialog(value),
+    (value: any) => setAuthView(value)
+  )
   const { toast } = useToast()
   const supabase = createSupabaseBrowserClient()
+  const isMountedRef = useRef(true)
   
   const [email, setEmail] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
@@ -40,95 +46,144 @@ export default function AccountSettings() {
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false)
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [emailDirty, setEmailDirty] = useState(false)
+  const [passwordDirty, setPasswordDirty] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({})
 
-  useEffect(() => {
-    if (!session?.user?.id) return
+  const loadUserData = useCallback(async () => {
+    if (!session?.user?.id || !isMountedRef.current) return
+    
+    setIsLoading(true)
+    try {
+      const [profile, preferences, securitySettings] = await Promise.all([
+        getUserProfile(session.user.id),
+        getUserPreferences(session.user.id),
+        getUserSecuritySettings(session.user.id)
+      ])
 
-    const loadUserData = async () => {
-      setIsLoading(true)
-      try {
-        const [profile, preferences, securitySettings] = await Promise.all([
-          getUserProfile(session.user.id),
-          getUserPreferences(session.user.id),
-          getUserSecuritySettings(session.user.id)
-        ])
+      if (!isMountedRef.current) return
 
-        setEmail(session.user.email || '')
+      setEmail(session.user.email || '')
+      setEmailDirty(false)
 
-        if (profile) {
-          setAvatarUrl(profile.avatar_url || '')
-        }
+      if (profile) {
+        setAvatarUrl(profile.avatar_url || '')
+      }
 
-        if (preferences) {
-          setEmailNotifications(preferences.email_notifications)
-          setSecurityAlerts(preferences.security_alerts)
-        }
+      if (preferences) {
+        setEmailNotifications(preferences.email_notifications)
+        setSecurityAlerts(preferences.security_alerts)
+      }
 
-        if (securitySettings) {
-          setTwoFactorEnabled(securitySettings.two_factor_enabled)
-        }
-      } catch (error) {
-        console.error('Error loading user data:', error)
+      if (securitySettings) {
+        setTwoFactorEnabled(securitySettings.two_factor_enabled)
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error)
+      if (isMountedRef.current) {
         toast({
           title: "Error",
           description: "Failed to load account data. Please refresh the page.",
           variant: "destructive",
         })
-      } finally {
+      }
+    } finally {
+      if (isMountedRef.current) {
         setIsLoading(false)
       }
     }
-
-    loadUserData()
   }, [session, toast])
 
-  const handleUpdateEmail = async () => {
-    if (!supabase || !session?.user?.id) return
+  useEffect(() => {
+    isMountedRef.current = true
+    loadUserData()
+    
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [loadUserData])
 
+  const validateEmail = (email: string): string | null => {
+    if (!email) return 'Email is required'
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) return 'Please enter a valid email address'
+    return null
+  }
+
+  const handleUpdateEmail = async () => {
+    if (!supabase || !session?.user?.id || isUpdatingEmail) return
+    
+    const emailError = validateEmail(email)
+    if (emailError) {
+      setValidationErrors(prev => ({ ...prev, email: emailError }))
+      return
+    }
+    
+    setValidationErrors(prev => ({ ...prev, email: '' }))
     setIsUpdatingEmail(true)
+    
     try {
       const { error } = await supabase.auth.updateUser({
-        email: email
+        email: email.trim()
       })
 
       if (error) throw error
 
-      toast({
-        title: "Email Update Initiated",
-        description: "Please check your new email address for confirmation.",
-      })
+      if (isMountedRef.current) {
+        setEmailDirty(false)
+        toast({
+          title: "Email Update Initiated",
+          description: "Please check your new email address for confirmation.",
+        })
+      }
     } catch (error: any) {
       console.error('Error updating email:', error)
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update email. Please try again.",
-        variant: "destructive",
-      })
+      if (isMountedRef.current) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to update email. Please try again.",
+          variant: "destructive",
+        })
+      }
     } finally {
-      setIsUpdatingEmail(false)
+      if (isMountedRef.current) {
+        setIsUpdatingEmail(false)
+      }
     }
   }
 
+  const validatePassword = (password: string, confirmPass: string): { newPassword?: string; confirmPassword?: string } => {
+    const errors: { newPassword?: string; confirmPassword?: string } = {}
+    
+    if (!password) {
+      errors.newPassword = 'New password is required'
+    } else if (password.length < 8) {
+      errors.newPassword = 'Password must be at least 8 characters long'
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      errors.newPassword = 'Password must contain at least one uppercase letter, lowercase letter, and number'
+    }
+    
+    if (!confirmPass) {
+      errors.confirmPassword = 'Please confirm your password'
+    } else if (password !== confirmPass) {
+      errors.confirmPassword = 'Passwords do not match'
+    }
+    
+    return errors
+  }
+
   const handleChangePassword = async () => {
-    if (!supabase || !newPassword || newPassword !== confirmPassword) {
-      toast({
-        title: "Error",
-        description: "New passwords do not match.",
-        variant: "destructive",
-      })
+    if (!supabase || isChangingPassword) return
+    
+    const passwordErrors = validatePassword(newPassword, confirmPassword)
+    if (Object.keys(passwordErrors).length > 0) {
+      setValidationErrors(prev => ({ ...prev, ...passwordErrors }))
       return
     }
-
-    if (newPassword.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password must be at least 6 characters long.",
-        variant: "destructive",
-      })
-      return
-    }
-
+    
+    setValidationErrors(prev => ({ ...prev, newPassword: '', confirmPassword: '' }))
     setIsChangingPassword(true)
+    
     try {
       const { error } = await supabase.auth.updateUser({
         password: newPassword
@@ -142,28 +197,35 @@ export default function AccountSettings() {
         })
       }
 
-      setCurrentPassword('')
-      setNewPassword('')
-      setConfirmPassword('')
-
-      toast({
-        title: "Success",
-        description: "Password updated successfully.",
-      })
+      if (isMountedRef.current) {
+        setCurrentPassword('')
+        setNewPassword('')
+        setConfirmPassword('')
+        setPasswordDirty(false)
+        
+        toast({
+          title: "Success",
+          description: "Password updated successfully.",
+        })
+      }
     } catch (error: any) {
       console.error('Error changing password:', error)
-      toast({
-        title: "Error",
-        description: error.message || "Failed to change password. Please try again.",
-        variant: "destructive",
-      })
+      if (isMountedRef.current) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to change password. Please try again.",
+          variant: "destructive",
+        })
+      }
     } finally {
-      setIsChangingPassword(false)
+      if (isMountedRef.current) {
+        setIsChangingPassword(false)
+      }
     }
   }
 
   const handleUpdateNotificationSettings = async (key: 'email_notifications' | 'security_alerts', value: boolean) => {
-    if (!session?.user?.id) return
+    if (!session?.user?.id || isUpdatingSettings) return
 
     setIsUpdatingSettings(true)
     try {
@@ -171,7 +233,7 @@ export default function AccountSettings() {
         [key]: value
       })
 
-      if (success) {
+      if (success && isMountedRef.current) {
         if (key === 'email_notifications') setEmailNotifications(value)
         if (key === 'security_alerts') setSecurityAlerts(value)
         
@@ -184,54 +246,80 @@ export default function AccountSettings() {
       }
     } catch (error) {
       console.error('Error updating notification settings:', error)
-      toast({
-        title: "Error",
-        description: "Failed to update settings. Please try again.",
-        variant: "destructive",
-      })
+      if (isMountedRef.current) {
+        toast({
+          title: "Error",
+          description: "Failed to update settings. Please try again.",
+          variant: "destructive",
+        })
+      }
     } finally {
-      setIsUpdatingSettings(false)
+      if (isMountedRef.current) {
+        setIsUpdatingSettings(false)
+      }
     }
   }
 
   const handleEnable2FA = async () => {
-    if (!session?.user?.id) return
+    if (!session?.user?.id || isUpdatingSettings) return
 
+    const newValue = !twoFactorEnabled
     setIsUpdatingSettings(true)
+    
     try {
       const success = await updateUserSecuritySettings(session.user.id, {
-        two_factor_enabled: !twoFactorEnabled
+        two_factor_enabled: newValue
       })
 
-      if (success) {
-        setTwoFactorEnabled(!twoFactorEnabled)
+      if (success && isMountedRef.current) {
+        setTwoFactorEnabled(newValue)
         toast({
           title: "Success",
-          description: `Two-factor authentication ${!twoFactorEnabled ? 'enabled' : 'disabled'}.`,
+          description: `Two-factor authentication ${newValue ? 'enabled' : 'disabled'}.`,
         })
       } else {
         throw new Error('Failed to update 2FA settings')
       }
     } catch (error) {
       console.error('Error updating 2FA:', error)
-      toast({
-        title: "Error",
-        description: "Failed to update 2FA settings. Please try again.",
-        variant: "destructive",
-      })
+      if (isMountedRef.current) {
+        toast({
+          title: "Error",
+          description: "Failed to update 2FA settings. Please try again.",
+          variant: "destructive",
+        })
+      }
     } finally {
-      setIsUpdatingSettings(false)
+      if (isMountedRef.current) {
+        setIsUpdatingSettings(false)
+      }
     }
+  }
+
+  const validateAvatarFile = (file: File): string | null => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    const maxSize = 2 * 1024 * 1024 // 2MB
+    
+    if (!allowedTypes.includes(file.type)) {
+      return 'Please upload a valid image file (JPG, PNG, GIF, or WebP)'
+    }
+    
+    if (file.size > maxSize) {
+      return 'File size must be less than 2MB'
+    }
+    
+    return null
   }
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (!file || !session?.user?.id || !supabase) return
+    if (!file || !session?.user?.id || !supabase || isUploadingAvatar) return
 
-    if (file.size > 2 * 1024 * 1024) {
+    const validationError = validateAvatarFile(file)
+    if (validationError) {
       toast({
         title: "Error",
-        description: "File size must be less than 2MB.",
+        description: validationError,
         variant: "destructive",
       })
       return
@@ -239,7 +327,7 @@ export default function AccountSettings() {
 
     setIsUploadingAvatar(true)
     try {
-      const fileExt = file.name.split('.').pop()
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg'
       const fileName = `${session.user.id}/avatar.${fileExt}`
 
       const { error: uploadError } = await supabase.storage
@@ -252,11 +340,13 @@ export default function AccountSettings() {
         .from('avatars')
         .getPublicUrl(fileName)
 
+      if (!isMountedRef.current) return
+
       const success = await updateUserProfile(session.user.id, {
         avatar_url: data.publicUrl
       })
 
-      if (success) {
+      if (success && isMountedRef.current) {
         setAvatarUrl(data.publicUrl)
         toast({
           title: "Success",
@@ -265,13 +355,21 @@ export default function AccountSettings() {
       }
     } catch (error: any) {
       console.error('Error uploading avatar:', error)
-      toast({
-        title: "Error",
-        description: "Failed to upload profile picture. Please try again.",
-        variant: "destructive",
-      })
+      if (isMountedRef.current) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to upload profile picture. Please try again.",
+          variant: "destructive",
+        })
+      }
     } finally {
-      setIsUploadingAvatar(false)
+      if (isMountedRef.current) {
+        setIsUploadingAvatar(false)
+      }
+      // Clear the input to allow re-uploading the same file
+      if (event.target) {
+        event.target.value = ''
+      }
     }
   }
 
@@ -285,8 +383,35 @@ export default function AccountSettings() {
           </p>
         </div>
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin" />
+          <Loader2 className="h-6 w-6 animate-spin" aria-label="Loading account settings" />
+          <span className="sr-only">Loading your account settings...</span>
         </div>
+      </div>
+    )
+  }
+
+  if (!session?.user) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-medium">Account</h2>
+          <p className="text-sm text-muted-foreground">
+            Manage your account settings and security preferences.
+          </p>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              <div>
+                <p className="font-medium">Authentication Required</p>
+                <p className="text-sm text-muted-foreground">
+                  Please sign in to access your account settings.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -321,6 +446,7 @@ export default function AccountSettings() {
                 size="sm" 
                 disabled={isUploadingAvatar}
                 onClick={() => document.getElementById('avatar-upload')?.click()}
+                aria-describedby="avatar-help-text"
               >
                 {isUploadingAvatar ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -336,8 +462,8 @@ export default function AccountSettings() {
                 className="hidden"
                 onChange={handleAvatarUpload}
               />
-              <p className="text-xs text-muted-foreground">
-                JPG, PNG or GIF. Max size 2MB.
+              <p id="avatar-help-text" className="text-xs text-muted-foreground">
+                JPG, PNG, GIF, or WebP. Max size 2MB.
               </p>
             </div>
           </div>
@@ -359,17 +485,27 @@ export default function AccountSettings() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  setEmailDirty(true)
+                  setValidationErrors(prev => ({ ...prev, email: '' }))
+                }}
+                aria-describedby={validationErrors.email ? 'email-error' : undefined}
                 className="flex-1"
               />
               <Button 
                 onClick={handleUpdateEmail}
-                disabled={isUpdatingEmail || email === session?.user?.email}
+                disabled={isUpdatingEmail || (!emailDirty || email === session?.user?.email)}
               >
                 {isUpdatingEmail && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Update
               </Button>
             </div>
+            {validationErrors.email && (
+              <p id="email-error" className="text-sm text-destructive mt-1" role="alert">
+                {validationErrors.email}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -388,9 +524,19 @@ export default function AccountSettings() {
               id="newPassword"
               type="password"
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              onChange={(e) => {
+                setNewPassword(e.target.value)
+                setPasswordDirty(true)
+                setValidationErrors(prev => ({ ...prev, newPassword: '' }))
+              }}
+              aria-describedby={validationErrors.newPassword ? 'new-password-error' : undefined}
               placeholder="Enter new password"
             />
+            {validationErrors.newPassword && (
+              <p id="new-password-error" className="text-sm text-destructive mt-1" role="alert">
+                {validationErrors.newPassword}
+              </p>
+            )}
           </div>
           
           <div className="space-y-2">
@@ -399,14 +545,23 @@ export default function AccountSettings() {
               id="confirmPassword"
               type="password"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value)
+                setValidationErrors(prev => ({ ...prev, confirmPassword: '' }))
+              }}
+              aria-describedby={validationErrors.confirmPassword ? 'confirm-password-error' : undefined}
               placeholder="Confirm new password"
             />
+            {validationErrors.confirmPassword && (
+              <p id="confirm-password-error" className="text-sm text-destructive mt-1" role="alert">
+                {validationErrors.confirmPassword}
+              </p>
+            )}
           </div>
 
           <Button 
             onClick={handleChangePassword}
-            disabled={isChangingPassword || !newPassword || newPassword !== confirmPassword}
+            disabled={isChangingPassword || !passwordDirty || !newPassword || !confirmPassword}
           >
             {isChangingPassword && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Change password
@@ -455,7 +610,7 @@ export default function AccountSettings() {
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="email-notifications">Email notifications</Label>
-              <p className="text-sm text-muted-foreground">
+              <p id="email-notifications-desc" className="text-sm text-muted-foreground">
                 Receive notifications about your account activity
               </p>
             </div>
@@ -464,13 +619,14 @@ export default function AccountSettings() {
               checked={emailNotifications}
               onCheckedChange={(checked) => handleUpdateNotificationSettings('email_notifications', checked)}
               disabled={isUpdatingSettings}
+              aria-describedby="email-notifications-desc"
             />
           </div>
 
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="security-alerts">Security alerts</Label>
-              <p className="text-sm text-muted-foreground">
+              <p id="security-alerts-desc" className="text-sm text-muted-foreground">
                 Get notified about important security events
               </p>
             </div>
@@ -479,6 +635,7 @@ export default function AccountSettings() {
               checked={securityAlerts}
               onCheckedChange={(checked) => handleUpdateNotificationSettings('security_alerts', checked)}
               disabled={isUpdatingSettings}
+              aria-describedby="security-alerts-desc"
             />
           </div>
         </CardContent>
@@ -499,12 +656,23 @@ export default function AccountSettings() {
               <AlertTriangle className="h-5 w-5 text-destructive" />
               <div>
                 <p className="font-medium">Delete Account</p>
-                <p className="text-sm text-muted-foreground">
+                <p id="delete-account-desc" className="text-sm text-muted-foreground">
                   Permanently delete your account and all associated data
                 </p>
               </div>
             </div>
-            <Button variant="destructive" size="sm">
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={() => {
+                toast({
+                  title: "Feature Not Available",
+                  description: "Account deletion is not yet implemented. Please contact support if needed.",
+                  variant: "default",
+                })
+              }}
+              aria-describedby="delete-account-desc"
+            >
               Delete Account
             </Button>
           </div>
