@@ -8,10 +8,12 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { WorkflowCanvas } from '@/components/workflow-builder/workflow-canvas'
 import { WorkflowSchema } from '@/lib/workflow-engine'
-import { Plus, Search, Play, Edit, Trash2, Copy, GitBranch } from 'lucide-react'
+import { Plus, Search, Play, Edit, Trash2, Copy, GitBranch, Layers, List } from 'lucide-react'
 import { toast } from '@/components/ui/use-toast'
 import { useAuth } from '@/lib/auth'
 import { ViewType } from '@/components/auth'
+import { workflowBuilderV2, workflowInterfaceStyle } from '@/flags'
+import { useFeatureFlag, useFeatureValue } from '@/hooks/use-edge-flags'
 
 export default function WorkflowsPage() {
   const [authDialog, setAuthDialog] = useState(false)
@@ -22,6 +24,10 @@ export default function WorkflowsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  
+  // Feature flags
+  const { enabled: isWorkflowBuilderV2Enabled } = useFeatureFlag('workflow-builder-v2', false)
+  const { value: interfaceStyle } = useFeatureValue<'list' | 'canvas' | 'hybrid'>('workflow-interface-style', 'list')
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -195,9 +201,19 @@ export default function WorkflowsPage() {
     <div className="container mx-auto p-6 h-screen flex flex-col">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Workflows</h1>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            Workflows
+            {isWorkflowBuilderV2Enabled && (
+              <Badge variant="outline" className="text-xs">
+                V2 Beta
+              </Badge>
+            )}
+          </h1>
           <p className="text-muted-foreground">
-            Build and manage multi-step automation workflows
+            {isWorkflowBuilderV2Enabled 
+              ? 'Build and manage workflows with our enhanced visual interface' 
+              : 'Build and manage multi-step automation workflows'
+            }
           </p>
         </div>
         <Button onClick={createWorkflow} disabled={isCreating}>
@@ -207,12 +223,29 @@ export default function WorkflowsPage() {
       </div>
 
       <Tabs defaultValue="list" className="flex-1 flex flex-col">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="list">Workflow List</TabsTrigger>
-          <TabsTrigger value="builder" disabled={!selectedWorkflow}>
-            Builder {selectedWorkflow && `- ${selectedWorkflow.name}`}
-          </TabsTrigger>
-        </TabsList>
+        {isWorkflowBuilderV2Enabled ? (
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="list">
+              <List className="w-4 h-4 mr-2" />
+              List View
+            </TabsTrigger>
+            <TabsTrigger value="canvas">
+              <Layers className="w-4 h-4 mr-2" />
+              Canvas View
+            </TabsTrigger>
+            <TabsTrigger value="builder" disabled={!selectedWorkflow}>
+              <Edit className="w-4 h-4 mr-2" />
+              Builder {selectedWorkflow && `- ${selectedWorkflow.name}`}
+            </TabsTrigger>
+          </TabsList>
+        ) : (
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="list">Workflow List</TabsTrigger>
+            <TabsTrigger value="builder" disabled={!selectedWorkflow}>
+              Builder {selectedWorkflow && `- ${selectedWorkflow.name}`}
+            </TabsTrigger>
+          </TabsList>
+        )}
 
         <TabsContent value="list" className="flex-1">
           <div className="space-y-4">
@@ -296,6 +329,44 @@ export default function WorkflowsPage() {
             )}
           </div>
         </TabsContent>
+
+        {isWorkflowBuilderV2Enabled && (
+          <TabsContent value="canvas" className="flex-1">
+            <div className="h-full border rounded-lg bg-muted/50 p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Workflow Canvas</h2>
+                <Badge variant="secondary">New V2 Interface</Badge>
+              </div>
+              
+              {workflows.length > 0 ? (
+                <div className="grid gap-4 h-full">
+                  <div className="text-center py-8 border-2 border-dashed border-muted-foreground/25 rounded-lg">
+                    <Layers className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Visual Workflow Builder</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Drag and drop interface for creating complex workflows
+                    </p>
+                    <Button>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Visual Workflow
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <Layers className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground">No workflows to display in canvas view</p>
+                    <Button onClick={createWorkflow} className="mt-4">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create First Workflow
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        )}
 
         <TabsContent value="builder" className="flex-1">
           {selectedWorkflow ? (

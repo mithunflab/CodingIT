@@ -1,14 +1,17 @@
 import { Duration } from '@/lib/duration'
-import { getModelClient } from '@/lib/models'
-import { LLMModel, LLMModelConfig } from '@/lib/models'
+import {
+  getModelClient,
+  getDefaultModelParams,
+  LLMModel,
+  LLMModelConfig,
+} from '@/lib/models'
 import { toPrompt } from '@/lib/prompt'
 import ratelimit from '@/lib/ratelimit'
 import { fragmentSchema as schema } from '@/lib/schema'
-import { TemplateId } from '@/lib/templates'
-import templates from '@/lib/templates'
+import { Templates } from '@/lib/templates'
 import { streamObject, LanguageModel, CoreMessage } from 'ai'
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 const rateLimitMaxRequests = process.env.RATE_LIMIT_MAX_REQUESTS
   ? parseInt(process.env.RATE_LIMIT_MAX_REQUESTS)
@@ -29,7 +32,7 @@ export async function POST(req: Request) {
     messages: CoreMessage[]
     userID: string | undefined
     teamID: string | undefined
-    template: TemplateId
+    template: Templates
     model: LLMModel
     config: LLMModelConfig
   } = await req.json()
@@ -54,22 +57,22 @@ export async function POST(req: Request) {
   }
 
   console.log('userID', userID)
-  console.log('template', template)
+  console.log('teamID', teamID)
+  // console.log('template', template)
   console.log('model', model)
-  console.log('config', config)
+  // console.log('config', config)
 
   const { model: modelNameString, apiKey: modelApiKey, ...modelParams } = config
   const modelClient = getModelClient(model, config)
 
   try {
-    const systemPrompt = toPrompt(templates);
-
     const stream = await streamObject({
       model: modelClient as LanguageModel,
       schema,
-      system: systemPrompt,
+      system: toPrompt(template),
       messages,
-      maxRetries: 0,
+      maxRetries: 0, // do not retry on errors
+      ...getDefaultModelParams(model),
       ...modelParams,
     })
 

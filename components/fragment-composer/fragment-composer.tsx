@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useRef } from 'react'
 import { FragmentSchema } from '@/lib/schema'
-import { TemplatesDataObject } from '@/lib/templates'
+import { Templates } from '@/lib/templates'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,7 +29,7 @@ import {
 import { toast } from '@/components/ui/use-toast'
 
 interface FragmentComposerProps {
-  template: keyof TemplatesDataObject
+  template: keyof Templates
   initialFragment?: Partial<FragmentSchema>
   onFragmentUpdate: (fragment: Partial<FragmentSchema>) => void
   onExecute: (fragment: Partial<FragmentSchema>) => void
@@ -291,7 +291,7 @@ export function FragmentComposer({
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">{fragment.template}</Badge>
                           <span className="text-sm text-gray-600 dark:text-gray-400">
-                            {getTemplateDescription(fragment.template as keyof TemplatesDataObject | undefined)}
+                            {getTemplateDescription(fragment.template as keyof Templates | undefined)}
                           </span>
                         </div>
                       </div>
@@ -377,7 +377,7 @@ export function FragmentComposer({
 }
 
 // Helper functions
-function generateComponentCode(component: any, template: keyof TemplatesDataObject): string {
+function generateComponentCode(component: any, template: keyof Templates): string {
   switch (template) {
     case 'streamlit-developer':
       return generateStreamlitComponent(component)
@@ -495,7 +495,7 @@ function insertCodeAtPosition(currentCode: string, newCode: string, position: nu
   return lines.join('\n')
 }
 
-function getLanguageFromTemplate(template: keyof TemplatesDataObject): string {
+function getLanguageFromTemplate(template: keyof Templates): string {
   switch (template) {
     case 'streamlit-developer':
     case 'gradio-developer':
@@ -510,7 +510,7 @@ function getLanguageFromTemplate(template: keyof TemplatesDataObject): string {
   }
 }
 
-function getTemplateDescription(template: keyof TemplatesDataObject | undefined): string {
+function getTemplateDescription(template: keyof Templates | undefined): string {
   switch (template) {
     case 'streamlit-developer':
       return 'Interactive data applications'

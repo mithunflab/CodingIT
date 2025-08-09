@@ -173,36 +173,6 @@ export class FragmentNodeMapper {
         backoffStrategy: 'exponential',
         initialDelay: 1500
       }
-    },
-    'codinit-engineer': {
-      inputs: [
-        {
-          id: 'task_input',
-          name: 'task',
-          type: 'input',
-          dataType: 'string',
-          required: true
-        }
-      ],
-      outputs: [
-        {
-          id: 'result_output',
-          name: 'result',
-          type: 'output',
-          dataType: 'object',
-          required: false
-        }
-      ],
-      defaultResources: {
-        memory: '2GB',
-        cpu: '2.0',
-        timeout: 600000 // 10 minutes
-      },
-      retryPolicy: {
-        maxRetries: 1,
-        backoffStrategy: 'linear',
-        initialDelay: 5000
-      }
     }
   }
 
@@ -293,8 +263,7 @@ export class FragmentNodeMapper {
       'nextjs-developer': 'pages/index.tsx',
       'vue-developer': 'app.vue',
       'streamlit-developer': 'app.py',
-      'gradio-developer': 'app.py',
-      'codinit-engineer': 'main.py'
+      'gradio-developer': 'app.py'
     }
     
     return defaultPaths[template] || 'main.py'

@@ -11,10 +11,20 @@ import {
   AlertTriangle,
   Loader2,
   CheckCircle,
-  XCircle
+  XCircle,
+  BarChart3,
+  TrendingUp,
+  Activity,
+  Zap,
+  Clock,
+  Users,
+  Server,
+  Database
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
+import { useFeatureFlag, useFeatureValue } from '@/hooks/use-edge-flags'
+import ErrorBoundary, { SettingsSection } from '@/components/error-boundary'
 
 interface BillingInfo {
   subscription: {
@@ -49,29 +59,52 @@ export default function BillingSettings() {
   const { session, userTeam } = useAuth(() => {}, () => {})
   const { toast } = useToast()
   
+  // Feature flags
+  const { enabled: hasAdvancedAnalytics } = useFeatureFlag('advanced-analytics', false)
+  const { value: userSubscriptionTier } = useFeatureValue<'free' | 'pro' | 'enterprise'>('subscription-tier', 'free')
 
   const [billingInfo, setBillingInfo] = useState<BillingInfo | null>(null)
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [analyticsData, setAnalyticsData] = useState({
+    totalExecutions: 1247,
+    executionTrend: '+12.5%',
+    averageExecutionTime: '2.3s',
+    successRate: '98.7%',
+    totalStorage: '12.4 GB',
+    apiCalls: 8542,
+    activeUsers: 23,
+    peakUsageHour: '2:00 PM'
+  })
 
 
   useEffect(() => {
-    if (!session?.user?.id || !userTeam?.id) return
+    if (!session?.user?.id) return
+    
+    // Set up a timeout to prevent infinite loading
+    const loadingTimeout = setTimeout(() => {
+      if (isLoading) {
+        console.warn('Billing data loading timeout, using defaults')
+        setIsLoading(false)
+      }
+    }, 5000)
 
     const loadBillingInfo = async () => {
       setIsLoading(true)
       try {
 
 
+        const userTier = userTeam?.tier || 'free'
+        
         const mockBillingInfo: BillingInfo = {
           subscription: {
-            plan: userTeam.tier || 'free',
+            plan: userTier,
             status: 'active',
             current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
             cancel_at_period_end: false
           },
-          payment_method: userTeam.tier !== 'free' ? {
+          payment_method: userTier !== 'free' ? {
             brand: 'visa',
             last4: '4242',
             exp_month: 12,
@@ -79,13 +112,13 @@ export default function BillingSettings() {
           } : null,
           usage: {
             fragments_used: 45,
-            fragments_limit: userTeam.tier === 'free' ? 50 : 1000,
+            fragments_limit: userTier === 'free' ? 50 : 1000,
             storage_used: 2.4,
-            storage_limit: userTeam.tier === 'free' ? 5 : 100
+            storage_limit: userTier === 'free' ? 5 : 100
           }
         }
 
-        const mockInvoices: Invoice[] = userTeam.tier !== 'free' ? [
+        const mockInvoices: Invoice[] = userTier !== 'free' ? [
           {
             id: 'inv_001',
             date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
@@ -113,11 +146,17 @@ export default function BillingSettings() {
         })
       } finally {
         setIsLoading(false)
+        clearTimeout(loadingTimeout)
       }
     }
 
     loadBillingInfo()
-  }, [session?.user?.id, userTeam, toast])
+    
+    // Cleanup timeout on unmount
+    return () => {
+      clearTimeout(loadingTimeout)
+    }
+  }, [session?.user?.id, userTeam?.tier, toast, isLoading])
 
   const handleUpgradePlan = async () => {
     setIsUpdating(true)
@@ -263,20 +302,133 @@ export default function BillingSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-medium">Billing</h2>
+        <h2 className="text-lg font-medium flex items-center gap-2">
+          Billing
+          {hasAdvancedAnalytics && (
+            <Badge variant="default" className="gap-1">
+              <BarChart3 className="w-3 h-3" />
+              Analytics
+            </Badge>
+          )}
+        </h2>
         <p className="text-sm text-muted-foreground">
           Manage your subscription and billing information.
         </p>
       </div>
 
+      {hasAdvancedAnalytics && (
+        <SettingsSection
+          title="Advanced Usage Analytics"
+          description="Detailed insights and metrics for your platform usage"
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                Usage Analytics
+                <Badge variant="default" className="gap-1">
+                  <Zap className="w-3 h-3" />
+                  Advanced
+                </Badge>
+              </CardTitle>
+              <CardDescription>
+                Detailed insights into your platform usage and performance
+              </CardDescription>
+            </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Activity className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium">Total Executions</span>
+                </div>
+                <div className="text-2xl font-bold">{analyticsData.totalExecutions.toLocaleString()}</div>
+                <div className="text-xs text-green-600 flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3" />
+                  {analyticsData.executionTrend} this month
+                </div>
+              </div>
+              
+              <div className="bg-green-50 dark:bg-green-950 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-medium">Avg Execution Time</span>
+                </div>
+                <div className="text-2xl font-bold">{analyticsData.averageExecutionTime}</div>
+                <div className="text-xs text-gray-600">Per workflow execution</div>
+              </div>
+              
+              <div className="bg-purple-50 dark:bg-purple-950 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm font-medium">Success Rate</span>
+                </div>
+                <div className="text-2xl font-bold">{analyticsData.successRate}</div>
+                <div className="text-xs text-gray-600">All executions</div>
+              </div>
+              
+              <div className="bg-orange-50 dark:bg-orange-950 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-4 h-4 text-orange-600" />
+                  <span className="text-sm font-medium">Active Users</span>
+                </div>
+                <div className="text-2xl font-bold">{analyticsData.activeUsers}</div>
+                <div className="text-xs text-gray-600">This month</div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Database className="w-4 h-4" />
+                  <span className="text-sm font-medium">Storage Used</span>
+                </div>
+                <div className="text-lg font-bold">{analyticsData.totalStorage}</div>
+              </div>
+              
+              <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Server className="w-4 h-4" />
+                  <span className="text-sm font-medium">API Calls</span>
+                </div>
+                <div className="text-lg font-bold">{analyticsData.apiCalls.toLocaleString()}</div>
+              </div>
+              
+              <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="w-4 h-4" />
+                  <span className="text-sm font-medium">Peak Usage</span>
+                </div>
+                <div className="text-lg font-bold">{analyticsData.peakUsageHour}</div>
+              </div>
+            </div>
+            
+            {userSubscriptionTier === 'free' && (
+              <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                  <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                    Upgrade to Pro for detailed analytics and custom reports
+                  </span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </SettingsSection>
+      )}
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Current Plan</CardTitle>
-          <CardDescription>
-            Your current subscription plan and usage details.
-          </CardDescription>
-        </CardHeader>
+      <SettingsSection
+        title="Subscription Plan"
+        description="Manage your current subscription and view usage details"
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle>Current Plan</CardTitle>
+            <CardDescription>
+              Your current subscription plan and usage details.
+            </CardDescription>
+          </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
@@ -361,10 +513,15 @@ export default function BillingSettings() {
           </div>
         </CardContent>
       </Card>
+    </SettingsSection>
 
       
       {billingInfo?.payment_method && (
-        <Card>
+        <SettingsSection
+          title="Payment Method"
+          description="Manage your default payment method for subscription charges"
+        >
+          <Card>
           <CardHeader>
             <CardTitle>Payment Method</CardTitle>
             <CardDescription>
@@ -397,12 +554,17 @@ export default function BillingSettings() {
             </div>
           </CardContent>
         </Card>
+      </SettingsSection>
       )}
 
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Billing History</CardTitle>
+      <SettingsSection
+        title="Billing History"
+        description="View and download your past invoices and receipts"
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle>Billing History</CardTitle>
           <CardDescription>
             Download your past invoices and receipts.
           </CardDescription>
@@ -451,9 +613,27 @@ export default function BillingSettings() {
           )}
         </CardContent>
       </Card>
+    </SettingsSection>
 
       
-      <Card>
+      <ErrorBoundary
+        fallback={
+          <Card className="border-yellow-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                <div>
+                  <p className="font-medium">Support Contact Unavailable</p>
+                  <p className="text-sm text-muted-foreground">
+                    Support contact features are temporarily unavailable. Please try again later.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        }
+      >
+        <Card>
         <CardHeader>
           <CardTitle>Billing Contact</CardTitle>
           <CardDescription>
@@ -477,6 +657,7 @@ export default function BillingSettings() {
           </div>
         </CardContent>
       </Card>
+    </ErrorBoundary>
     </div>
   )
 }

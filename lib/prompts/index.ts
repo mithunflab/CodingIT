@@ -1,4 +1,4 @@
-import { BaseTemplateConfig as TemplateConfig } from '@/lib/templates';
+import { TemplateConfig } from '@/lib/templates';
 import { discussPrompt } from './discuss-prompt';
 import { getFineTunedPrompt } from './new-prompt';
 import optimizedPrompt from './optimized';

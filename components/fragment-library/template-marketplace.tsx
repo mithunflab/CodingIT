@@ -24,8 +24,12 @@ import {
   Settings,
   ShoppingCart,
   Crown,
-  Gift
+  Gift,
+  Lock,
+  Unlock
 } from 'lucide-react'
+import { premiumTemplates, subscriptionTier } from '@/flags'
+import { useFeatureFlag, useFeatureValue } from '@/hooks/use-edge-flags'
 
 interface TemplateCategory {
   id: string
@@ -292,6 +296,10 @@ export function TemplateMarketplace() {
   const [activeCategory, setActiveCategory] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'popular' | 'recent' | 'rating' | 'price'>('popular')
+  
+  // Feature flags
+  const { enabled: hasPremiumTemplates } = useFeatureFlag('premium-templates', false)
+  const { value: userSubscriptionTier } = useFeatureValue<'free' | 'pro' | 'enterprise'>('subscription-tier', 'free')
 
   const allTemplates = templateCategories.flatMap(category => category.templates)
 
@@ -302,7 +310,23 @@ export function TemplateMarketplace() {
     
     const matchesCategory = activeCategory === 'all' || template.category === activeCategory
     
-    return matchesSearch && matchesCategory
+    // Premium template access control
+    const hasAccessToPremium = hasPremiumTemplates || userSubscriptionTier === 'pro' || userSubscriptionTier === 'enterprise'
+    const canAccess = !template.isPremium || hasAccessToPremium
+    
+    return matchesSearch && matchesCategory && canAccess
+  })
+  
+  // Get locked premium templates for display
+  const lockedPremiumTemplates = allTemplates.filter(template => {
+    const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         template.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+    
+    const matchesCategory = activeCategory === 'all' || template.category === activeCategory
+    const hasAccessToPremium = hasPremiumTemplates || userSubscriptionTier === 'pro' || userSubscriptionTier === 'enterprise'
+    
+    return matchesSearch && matchesCategory && template.isPremium && !hasAccessToPremium
   })
 
   const sortedTemplates = [...filteredTemplates].sort((a, b) => {
@@ -338,10 +362,26 @@ export function TemplateMarketplace() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Template Marketplace</h2>
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            Template Marketplace
+            {hasPremiumTemplates && (
+              <Badge variant="default" className="gap-1">
+                <Crown className="w-3 h-3" />
+                Premium Access
+              </Badge>
+            )}
+          </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Discover premium templates and components to accelerate your development
+            Discover {hasPremiumTemplates ? 'premium ' : ''}templates and components to accelerate your development
           </p>
+          {!hasPremiumTemplates && userSubscriptionTier === 'free' && (
+            <div className="mt-2">
+              <Badge variant="outline" className="gap-1">
+                <Lock className="w-3 h-3" />
+                Free Tier - Upgrade for premium templates
+              </Badge>
+            </div>
+          )}
         </div>
         
         <div className="flex items-center gap-4">
@@ -479,9 +519,22 @@ export function TemplateMarketplace() {
                   <Button variant="outline" size="sm" className="flex-1">
                     Preview
                   </Button>
-                  <Button size="sm" className="flex-1 gap-1">
-                    <ShoppingCart className="w-3 h-3" />
-                    {template.price === 0 ? 'Download' : 'Buy Now'}
+                  <Button 
+                    size="sm" 
+                    className="flex-1 gap-1"
+                    disabled={template.isPremium && !hasPremiumTemplates && userSubscriptionTier === 'free'}
+                  >
+                    {template.isPremium && !hasPremiumTemplates && userSubscriptionTier === 'free' ? (
+                      <>
+                        <Lock className="w-3 h-3" />
+                        Upgrade Required
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="w-3 h-3" />
+                        {template.price === 0 ? 'Download' : 'Buy Now'}
+                      </>
+                    )}
                   </Button>
                 </div>
               </CardContent>
@@ -504,7 +557,11 @@ export function TemplateMarketplace() {
               
               {template.isPremium && (
                 <div className="absolute top-2 right-2 z-10">
-                  <Crown className="w-4 h-4 text-yellow-500" />
+                  {hasPremiumTemplates || userSubscriptionTier !== 'free' ? (
+                    <Crown className="w-4 h-4 text-yellow-500" />
+                  ) : (
+                    <Lock className="w-4 h-4 text-gray-500" />
+                  )}
                 </div>
               )}
               
@@ -543,9 +600,22 @@ export function TemplateMarketplace() {
                   <Button variant="outline" size="sm" className="flex-1 text-xs">
                     Preview
                   </Button>
-                  <Button size="sm" className="flex-1 text-xs gap-1">
-                    <ShoppingCart className="w-3 h-3" />
-                    {template.price === 0 ? 'Get' : 'Buy'}
+                  <Button 
+                    size="sm" 
+                    className="flex-1 text-xs gap-1"
+                    disabled={template.isPremium && !hasPremiumTemplates && userSubscriptionTier === 'free'}
+                  >
+                    {template.isPremium && !hasPremiumTemplates && userSubscriptionTier === 'free' ? (
+                      <>
+                        <Lock className="w-3 h-3" />
+                        Pro
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="w-3 h-3" />
+                        {template.price === 0 ? 'Get' : 'Buy'}
+                      </>
+                    )}
                   </Button>
                 </div>
               </CardContent>
@@ -553,6 +623,68 @@ export function TemplateMarketplace() {
           ))}
         </div>
       </div>
+      
+      {/* Locked Premium Templates (for free users) */}
+      {lockedPremiumTemplates.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Lock className="w-5 h-5" />
+              Premium Templates
+            </h3>
+            <Button variant="default" size="sm">
+              <Crown className="w-4 h-4 mr-2" />
+              Upgrade to Pro
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {lockedPremiumTemplates.slice(0, 4).map(template => (
+              <Card key={`locked-${template.id}`} className="relative overflow-hidden opacity-75 border-dashed">
+                <div className="absolute inset-0 bg-black/10 z-10 flex items-center justify-center">
+                  <div className="bg-white dark:bg-gray-900 rounded-lg p-4 text-center border">
+                    <Lock className="w-6 h-6 mx-auto mb-2 text-gray-600" />
+                    <p className="text-sm font-medium">Premium Template</p>
+                    <p className="text-xs text-gray-500 mb-2">Upgrade to access</p>
+                    <Button size="sm" variant="default">
+                      <Crown className="w-3 h-3 mr-1" />
+                      Upgrade
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="h-32 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center">
+                  <Package className="w-8 h-8 text-gray-400" />
+                </div>
+                
+                <CardContent className="p-3">
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="font-semibold text-sm truncate">{template.name}</h4>
+                    <div className="text-right">
+                      <span className="font-bold text-sm">${template.price}</span>
+                    </div>
+                  </div>
+                  
+                  <p className="text-gray-600 dark:text-gray-400 text-xs mb-2 line-clamp-2">
+                    {template.description}
+                  </p>
+                  
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-1">
+                      <Star className="w-3 h-3 text-yellow-500" />
+                      <span className="text-xs font-medium">{template.rating}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Download className="w-3 h-3 text-gray-500" />
+                      <span className="text-xs">{template.downloads}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

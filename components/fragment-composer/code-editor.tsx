@@ -1,7 +1,7 @@
 'use client'
 
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react'
-import { TemplatesDataObject } from '@/lib/templates'
+import { Templates } from '@/lib/templates'
 import { Editor } from '@monaco-editor/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -15,15 +15,18 @@ import {
   Maximize2, 
   Minimize2,
   Play,
-  Palette
+  Palette,
+  Zap,
+  Search
 } from 'lucide-react'
 import { toast } from '@/components/ui/use-toast'
+import { useFeatureFlag, useFeatureValue } from '@/hooks/use-edge-flags'
 
 interface CodeEditorProps {
   value: string
   onChange: (value: string) => void
   language: string
-  template: keyof TemplatesDataObject
+  template: keyof Templates
   onDragOver: (event: React.DragEvent) => void
   onDrop: (event: React.DragEvent) => void
 }
@@ -43,6 +46,10 @@ export const CodeEditor = forwardRef<any, CodeEditorProps>(({
   const [showMinimap, setShowMinimap] = useState(false)
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 })
   const editorRef = useRef<any>(null)
+  
+  // Feature flags
+  const { enabled: isEnhancedEditorEnabled } = useFeatureFlag('enhanced-code-editor', false)
+  const { value: themeMode } = useFeatureValue<'basic' | 'advanced' | 'custom'>('editor-theme-mode', 'basic')
 
   useImperativeHandle(ref, () => ({
     getInsertPosition: () => {
@@ -180,37 +187,53 @@ export const CodeEditor = forwardRef<any, CodeEditorProps>(({
   const editorOptions = {
     fontSize,
     wordWrap,
-    minimap: { enabled: showMinimap },
+    minimap: { enabled: isEnhancedEditorEnabled ? showMinimap : false },
     scrollBeyondLastLine: false,
     automaticLayout: true,
     tabSize: 2,
     insertSpaces: true,
     detectIndentation: true,
-    renderWhitespace: 'selection',
-    renderIndentGuides: true,
+    renderWhitespace: isEnhancedEditorEnabled ? 'selection' : 'none',
+    renderIndentGuides: isEnhancedEditorEnabled,
     cursorBlinking: "blink" as "blink",
-    cursorSmoothCaretAnimation: "on",
-    smoothScrolling: true,
+    cursorSmoothCaretAnimation: isEnhancedEditorEnabled ? "on" : "off",
+    smoothScrolling: isEnhancedEditorEnabled,
     contextmenu: true,
-    mouseWheelZoom: true,
-    quickSuggestions: true,
-    suggestOnTriggerCharacters: true,
-    acceptSuggestionOnEnter: 'on',
-    snippetSuggestions: 'top',
-    parameterHints: { enabled: true },
-    hover: { enabled: true },
-    folding: true,
+    mouseWheelZoom: isEnhancedEditorEnabled,
+    quickSuggestions: isEnhancedEditorEnabled,
+    suggestOnTriggerCharacters: isEnhancedEditorEnabled,
+    acceptSuggestionOnEnter: isEnhancedEditorEnabled ? 'on' : 'off',
+    snippetSuggestions: isEnhancedEditorEnabled ? 'top' : 'bottom',
+    parameterHints: { enabled: isEnhancedEditorEnabled },
+    hover: { enabled: isEnhancedEditorEnabled },
+    folding: isEnhancedEditorEnabled,
     foldingStrategy: 'indentation',
-    showFoldingControls: 'always',
-    formatOnPaste: true,
-    formatOnType: true,
+    showFoldingControls: isEnhancedEditorEnabled ? 'always' : 'mouseover',
+    formatOnPaste: isEnhancedEditorEnabled,
+    formatOnType: isEnhancedEditorEnabled,
     dragAndDrop: true,
-    links: true,
-    colorDecorators: true,
-    lightbulb: { enabled: true },
-    codeActionsOnSave: {
+    links: isEnhancedEditorEnabled,
+    colorDecorators: isEnhancedEditorEnabled,
+    lightbulb: { enabled: isEnhancedEditorEnabled },
+    codeActionsOnSave: isEnhancedEditorEnabled ? {
       'source.organizeImports': true
-    }
+    } : undefined,
+    // Enhanced features
+    ...(isEnhancedEditorEnabled && {
+      inlineSuggestions: { enabled: true },
+      bracketPairColorization: { enabled: true },
+      guides: {
+        bracketPairs: true,
+        bracketPairsHorizontal: true,
+        highlightActiveBracketPair: true,
+        indentation: true
+      },
+      unicodeHighlight: {
+        ambiguousCharacters: true,
+        invisibleCharacters: true
+      },
+      stickyScroll: { enabled: true }
+    })
   }
 
   const containerClass = isFullscreen 
@@ -229,6 +252,12 @@ export const CodeEditor = forwardRef<any, CodeEditorProps>(({
                 {getLanguageIcon(language)}
                 {language}
               </Badge>
+              {isEnhancedEditorEnabled && (
+                <Badge variant="default" className="gap-1">
+                  <Zap className="w-3 h-3" />
+                  Enhanced
+                </Badge>
+              )}
             </CardTitle>
             
             <div className="flex items-center gap-1">
@@ -281,6 +310,39 @@ export const CodeEditor = forwardRef<any, CodeEditorProps>(({
                 <Palette className="w-3 h-3" />
                 Format
               </Button>
+              
+              {isEnhancedEditorEnabled && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const editor = editorRef.current
+                      if (editor) {
+                        editor.getAction('editor.action.quickCommand').run()
+                      }
+                    }}
+                    className="gap-1"
+                  >
+                    <Search className="w-3 h-3" />
+                    Commands
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      toast({
+                        title: "Enhanced Features Active",
+                        description: "IntelliSense, bracket matching, and advanced formatting enabled.",
+                      })
+                    }}
+                    className="gap-1"
+                  >
+                    <Settings className="w-3 h-3" />
+                  </Button>
+                </>
+              )}
               
               <Button
                 variant="ghost"
@@ -338,6 +400,12 @@ export const CodeEditor = forwardRef<any, CodeEditorProps>(({
                     <option value={14}>14px</option>
                     <option value={16}>16px</option>
                     <option value={18}>18px</option>
+                    {isEnhancedEditorEnabled && (
+                      <>
+                        <option value={20}>20px</option>
+                        <option value={22}>22px</option>
+                      </>
+                    )}
                   </select>
                   
                   <button
@@ -347,12 +415,20 @@ export const CodeEditor = forwardRef<any, CodeEditorProps>(({
                     Wrap: {wordWrap}
                   </button>
                   
-                  <button
-                    onClick={() => setShowMinimap(!showMinimap)}
-                    className="hover:text-gray-900 dark:hover:text-gray-100"
-                  >
-                    Map: {showMinimap ? 'On' : 'Off'}
-                  </button>
+                  {isEnhancedEditorEnabled && (
+                    <button
+                      onClick={() => setShowMinimap(!showMinimap)}
+                      className="hover:text-gray-900 dark:hover:text-gray-100"
+                    >
+                      Map: {showMinimap ? 'On' : 'Off'}
+                    </button>
+                  )}
+                  
+                  {isEnhancedEditorEnabled && (
+                    <span className="text-green-600 font-medium">
+                      ✨ Enhanced
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

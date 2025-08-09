@@ -21,7 +21,7 @@ import {
 import { Session } from '@supabase/supabase-js'
 import { ArrowRight, LogOut, Trash, Undo, Settings, Menu, GitBranch, Rocket } from 'lucide-react'
 import Link from 'next/link'
-import Icon from './logo2'
+import Icon from './logo'
 import { HeroPillSecond } from './announcement'
 
 export function NavBar({

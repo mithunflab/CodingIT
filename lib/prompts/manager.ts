@@ -1,4 +1,4 @@
-import { BaseTemplateConfig } from '@/lib/templates';
+import { TemplateConfig } from '@/lib/templates';
 import { generatePrompt, selectPromptMode, PromptConfig, PromptMode } from './index';
 
 export class PromptManager {
@@ -15,7 +15,7 @@ export class PromptManager {
   }
 
   public getPrompt(
-    template: BaseTemplateConfig,
+    template: TemplateConfig,
     userInput?: string,
     overrides?: Partial<PromptConfig>
   ): string {
@@ -40,7 +40,7 @@ export class PromptManager {
   }
 
   public selectBestPrompt(
-    template: BaseTemplateConfig,
+    template: TemplateConfig,
     userInput: string,
     context?: {
       projectFiles?: string[];

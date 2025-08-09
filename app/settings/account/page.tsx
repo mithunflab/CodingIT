@@ -12,6 +12,7 @@ import { AlertTriangle, Camera, Mail, Shield, Loader2 } from 'lucide-react'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '@/lib/auth'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import ErrorBoundary, { SettingsSection } from '@/components/error-boundary'
 import { 
   getUserPreferences, 
   getUserSecuritySettings,
@@ -55,36 +56,53 @@ export default function AccountSettings() {
     
     setIsLoading(true)
     try {
-      const [profile, preferences, securitySettings] = await Promise.all([
-        getUserProfile(session.user.id),
-        getUserPreferences(session.user.id),
-        getUserSecuritySettings(session.user.id)
-      ])
-
-      if (!isMountedRef.current) return
-
+      // Set basic user data immediately from session
       setEmail(session.user.email || '')
       setEmailDirty(false)
+      
+      // Try to load additional data with timeout
+      const loadWithTimeout = Promise.race([
+        Promise.all([
+          getUserProfile(session.user.id),
+          getUserPreferences(session.user.id),
+          getUserSecuritySettings(session.user.id)
+        ]),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 3000)
+        )
+      ])
 
-      if (profile) {
-        setAvatarUrl(profile.avatar_url || '')
-      }
+      try {
+        const [profile, preferences, securitySettings] = await loadWithTimeout as any
+        
+        if (!isMountedRef.current) return
 
-      if (preferences) {
-        setEmailNotifications(preferences.email_notifications)
-        setSecurityAlerts(preferences.security_alerts)
-      }
+        if (profile) {
+          setAvatarUrl(profile.avatar_url || '')
+        }
 
-      if (securitySettings) {
-        setTwoFactorEnabled(securitySettings.two_factor_enabled)
+        if (preferences) {
+          setEmailNotifications(preferences.email_notifications)
+          setSecurityAlerts(preferences.security_alerts)
+        }
+
+        if (securitySettings) {
+          setTwoFactorEnabled(securitySettings.two_factor_enabled)
+        }
+      } catch (dataError) {
+        console.warn('Could not load extended user data, using defaults:', dataError)
+        // Use default values - don't show error to user
+        setEmailNotifications(true)
+        setSecurityAlerts(true)
+        setTwoFactorEnabled(false)
       }
     } catch (error) {
-      console.error('Error loading user data:', error)
+      console.error('Error loading basic user data:', error)
       if (isMountedRef.current) {
         toast({
-          title: "Error",
-          description: "Failed to load account data. Please refresh the page.",
-          variant: "destructive",
+          title: "Warning",
+          description: "Some account features may be limited. Core functionality is still available.",
+          variant: "default",
         })
       }
     } finally {
@@ -227,6 +245,10 @@ export default function AccountSettings() {
   const handleUpdateNotificationSettings = async (key: 'email_notifications' | 'security_alerts', value: boolean) => {
     if (!session?.user?.id || isUpdatingSettings) return
 
+    // Optimistically update the UI
+    if (key === 'email_notifications') setEmailNotifications(value)
+    if (key === 'security_alerts') setSecurityAlerts(value)
+
     setIsUpdatingSettings(true)
     try {
       const success = await updateUserPreferences(session.user.id, {
@@ -234,9 +256,6 @@ export default function AccountSettings() {
       })
 
       if (success && isMountedRef.current) {
-        if (key === 'email_notifications') setEmailNotifications(value)
-        if (key === 'security_alerts') setSecurityAlerts(value)
-        
         toast({
           title: "Success",
           description: "Notification settings updated successfully.",
@@ -245,12 +264,16 @@ export default function AccountSettings() {
         throw new Error('Failed to update settings')
       }
     } catch (error) {
-      console.error('Error updating notification settings:', error)
+      console.warn('Could not save notification settings to database:', error)
+      // Revert optimistic update
       if (isMountedRef.current) {
+        if (key === 'email_notifications') setEmailNotifications(!value)
+        if (key === 'security_alerts') setSecurityAlerts(!value)
+        
         toast({
-          title: "Error",
-          description: "Failed to update settings. Please try again.",
-          variant: "destructive",
+          title: "Warning",
+          description: "Settings changed locally but could not be saved to server.",
+          variant: "default",
         })
       }
     } finally {
@@ -264,6 +287,9 @@ export default function AccountSettings() {
     if (!session?.user?.id || isUpdatingSettings) return
 
     const newValue = !twoFactorEnabled
+    
+    // Optimistically update the UI
+    setTwoFactorEnabled(newValue)
     setIsUpdatingSettings(true)
     
     try {
@@ -272,7 +298,6 @@ export default function AccountSettings() {
       })
 
       if (success && isMountedRef.current) {
-        setTwoFactorEnabled(newValue)
         toast({
           title: "Success",
           description: `Two-factor authentication ${newValue ? 'enabled' : 'disabled'}.`,
@@ -281,12 +306,14 @@ export default function AccountSettings() {
         throw new Error('Failed to update 2FA settings')
       }
     } catch (error) {
-      console.error('Error updating 2FA:', error)
+      console.warn('Could not save 2FA settings to database:', error)
+      // Revert optimistic update
       if (isMountedRef.current) {
+        setTwoFactorEnabled(!newValue)
         toast({
-          title: "Error",
-          description: "Failed to update 2FA settings. Please try again.",
-          variant: "destructive",
+          title: "Warning",
+          description: "2FA setting changed locally but could not be saved to server.",
+          variant: "default",
         })
       }
     } finally {
@@ -425,259 +452,302 @@ export default function AccountSettings() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile Picture</CardTitle>
-          <CardDescription>
-            Update your profile picture.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={avatarUrl} />
-              <AvatarFallback>
-                {session?.user?.email?.charAt(0).toUpperCase() || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="space-y-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                disabled={isUploadingAvatar}
-                onClick={() => document.getElementById('avatar-upload')?.click()}
-                aria-describedby="avatar-help-text"
-              >
-                {isUploadingAvatar ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Camera className="h-4 w-4 mr-2" />
-                )}
-                Change picture
-              </Button>
-              <input
-                id="avatar-upload"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarUpload}
-              />
-              <p id="avatar-help-text" className="text-xs text-muted-foreground">
-                JPG, PNG, GIF, or WebP. Max size 2MB.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Email Address</CardTitle>
-          <CardDescription>
-            Your email address is used for account authentication and notifications.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email address</Label>
-            <div className="flex gap-2">
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value)
-                  setEmailDirty(true)
-                  setValidationErrors(prev => ({ ...prev, email: '' }))
-                }}
-                aria-describedby={validationErrors.email ? 'email-error' : undefined}
-                className="flex-1"
-              />
-              <Button 
-                onClick={handleUpdateEmail}
-                disabled={isUpdatingEmail || (!emailDirty || email === session?.user?.email)}
-              >
-                {isUpdatingEmail && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Update
-              </Button>
-            </div>
-            {validationErrors.email && (
-              <p id="email-error" className="text-sm text-destructive mt-1" role="alert">
-                {validationErrors.email}
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Password</CardTitle>
-          <CardDescription>
-            Update your password to keep your account secure.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="newPassword">New password</Label>
-            <Input
-              id="newPassword"
-              type="password"
-              value={newPassword}
-              onChange={(e) => {
-                setNewPassword(e.target.value)
-                setPasswordDirty(true)
-                setValidationErrors(prev => ({ ...prev, newPassword: '' }))
-              }}
-              aria-describedby={validationErrors.newPassword ? 'new-password-error' : undefined}
-              placeholder="Enter new password"
-            />
-            {validationErrors.newPassword && (
-              <p id="new-password-error" className="text-sm text-destructive mt-1" role="alert">
-                {validationErrors.newPassword}
-              </p>
-            )}
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm new password</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value)
-                setValidationErrors(prev => ({ ...prev, confirmPassword: '' }))
-              }}
-              aria-describedby={validationErrors.confirmPassword ? 'confirm-password-error' : undefined}
-              placeholder="Confirm new password"
-            />
-            {validationErrors.confirmPassword && (
-              <p id="confirm-password-error" className="text-sm text-destructive mt-1" role="alert">
-                {validationErrors.confirmPassword}
-              </p>
-            )}
-          </div>
-
-          <Button 
-            onClick={handleChangePassword}
-            disabled={isChangingPassword || !passwordDirty || !newPassword || !confirmPassword}
-          >
-            {isChangingPassword && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Change password
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Two-Factor Authentication</CardTitle>
-          <CardDescription>
-            Add an extra layer of security to your account.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Shield className="h-5 w-5" />
-              <div>
-                <p className="font-medium">Authenticator App</p>
-                <p className="text-sm text-muted-foreground">
-                  {twoFactorEnabled ? 'Two-factor authentication is enabled' : 'Use an authenticator app to generate codes'}
+      <SettingsSection
+        title="Profile Picture"
+        description="Update your profile picture and basic information."
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile Picture</CardTitle>
+            <CardDescription>
+              Update your profile picture.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={avatarUrl} />
+                <AvatarFallback>
+                  {session?.user?.email?.charAt(0).toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={isUploadingAvatar}
+                  onClick={() => document.getElementById('avatar-upload')?.click()}
+                  aria-describedby="avatar-help-text"
+                >
+                  {isUploadingAvatar ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4 mr-2" />
+                  )}
+                  Change picture
+                </Button>
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
+                />
+                <p id="avatar-help-text" className="text-xs text-muted-foreground">
+                  JPG, PNG, GIF, or WebP. Max size 2MB.
                 </p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </SettingsSection>
+
+      <SettingsSection
+        title="Email Address"
+        description="Manage your email address for authentication and notifications."
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle>Email Address</CardTitle>
+            <CardDescription>
+              Your email address is used for account authentication and notifications.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email address</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    setEmailDirty(true)
+                    setValidationErrors(prev => ({ ...prev, email: '' }))
+                  }}
+                  aria-describedby={validationErrors.email ? 'email-error' : undefined}
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={handleUpdateEmail}
+                  disabled={isUpdatingEmail || (!emailDirty || email === session?.user?.email)}
+                >
+                  {isUpdatingEmail && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Update
+                </Button>
+              </div>
+              {validationErrors.email && (
+                <p id="email-error" className="text-sm text-destructive mt-1" role="alert">
+                  {validationErrors.email}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </SettingsSection>
+
+      <SettingsSection
+        title="Password Security"
+        description="Update your password to keep your account secure."
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle>Password</CardTitle>
+            <CardDescription>
+              Update your password to keep your account secure.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">New password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => {
+                  setNewPassword(e.target.value)
+                  setPasswordDirty(true)
+                  setValidationErrors(prev => ({ ...prev, newPassword: '' }))
+                }}
+                aria-describedby={validationErrors.newPassword ? 'new-password-error' : undefined}
+                placeholder="Enter new password"
+              />
+              {validationErrors.newPassword && (
+                <p id="new-password-error" className="text-sm text-destructive mt-1" role="alert">
+                  {validationErrors.newPassword}
+                </p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm new password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value)
+                  setValidationErrors(prev => ({ ...prev, confirmPassword: '' }))
+                }}
+                aria-describedby={validationErrors.confirmPassword ? 'confirm-password-error' : undefined}
+                placeholder="Confirm new password"
+              />
+              {validationErrors.confirmPassword && (
+                <p id="confirm-password-error" className="text-sm text-destructive mt-1" role="alert">
+                  {validationErrors.confirmPassword}
+                </p>
+              )}
+            </div>
+
             <Button 
-              variant={twoFactorEnabled ? "destructive" : "default"}
-              onClick={handleEnable2FA}
-              disabled={isUpdatingSettings}
+              onClick={handleChangePassword}
+              disabled={isChangingPassword || !passwordDirty || !newPassword || !confirmPassword}
             >
-              {isUpdatingSettings && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {twoFactorEnabled ? 'Disable' : 'Enable'}
+              {isChangingPassword && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Change password
             </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </SettingsSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Notifications</CardTitle>
-          <CardDescription>
-            Choose which notifications you want to receive.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="email-notifications">Email notifications</Label>
-              <p id="email-notifications-desc" className="text-sm text-muted-foreground">
-                Receive notifications about your account activity
-              </p>
+      <SettingsSection
+        title="Security Settings"
+        description="Manage two-factor authentication and other security features."
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle>Two-Factor Authentication</CardTitle>
+            <CardDescription>
+              Add an extra layer of security to your account.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Shield className="h-5 w-5" />
+                <div>
+                  <p className="font-medium">Authenticator App</p>
+                  <p className="text-sm text-muted-foreground">
+                    {twoFactorEnabled ? 'Two-factor authentication is enabled' : 'Use an authenticator app to generate codes'}
+                  </p>
+                </div>
+              </div>
+              <Button 
+                variant={twoFactorEnabled ? "destructive" : "default"}
+                onClick={handleEnable2FA}
+                disabled={isUpdatingSettings}
+              >
+                {isUpdatingSettings && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {twoFactorEnabled ? 'Disable' : 'Enable'}
+              </Button>
             </div>
-            <Switch
-              id="email-notifications"
-              checked={emailNotifications}
-              onCheckedChange={(checked) => handleUpdateNotificationSettings('email_notifications', checked)}
-              disabled={isUpdatingSettings}
-              aria-describedby="email-notifications-desc"
-            />
-          </div>
+          </CardContent>
+        </Card>
+      </SettingsSection>
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="security-alerts">Security alerts</Label>
-              <p id="security-alerts-desc" className="text-sm text-muted-foreground">
-                Get notified about important security events
-              </p>
+      <SettingsSection
+        title="Notification Preferences"
+        description="Choose which notifications you want to receive."
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle>Notifications</CardTitle>
+            <CardDescription>
+              Choose which notifications you want to receive.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="email-notifications">Email notifications</Label>
+                <p id="email-notifications-desc" className="text-sm text-muted-foreground">
+                  Receive notifications about your account activity
+                </p>
+              </div>
+              <Switch
+                id="email-notifications"
+                checked={emailNotifications}
+                onCheckedChange={(checked) => handleUpdateNotificationSettings('email_notifications', checked)}
+                disabled={isUpdatingSettings}
+                aria-describedby="email-notifications-desc"
+              />
             </div>
-            <Switch
-              id="security-alerts"
-              checked={securityAlerts}
-              onCheckedChange={(checked) => handleUpdateNotificationSettings('security_alerts', checked)}
-              disabled={isUpdatingSettings}
-              aria-describedby="security-alerts-desc"
-            />
-          </div>
-        </CardContent>
-      </Card>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="security-alerts">Security alerts</Label>
+                <p id="security-alerts-desc" className="text-sm text-muted-foreground">
+                  Get notified about important security events
+                </p>
+              </div>
+              <Switch
+                id="security-alerts"
+                checked={securityAlerts}
+                onCheckedChange={(checked) => handleUpdateNotificationSettings('security_alerts', checked)}
+                disabled={isUpdatingSettings}
+                aria-describedby="security-alerts-desc"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </SettingsSection>
 
       <Separator />
 
-      <Card className="border-destructive">
-        <CardHeader>
-          <CardTitle className="text-destructive">Danger Zone</CardTitle>
-          <CardDescription>
-            Irreversible and destructive actions.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              <div>
-                <p className="font-medium">Delete Account</p>
-                <p id="delete-account-desc" className="text-sm text-muted-foreground">
-                  Permanently delete your account and all associated data
-                </p>
+      <ErrorBoundary
+        fallback={
+          <Card className="border-yellow-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                <div>
+                  <p className="font-medium">Account Actions Unavailable</p>
+                  <p className="text-sm text-muted-foreground">
+                    Some account management features are temporarily unavailable.
+                  </p>
+                </div>
               </div>
+            </CardContent>
+          </Card>
+        }
+      >
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="text-destructive">Danger Zone</CardTitle>
+            <CardDescription>
+              Irreversible and destructive actions.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                <div>
+                  <p className="font-medium">Delete Account</p>
+                  <p id="delete-account-desc" className="text-sm text-muted-foreground">
+                    Permanently delete your account and all associated data
+                  </p>
+                </div>
+              </div>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={() => {
+                  toast({
+                    title: "Feature Not Available",
+                    description: "Account deletion is not yet implemented. Please contact support if needed.",
+                    variant: "default",
+                  })
+                }}
+                aria-describedby="delete-account-desc"
+              >
+                Delete Account
+              </Button>
             </div>
-            <Button 
-              variant="destructive" 
-              size="sm"
-              onClick={() => {
-                toast({
-                  title: "Feature Not Available",
-                  description: "Account deletion is not yet implemented. Please contact support if needed.",
-                  variant: "default",
-                })
-              }}
-              aria-describedby="delete-account-desc"
-            >
-              Delete Account
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </ErrorBoundary>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 {
   "name": "codinit-app",
-  "version": "0.0.29",
+  "version": "0.0.34",
   "private": false,
   "scripts": {
     "postinstall": "patch-package",
@@ -47,6 +47,7 @@
     "@tailwindcss/typography": "github:tailwindcss/typography",
     "@upstash/ratelimit": "^2.0.1",
     "@vercel/analytics": "^1.5.0",
+    "@vercel/edge-config": "^1.4.0",
     "@vercel/kv": "^2.0.0",
     "@vercel/speed-insights": "^1.2.0",
     "@xenova/transformers": "^2.17.2",

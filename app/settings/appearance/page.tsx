@@ -2,8 +2,11 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
-import { Check, Monitor, Moon, Sun, Loader2 } from 'lucide-react'
+import { Check, Monitor, Moon, Sun, Loader2, Palette, Zap, Sparkles, Eye } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
@@ -13,6 +16,8 @@ import {
   updateUserPreferences,
   UserPreferences
 } from '@/lib/user-settings'
+import { themeCustomization, subscriptionTier } from '@/flags'
+import { useFeatureFlag, useFeatureValue } from '@/hooks/use-edge-flags'
 
 const themes = [
   {
@@ -61,11 +66,20 @@ export default function AppearanceSettings() {
   const { session } = useAuth(() => {}, () => {})
   const { toast } = useToast()
   
+  // Feature flags
+  const { enabled: hasThemeCustomization } = useFeatureFlag('theme-customization', false)
+  const { value: userSubscriptionTier } = useFeatureValue<'free' | 'pro' | 'enterprise'>('subscription-tier', 'free')
 
   const [selectedTheme, setSelectedTheme] = useState<'light' | 'dark' | 'system'>('system')
   const [selectedFont, setSelectedFont] = useState<'inter' | 'jetbrains-mono' | 'cal-sans'>('inter')
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
+  
+  // Advanced customization options
+  const [accentColor, setAccentColor] = useState('#3B82F6')
+  const [borderRadius, setBorderRadius] = useState([8])
+  const [animationsEnabled, setAnimationsEnabled] = useState(true)
+  const [compactMode, setCompactMode] = useState(false)
 
 
   useEffect(() => {
@@ -215,17 +229,39 @@ export default function AppearanceSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-medium">Appearance</h2>
+        <h2 className="text-lg font-medium flex items-center gap-2">
+          Appearance
+          {hasThemeCustomization && (
+            <Badge variant="default" className="gap-1">
+              <Palette className="w-3 h-3" />
+              Pro Themes
+            </Badge>
+          )}
+        </h2>
         <p className="text-sm text-muted-foreground">
-          Customize how the interface looks and feels.
+          {hasThemeCustomization 
+            ? 'Advanced customization options for your interface appearance.' 
+            : 'Customize how the interface looks and feels.'
+          }
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Theme</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            Theme
+            {hasThemeCustomization && (
+              <Badge variant="outline" className="gap-1">
+                <Zap className="w-3 h-3" />
+                Enhanced
+              </Badge>
+            )}
+          </CardTitle>
           <CardDescription>
-            Choose your preferred color scheme.
+            {hasThemeCustomization 
+              ? 'Choose your theme and customize every detail.' 
+              : 'Choose your preferred color scheme.'
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -328,6 +364,173 @@ export default function AppearanceSettings() {
           </div>
         </CardContent>
       </Card>
+
+      {hasThemeCustomization && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5" />
+              Advanced Customization
+              <Badge variant="default">Pro</Badge>
+            </CardTitle>
+            <CardDescription>
+              Fine-tune your interface with advanced theming options.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Accent Color */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Accent Color</Label>
+              <div className="flex items-center gap-4">
+                <input
+                  type="color"
+                  value={accentColor}
+                  onChange={(e) => setAccentColor(e.target.value)}
+                  className="w-12 h-8 rounded border cursor-pointer"
+                  disabled={!hasThemeCustomization}
+                />
+                <span className="text-sm font-mono text-muted-foreground">{accentColor}</span>
+                <div className="flex gap-2">
+                  {['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'].map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setAccentColor(color)}
+                      className="w-6 h-6 rounded-full border-2 border-gray-200"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Border Radius */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Border Radius</Label>
+              <div className="flex items-center gap-4">
+                <Input
+                  type="range"
+                  min="0"
+                  max="20"
+                  step="1"
+                  value={borderRadius[0]}
+                  onChange={(e) => setBorderRadius([parseInt(e.target.value)])}
+                  className="flex-1"
+                  disabled={!hasThemeCustomization}
+                />
+                <span className="text-sm font-medium min-w-[40px]">{borderRadius[0]}px</span>
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Sharp</span>
+                <span>Rounded</span>
+              </div>
+            </div>
+            
+            {/* Interface Options */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium">Smooth Animations</Label>
+                  <p className="text-xs text-muted-foreground">Enable transitions and micro-interactions</p>
+                </div>
+                <Button
+                  variant={animationsEnabled ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setAnimationsEnabled(!animationsEnabled)}
+                  disabled={!hasThemeCustomization}
+                >
+                  {animationsEnabled ? 'On' : 'Off'}
+                </Button>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium">Compact Mode</Label>
+                  <p className="text-xs text-muted-foreground">Reduce spacing and padding for more content</p>
+                </div>
+                <Button
+                  variant={compactMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCompactMode(!compactMode)}
+                  disabled={!hasThemeCustomization}
+                >
+                  {compactMode ? 'On' : 'Off'}
+                </Button>
+              </div>
+            </div>
+            
+            {/* Preview */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                Live Preview
+              </Label>
+              <div 
+                className="p-4 border-2 rounded-lg bg-card"
+                style={{
+                  borderRadius: `${borderRadius[0]}px`,
+                  borderColor: accentColor + '40',
+                }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <div 
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: accentColor }}
+                  />
+                  <span className="text-sm font-medium">Preview Component</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  This is how your interface will look with the current settings.
+                </p>
+                <div 
+                  className="px-3 py-2 text-xs text-white rounded"
+                  style={{ 
+                    backgroundColor: accentColor,
+                    borderRadius: `${borderRadius[0] * 0.5}px`
+                  }}
+                >
+                  Action Button
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Upgrade CTA for free users */}
+      {!hasThemeCustomization && userSubscriptionTier === 'free' && (
+        <Card className="border-dashed">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="w-5 h-5" />
+              Advanced Theme Customization
+            </CardTitle>
+            <CardDescription>
+              Unlock advanced theming options with accent colors, custom radius, and more.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="flex flex-col items-center p-4 border rounded-lg opacity-60">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 mb-2" />
+                <span className="text-xs font-medium">Custom Colors</span>
+              </div>
+              <div className="flex flex-col items-center p-4 border rounded-lg opacity-60">
+                <div className="w-8 h-8 rounded-2xl bg-gray-300 mb-2" />
+                <span className="text-xs font-medium">Border Radius</span>
+              </div>
+              <div className="flex flex-col items-center p-4 border rounded-lg opacity-60">
+                <Sparkles className="w-8 h-8 text-gray-400 mb-2" />
+                <span className="text-xs font-medium">Animations</span>
+              </div>
+            </div>
+            <div className="text-center">
+              <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium">
+                Upgrade to Pro
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {isUpdating && (
         <div className="flex items-center justify-center py-4">

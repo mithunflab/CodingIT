@@ -181,8 +181,7 @@ export class WorkflowDetector {
       'nextjs-developer': 0,
       'vue-developer': 0,
       'streamlit-developer': 0,
-      'gradio-developer': 0,
-      'codinit-engineer': 0
+      'gradio-developer': 0
     }
 
     // Score each template based on keywords
@@ -241,8 +240,7 @@ export class WorkflowDetector {
       'nextjs-developer': 5,
       'vue-developer': 5,
       'streamlit-developer': 3,
-      'gradio-developer': 3,
-      'codinit-engineer': 10
+      'gradio-developer': 3
     }
     
     return durations[template] || 3
