@@ -58,9 +58,7 @@ export async function POST(req: Request) {
 
   console.log('userID', userID)
   console.log('teamID', teamID)
-  // console.log('template', template)
   console.log('model', model)
-  // console.log('config', config)
 
   const { model: modelNameString, apiKey: modelApiKey, ...modelParams } = config
   const modelClient = getModelClient(model, config)
@@ -71,7 +69,7 @@ export async function POST(req: Request) {
       schema,
       system: toPrompt(template),
       messages,
-      maxRetries: 0, // do not retry on errors
+      maxRetries: 0,
       ...getDefaultModelParams(model),
       ...modelParams,
     })

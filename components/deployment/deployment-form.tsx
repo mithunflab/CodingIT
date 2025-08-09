@@ -12,17 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
-import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   Rocket, 
   Settings, 
   Globe, 
-  Shield, 
   Zap, 
   Database,
   Monitor,
-  Bell,
   Code,
   Server,
   Cloud,

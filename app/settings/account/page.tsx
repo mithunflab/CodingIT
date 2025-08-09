@@ -56,11 +56,8 @@ export default function AccountSettings() {
     
     setIsLoading(true)
     try {
-      // Set basic user data immediately from session
       setEmail(session.user.email || '')
       setEmailDirty(false)
-      
-      // Try to load additional data with timeout
       const loadWithTimeout = Promise.race([
         Promise.all([
           getUserProfile(session.user.id),
@@ -91,7 +88,6 @@ export default function AccountSettings() {
         }
       } catch (dataError) {
         console.warn('Could not load extended user data, using defaults:', dataError)
-        // Use default values - don't show error to user
         setEmailNotifications(true)
         setSecurityAlerts(true)
         setTwoFactorEnabled(false)
@@ -245,7 +241,6 @@ export default function AccountSettings() {
   const handleUpdateNotificationSettings = async (key: 'email_notifications' | 'security_alerts', value: boolean) => {
     if (!session?.user?.id || isUpdatingSettings) return
 
-    // Optimistically update the UI
     if (key === 'email_notifications') setEmailNotifications(value)
     if (key === 'security_alerts') setSecurityAlerts(value)
 
@@ -265,7 +260,6 @@ export default function AccountSettings() {
       }
     } catch (error) {
       console.warn('Could not save notification settings to database:', error)
-      // Revert optimistic update
       if (isMountedRef.current) {
         if (key === 'email_notifications') setEmailNotifications(!value)
         if (key === 'security_alerts') setSecurityAlerts(!value)
@@ -288,7 +282,6 @@ export default function AccountSettings() {
 
     const newValue = !twoFactorEnabled
     
-    // Optimistically update the UI
     setTwoFactorEnabled(newValue)
     setIsUpdatingSettings(true)
     
@@ -307,7 +300,6 @@ export default function AccountSettings() {
       }
     } catch (error) {
       console.warn('Could not save 2FA settings to database:', error)
-      // Revert optimistic update
       if (isMountedRef.current) {
         setTwoFactorEnabled(!newValue)
         toast({
@@ -325,7 +317,7 @@ export default function AccountSettings() {
 
   const validateAvatarFile = (file: File): string | null => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-    const maxSize = 2 * 1024 * 1024 // 2MB
+    const maxSize = 2 * 1024 * 1024
     
     if (!allowedTypes.includes(file.type)) {
       return 'Please upload a valid image file (JPG, PNG, GIF, or WebP)'
@@ -393,7 +385,6 @@ export default function AccountSettings() {
       if (isMountedRef.current) {
         setIsUploadingAvatar(false)
       }
-      // Clear the input to allow re-uploading the same file
       if (event.target) {
         event.target.value = ''
       }

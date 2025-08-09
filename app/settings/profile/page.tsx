@@ -171,27 +171,60 @@ export default function ProfileSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="fullName">Full name</Label>
               <Input
-                id="fullName"
-                placeholder="Enter your full name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+              id="fullName"
+              placeholder="Enter your full name"
+              value={fullName || session?.user?.user_metadata?.full_name || ''}
+              onChange={(e) => setFullName(e.target.value)}
               />
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="displayName">What should we call you?</Label>
               <Input
-                id="displayName"
-                placeholder="Your preferred name"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
+              id="displayName"
+              placeholder="Your preferred name"
+              value={displayName || session?.user?.user_metadata?.name || session?.user?.user_metadata?.display_name || ''}
+              onChange={(e) => setDisplayName(e.target.value)}
               />
             </div>
-          </div>
+            </div>
+
+            <div className="space-y-4">
+            <h4 className="text-sm font-medium text-muted-foreground">User Metadata</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+              <Label>User ID</Label>
+              <Input value={session?.user?.id || ''} readOnly className="bg-muted" />
+              </div>
+              
+              <div className="space-y-2">
+              <Label>Email</Label>
+              <Input value={session?.user?.email || ''} readOnly className="bg-muted" />
+              </div>
+              
+              <div className="space-y-2">
+              <Label>Account Created</Label>
+              <Input 
+                value={session?.user?.created_at ? new Date(session.user.created_at).toLocaleDateString() : ''} 
+                readOnly 
+                className="bg-muted" 
+              />
+              </div>
+              
+              <div className="space-y-2">
+              <Label>Last Updated</Label>
+              <Input 
+                value={session?.user?.updated_at ? new Date(session.user.updated_at).toLocaleDateString() : ''} 
+                readOnly 
+                className="bg-muted" 
+              />
+              </div>
+            </div>
+            </div>
 
           <div className="space-y-2">
             <Label htmlFor="workDescription">What best describes your work?</Label>

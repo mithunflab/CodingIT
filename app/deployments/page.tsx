@@ -98,7 +98,7 @@ export default function DeploymentsPage() {
   }
 
   const pollDeploymentStatus = async (deploymentId: string) => {
-    const maxPolls = 60 // 5 minutes max
+    const maxPolls = 60
     let polls = 0
     
     const poll = async () => {
@@ -139,7 +139,7 @@ export default function DeploymentsPage() {
           }
         } else {
           polls++
-          setTimeout(poll, 5000) // Poll every 5 seconds
+          setTimeout(poll, 5000)
         }
       } catch (error) {
         console.error('Error polling deployment status:', error)
@@ -413,7 +413,7 @@ export default function DeploymentsPage() {
         <TabsContent value="history" className="flex-1">
           <DeploymentHistory
             deployments={deployments}
-            onRedeploy={() => {}} // TODO: implement redeploy logic
+            onRedeploy={() => {}}
             onRollback={(deployment) => rollbackDeployment(deployment.deploymentId)}
           />
         </TabsContent>

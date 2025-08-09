@@ -132,7 +132,7 @@ export default function IntegrationsSettings() {
       })
 
       if (success) {
-        await loadIntegrations() // Reload from database
+        await loadIntegrations()
         
         toast({
           title: "Success",
@@ -164,7 +164,7 @@ export default function IntegrationsSettings() {
       const success = await disconnectUserIntegration(session.user.id, serviceId)
 
       if (success) {
-        await loadIntegrations() // Reload from database
+        await loadIntegrations()
         
         toast({
           title: "Success",

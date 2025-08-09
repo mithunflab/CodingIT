@@ -59,7 +59,6 @@ export default function BillingSettings() {
   const { session, userTeam } = useAuth(() => {}, () => {})
   const { toast } = useToast()
   
-  // Feature flags
   const { enabled: hasAdvancedAnalytics } = useFeatureFlag('advanced-analytics', false)
   const { value: userSubscriptionTier } = useFeatureValue<'free' | 'pro' | 'enterprise'>('subscription-tier', 'free')
 
@@ -67,7 +66,7 @@ export default function BillingSettings() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
-  const [analyticsData, setAnalyticsData] = useState({
+  const [analyticsData] = useState({
     totalExecutions: 1247,
     executionTrend: '+12.5%',
     averageExecutionTime: '2.3s',
@@ -82,7 +81,6 @@ export default function BillingSettings() {
   useEffect(() => {
     if (!session?.user?.id) return
     
-    // Set up a timeout to prevent infinite loading
     const loadingTimeout = setTimeout(() => {
       if (isLoading) {
         console.warn('Billing data loading timeout, using defaults')
@@ -122,7 +120,7 @@ export default function BillingSettings() {
           {
             id: 'inv_001',
             date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-            amount: 2000, // $20.00 in cents
+            amount: 2000,
             status: 'paid',
             invoice_url: '#'
           },
@@ -152,7 +150,6 @@ export default function BillingSettings() {
 
     loadBillingInfo()
     
-    // Cleanup timeout on unmount
     return () => {
       clearTimeout(loadingTimeout)
     }
@@ -161,8 +158,7 @@ export default function BillingSettings() {
   const handleUpgradePlan = async () => {
     setIsUpdating(true)
     try {
-
-      await new Promise(resolve => setTimeout(resolve, 2000)) // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000))
       
       toast({
         title: "Redirecting to Checkout",
@@ -187,8 +183,7 @@ export default function BillingSettings() {
 
     setIsUpdating(true)
     try {
-
-      await new Promise(resolve => setTimeout(resolve, 1500)) // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500))
       
       if (billingInfo) {
         setBillingInfo({
@@ -219,8 +214,7 @@ export default function BillingSettings() {
   const handleUpdatePaymentMethod = async () => {
     setIsUpdating(true)
     try {
-
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate redirect
+      await new Promise(resolve => setTimeout(resolve, 1000))
       
       toast({
         title: "Redirecting to Payment Portal",

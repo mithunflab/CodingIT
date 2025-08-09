@@ -36,7 +36,6 @@ export default function PrivacySettings() {
   const { session } = useAuth(() => {}, () => {})
   const { toast } = useToast()
   
-
   const [privacySettings, setPrivacySettings] = useState<PrivacySettings>({
     analytics_enabled: true,
     marketing_emails: false,
@@ -49,7 +48,6 @@ export default function PrivacySettings() {
   const [isExporting, setIsExporting] = useState(false)
   const [isDeletingAccount, setIsDeletingAccount] = useState(false)
 
-
   useEffect(() => {
     if (!session?.user?.id) return
 
@@ -60,11 +58,11 @@ export default function PrivacySettings() {
         
         if (preferences) {
           setPrivacySettings({
-            analytics_enabled: true, // Default for analytics (could be stored in preferences)
-            marketing_emails: preferences.marketing_emails,
-            data_sharing: false, // Default setting
-            activity_tracking: true, // Default setting
-            personalization: true // Default setting
+            analytics_enabled: preferences.analytics_enabled ?? true,
+            marketing_emails: preferences.marketing_emails ?? false,
+            data_sharing: preferences.data_sharing_enabled ?? false,
+            activity_tracking: true,
+            personalization: preferences.ai_assistance ?? true
           })
         }
       } catch (error) {
@@ -87,17 +85,30 @@ export default function PrivacySettings() {
 
     setIsUpdating(true)
     try {
-
       setPrivacySettings(prev => ({ ...prev, [key]: value }))
+      let updateData: Partial<UserPreferences> = {}
+      
+      switch (key) {
+        case 'analytics_enabled':
+          updateData.analytics_enabled = value
+          break
+        case 'marketing_emails':
+          updateData.marketing_emails = value
+          break
+        case 'data_sharing':
+          updateData.data_sharing_enabled = value
+          break
+        case 'personalization':
+          updateData.ai_assistance = value
+          break
+        case 'activity_tracking':
+          break
+      }
 
-
-      if (key === 'marketing_emails') {
-        const success = await updateUserPreferences(session.user.id, {
-          marketing_emails: value
-        })
+      if (Object.keys(updateData).length > 0) {
+        const success = await updateUserPreferences(session.user.id, updateData)
 
         if (!success) {
-
           setPrivacySettings(prev => ({ ...prev, [key]: !value }))
           throw new Error('Failed to update preference')
         }
@@ -124,10 +135,8 @@ export default function PrivacySettings() {
 
     setIsExporting(true)
     try {
-
-      await new Promise(resolve => setTimeout(resolve, 3000)) // Simulate export process
+      await new Promise(resolve => setTimeout(resolve, 3000))
       
-
       const dataExport = {
         user_id: session.user.id,
         email: session.user.email,
@@ -173,8 +182,7 @@ export default function PrivacySettings() {
 
     setIsDeletingAccount(true)
     try {
-
-      await new Promise(resolve => setTimeout(resolve, 2000)) // Simulate deletion process
+      await new Promise(resolve => setTimeout(resolve, 2000))
       
       toast({
         title: "Account Deletion Initiated",

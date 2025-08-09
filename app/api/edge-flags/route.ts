@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { edgeConfigAdapter } from '@/lib/edge-config-adapter';
 import { getAllFeatureFlags } from '@/flags';
 
-// Force dynamic rendering for this route
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
@@ -12,9 +11,7 @@ export async function GET(request: NextRequest) {
     const featureKey = url.searchParams.get('feature');
 
     if (useEdgeConfig) {
-      // Use Edge Config adapter for faster response
       if (featureKey) {
-        // Get specific feature
         const value = await edgeConfigAdapter.getFeatureValue(featureKey);
         
         return NextResponse.json({
@@ -25,7 +22,6 @@ export async function GET(request: NextRequest) {
           timestamp: new Date().toISOString(),
         });
       } else {
-        // Get all features from Edge Config
         const features = await edgeConfigAdapter.getAllFeatures();
         const featureData = await edgeConfigAdapter.getFeatureData();
         
@@ -42,7 +38,6 @@ export async function GET(request: NextRequest) {
         });
       }
     } else {
-      // Use standard GrowthBook integration
       const flags = await getAllFeatureFlags();
       
       return NextResponse.json({
@@ -83,7 +78,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Batch check multiple features
     const results: Record<string, any> = {};
     
     for (const featureKey of features) {

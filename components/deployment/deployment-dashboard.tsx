@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DeploymentForm } from './deployment-form'
 import { DeploymentMonitoring } from './deployment-monitoring'
@@ -15,16 +14,12 @@ import {
   Rocket, 
   Globe, 
   Settings, 
-  Clock, 
   CheckCircle, 
   XCircle, 
   AlertCircle,
-  ExternalLink,
   Copy,
   RefreshCw,
-  Pause,
-  Play
-} from 'lucide-react'
+  Pause} from 'lucide-react'
 import { toast } from '@/components/ui/use-toast'
 import { DeploymentHistory } from './deployment-history'
 
@@ -35,11 +30,11 @@ interface DeploymentDashboardProps {
 
 export function DeploymentDashboard({ fragment, onClose }: DeploymentDashboardProps) {
   const [activeTab, setActiveTab] = useState('deploy')
-  const [deploymentConfig, setDeploymentConfig] = useState<DeploymentConfig | null>(null)
+  const [, setDeploymentConfig] = useState<DeploymentConfig | null>(null)
   const [currentDeployment, setCurrentDeployment] = useState<DeploymentStatus | null>(null)
   const [deploymentHistory, setDeploymentHistory] = useState<DeploymentResult[]>([])
   const [isDeploying, setIsDeploying] = useState(false)
-  const [activeDeployments, setActiveDeployments] = useState<DeploymentStatus[]>([])
+  const [, setActiveDeployments] = useState<DeploymentStatus[]>([])
 
   const loadDeploymentHistory = useCallback(async () => {
     try {

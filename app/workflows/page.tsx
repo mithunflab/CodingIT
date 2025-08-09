@@ -8,16 +8,15 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { WorkflowCanvas } from '@/components/workflow-builder/workflow-canvas'
 import { WorkflowSchema } from '@/lib/workflow-engine'
-import { Plus, Search, Play, Edit, Trash2, Copy, GitBranch, Layers, List } from 'lucide-react'
+import { Plus, Search, Play, Edit, Trash2, GitBranch, Layers, List } from 'lucide-react'
 import { toast } from '@/components/ui/use-toast'
 import { useAuth } from '@/lib/auth'
 import { ViewType } from '@/components/auth'
-import { workflowBuilderV2, workflowInterfaceStyle } from '@/flags'
 import { useFeatureFlag, useFeatureValue } from '@/hooks/use-edge-flags'
 
 export default function WorkflowsPage() {
-  const [authDialog, setAuthDialog] = useState(false)
-  const [authView, setAuthView] = useState<ViewType>('sign_in')
+  const [, setAuthDialog] = useState(false)
+  const [, setAuthView] = useState<ViewType>('sign_in')
   const { session } = useAuth(setAuthDialog, setAuthView)
   const [workflows, setWorkflows] = useState<WorkflowSchema[]>([])
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowSchema | null>(null)
@@ -25,9 +24,8 @@ export default function WorkflowsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   
-  // Feature flags
   const { enabled: isWorkflowBuilderV2Enabled } = useFeatureFlag('workflow-builder-v2', false)
-  const { value: interfaceStyle } = useFeatureValue<'list' | 'canvas' | 'hybrid'>('workflow-interface-style', 'list')
+  useFeatureValue<'list' | 'canvas' | 'hybrid'>('workflow-interface-style', 'list')
 
   useEffect(() => {
     if (session?.user?.id) {

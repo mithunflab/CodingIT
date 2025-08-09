@@ -93,7 +93,6 @@ export default function Home() {
 
   useEffect(() => {
     if (lastMessage) {
-      console.log('Last message:', lastMessage)
     }
   }, [lastMessage])
 

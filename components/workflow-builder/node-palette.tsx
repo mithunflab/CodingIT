@@ -10,7 +10,6 @@ import {
   Code, 
   Globe, 
   Zap, 
-  FileText, 
   Search, 
   Plus,
   Database,

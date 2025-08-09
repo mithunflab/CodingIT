@@ -13,10 +13,7 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/auth'
 import { 
   getUserPreferences, 
-  updateUserPreferences,
-  UserPreferences
-} from '@/lib/user-settings'
-import { themeCustomization, subscriptionTier } from '@/flags'
+  updateUserPreferences} from '@/lib/user-settings'
 import { useFeatureFlag, useFeatureValue } from '@/hooks/use-edge-flags'
 
 const themes = [
@@ -66,7 +63,6 @@ export default function AppearanceSettings() {
   const { session } = useAuth(() => {}, () => {})
   const { toast } = useToast()
   
-  // Feature flags
   const { enabled: hasThemeCustomization } = useFeatureFlag('theme-customization', false)
   const { value: userSubscriptionTier } = useFeatureValue<'free' | 'pro' | 'enterprise'>('subscription-tier', 'free')
 
@@ -75,7 +71,6 @@ export default function AppearanceSettings() {
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
   
-  // Advanced customization options
   const [accentColor, setAccentColor] = useState('#3B82F6')
   const [borderRadius, setBorderRadius] = useState([8])
   const [animationsEnabled, setAnimationsEnabled] = useState(true)
@@ -119,10 +114,8 @@ export default function AppearanceSettings() {
 
     setIsUpdating(true)
     try {
-
       setSelectedTheme(newTheme)
       setTheme(newTheme)
-
 
       const success = await updateUserPreferences(session.user.id, {
         theme: newTheme
@@ -134,7 +127,6 @@ export default function AppearanceSettings() {
           description: "Theme updated successfully.",
         })
       } else {
-
         setSelectedTheme(selectedTheme)
         setTheme(selectedTheme)
         throw new Error('Failed to save theme preference')
@@ -156,12 +148,9 @@ export default function AppearanceSettings() {
 
     setIsUpdating(true)
     try {
-
       setSelectedFont(newFont)
       
-
       document.documentElement.style.fontFamily = getFontFamily(newFont)
-
 
       const success = await updateUserPreferences(session.user.id, {
         font_family: newFont
@@ -173,7 +162,6 @@ export default function AppearanceSettings() {
           description: "Font updated successfully.",
         })
       } else {
-
         setSelectedFont(selectedFont)
         document.documentElement.style.fontFamily = getFontFamily(selectedFont)
         throw new Error('Failed to save font preference')
@@ -202,7 +190,6 @@ export default function AppearanceSettings() {
         return 'Inter, system-ui, sans-serif'
     }
   }
-
 
   useEffect(() => {
     if (!isLoading) {
@@ -378,7 +365,6 @@ export default function AppearanceSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Accent Color */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">Accent Color</Label>
               <div className="flex items-center gap-4">
@@ -403,7 +389,6 @@ export default function AppearanceSettings() {
               </div>
             </div>
             
-            {/* Border Radius */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">Border Radius</Label>
               <div className="flex items-center gap-4">
@@ -425,7 +410,6 @@ export default function AppearanceSettings() {
               </div>
             </div>
             
-            {/* Interface Options */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -458,7 +442,6 @@ export default function AppearanceSettings() {
               </div>
             </div>
             
-            {/* Preview */}
             <div className="space-y-3">
               <Label className="text-sm font-medium flex items-center gap-2">
                 <Eye className="w-4 h-4" />
@@ -496,7 +479,6 @@ export default function AppearanceSettings() {
         </Card>
       )}
       
-      {/* Upgrade CTA for free users */}
       {!hasThemeCustomization && userSubscriptionTier === 'free' && (
         <Card className="border-dashed">
           <CardHeader>

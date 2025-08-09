@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     const fullCommand = `cd "${workingDirectory}" && ${command}`
     
     const result = await sandbox.commands.run(fullCommand, {
-      timeoutMs: 30000, // 30 second timeout
+      timeoutMs: 30000,
     })
 
     return NextResponse.json({
