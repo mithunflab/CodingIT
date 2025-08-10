@@ -80,7 +80,6 @@ export async function POST(req: Request) {
         await Promise.all(fragment.code.map(async (file) => {
           await sbx.files.write(file.file_path, file.file_content)
         }))
-      } else {
       } else if (fragment.code !== null && fragment.code !== undefined) {
         await sbx.files.write(fragment.file_path, fragment.code)
       } else {

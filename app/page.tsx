@@ -278,7 +278,7 @@ export default function Home() {
       userID: session?.user?.id,
       teamID: userTeam?.id,
       messages: toAISDKMessages(updatedMessages),
-      template: templates[selectedTemplate],
+      template: templates,
       model: currentModel,
       config: languageModel,
     })

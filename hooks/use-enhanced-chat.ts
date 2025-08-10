@@ -110,10 +110,6 @@ export function useEnhancedChat(chatConfig: EnhancedChatConfig) {
         trackError(error.message)
         throw error
       } finally {
-        if (retryCount > 0) {
-          setIsSubmitting(false)
-        }
-      } finally {
         setIsSubmitting(false)
       }
     },
