@@ -113,6 +113,8 @@ export function useEnhancedChat(chatConfig: EnhancedChatConfig) {
         if (retryCount > 0) {
           setIsSubmitting(false)
         }
+      } finally {
+        setIsSubmitting(false)
       }
     },
     [append, analyzeUserLevel, isSubmitting, trackError],
