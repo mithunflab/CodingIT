@@ -1,6 +1,6 @@
 {
   "name": "codinit-app",
-  "version": "0.0.34",
+  "version": "0.0.36",
   "private": false,
   "scripts": {
     "postinstall": "patch-package",
@@ -10,8 +10,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@21st-extension/react": "^0.5.14",
-    "@21st-extension/toolbar-next": "^0.5.14",
     "@ai-sdk/anthropic": "latest",
     "@ai-sdk/fireworks": "latest",
     "@ai-sdk/google": "latest",

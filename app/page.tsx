@@ -59,10 +59,6 @@ export default function Home() {
 
   const { session, userTeam } = useAuth(setAuthDialog, setAuthView)
 
-  const currentTemplate =
-    selectedTemplate === 'auto'
-      ? templates
-      : templates[selectedTemplate as keyof typeof templates]
 
   const { executeCode: enhancedExecuteCode } = useEnhancedChat({
     userID: session?.user?.id,
@@ -101,10 +97,35 @@ export default function Home() {
     schema,
     onError: (error) => {
       console.error('Error submitting request:', error)
-      if (error.message.includes('limit')) {
-        setIsRateLimited(true)
+      
+      let displayMessage = error.message
+      let isRateLimit = false
+      
+      // Try to parse structured error response
+      try {
+        if (error.message.startsWith('{')) {
+          const errorData = JSON.parse(error.message)
+          displayMessage = errorData.error || error.message
+          isRateLimit = errorData.type === 'rate_limit'
+        } else {
+          // Handle common error patterns
+          if (error.message.includes('limit') || error.message.includes('rate')) {
+            isRateLimit = true
+            displayMessage = 'Rate limit exceeded. Please try again later or use your own API key.'
+          } else if (error.message.includes('API key') || error.message.includes('unauthorized')) {
+            displayMessage = 'Invalid API key. Please check your API key configuration in settings.'
+          } else if (error.message.includes('network') || error.message.includes('fetch')) {
+            displayMessage = 'Network error. Please check your connection and try again.'
+          } else if (error.message.includes('timeout')) {
+            displayMessage = 'Request timeout. Please try again.'
+          }
+        }
+      } catch {
+        // Use original error message if parsing fails
       }
-      setErrorMessage(error.message)
+      
+      setIsRateLimited(isRateLimit)
+      setErrorMessage(displayMessage)
     },
     onFinish: async ({ object: fragment, error }) => {
       if (!error) {
@@ -124,6 +145,14 @@ export default function Home() {
         })
 
         const result = await response.json()
+        
+        if (!response.ok) {
+          console.error('Sandbox creation failed:', result)
+          setErrorMessage(result.error || 'Failed to create sandbox environment')
+          setIsPreviewLoading(false)
+          return
+        }
+
         posthog.capture('sandbox_created', { url: result.url })
 
         setResult(result)
@@ -249,7 +278,7 @@ export default function Home() {
       userID: session?.user?.id,
       teamID: userTeam?.id,
       messages: toAISDKMessages(updatedMessages),
-      template: currentTemplate,
+      template: templates,
       model: currentModel,
       config: languageModel,
     })
@@ -279,7 +308,7 @@ export default function Home() {
       userID: session?.user?.id,
       teamID: userTeam?.id,
       messages: toAISDKMessages(messages),
-      template: currentTemplate,
+      template: templates,
       model: currentModel,
       config: languageModel,
     })
