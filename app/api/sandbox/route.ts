@@ -81,7 +81,16 @@ export async function POST(req: Request) {
           await sbx.files.write(file.file_path, file.file_content)
         }))
       } else {
+      } else if (fragment.code !== null && fragment.code !== undefined) {
         await sbx.files.write(fragment.file_path, fragment.code)
+      } else {
+        return new Response(
+          JSON.stringify({
+            error: 'Missing code data',
+            type: 'validation_error'
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        )
       }
 
       if (fragment.template === 'code-interpreter-v1') {
