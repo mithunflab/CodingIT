@@ -76,8 +76,15 @@ export function useEnhancedChat(chatConfig: EnhancedChatConfig) {
     }
   }, [updateContext])
 
+  const trackError = useCallback((error: string) => {
+    setContext(prev => ({
+      ...prev,
+      previousErrors: [...prev.previousErrors.slice(-4), error] // Keep last 5 errors
+    }))
+  }, [])
+
   const submitMessage = useCallback(
-    async (content: string) => {
+    async (content: string, retryCount = 0) => {
       if (isSubmitting) return
       setIsSubmitting(true)
       analyzeUserLevel(content)
@@ -87,23 +94,35 @@ export function useEnhancedChat(chatConfig: EnhancedChatConfig) {
           role: 'user',
           content,
         })
+      } catch (error: any) {
+        console.error('Submit message error:', error)
+        
+        // Auto-retry once for network errors
+        if (retryCount === 0 && (error.message.includes('network') || error.message.includes('fetch'))) {
+          console.log('Retrying message submission...')
+          setTimeout(() => {
+            setIsSubmitting(false)
+            submitMessage(content, 1)
+          }, 2000)
+          return
+        }
+        
+        trackError(error.message)
+        throw error
+      } finally {
+        if (retryCount > 0) {
+          setIsSubmitting(false)
+        }
       } finally {
         setIsSubmitting(false)
       }
     },
-    [append, analyzeUserLevel, isSubmitting],
+    [append, analyzeUserLevel, isSubmitting, trackError],
   )
-
-  const trackError = useCallback((error: string) => {
-    setContext(prev => ({
-      ...prev,
-      previousErrors: [...prev.previousErrors.slice(-4), error] // Keep last 5 errors
-    }))
-  }, [])
 
   const executeCode = useCallback(
     async (code: string) => {
-      if (isExecuting) return
+      if (isExecuting) return { error: 'Code execution already in progress' }
       setIsExecuting(true)
 
       try {
@@ -119,20 +138,43 @@ export function useEnhancedChat(chatConfig: EnhancedChatConfig) {
         })
 
         if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || 'Failed to execute code')
+          let errorMessage = 'Failed to execute code'
+          try {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorMessage
+          } catch {
+            errorMessage = `HTTP ${response.status}: ${response.statusText}`
+          }
+          throw new Error(errorMessage)
         }
 
         const result = await response.json()
+        
+        // Reset error tracking on successful execution
+        if (context.previousErrors.length > 0) {
+          updateContext({ previousErrors: [] })
+        }
+        
         return result
       } catch (error: any) {
-        trackError(error.message)
-        return { error: error.message }
+        const errorMessage = error.message || 'Unknown execution error'
+        trackError(errorMessage)
+        
+        console.error('Code execution failed:', {
+          error: errorMessage,
+          code: code.substring(0, 200), // Log first 200 chars of code
+          sessionID: chatConfig.userID
+        })
+        
+        return { 
+          error: errorMessage,
+          type: 'execution_error'
+        }
       } finally {
         setIsExecuting(false)
       }
     },
-    [isExecuting, chatConfig.userID, trackError],
+    [isExecuting, chatConfig.userID, trackError, context.previousErrors, updateContext],
   )
 
   useEffect(() => {

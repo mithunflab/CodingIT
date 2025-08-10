@@ -76,46 +76,100 @@ export async function POST(req: Request) {
 
     return stream.toTextStreamResponse()
   } catch (error: any) {
+    console.error('Chat API Error:', {
+      message: error?.message,
+      status: error?.statusCode,
+      provider: model,
+      stack: error?.stack
+    })
+
     const isRateLimitError =
-      error && (error.statusCode === 429 || error.message.includes('limit'))
+      error && (error.statusCode === 429 || error.message.includes('limit') || error.message.includes('rate'))
     const isOverloadedError =
       error && (error.statusCode === 529 || error.statusCode === 503)
     const isAccessDeniedError =
-      error && (error.statusCode === 403 || error.statusCode === 401)
+      error && (error.statusCode === 403 || error.statusCode === 401 || error.message.includes('unauthorized') || error.message.includes('invalid') && error.message.includes('key'))
+    const isModelError = 
+      error && (error.statusCode === 404 || error.message.includes('not found') || error.message.includes('model'))
+    const isNetworkError = 
+      error && (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.message.includes('network'))
 
     if (isRateLimitError) {
       return new Response(
-        'The provider is currently unavailable due to request limit. Try using your own API key.',
+        JSON.stringify({ 
+          error: 'Rate limit exceeded. Please try again later or use your own API key.',
+          type: 'rate_limit',
+          retryAfter: 60
+        }),
         {
           status: 429,
+          headers: { 'Content-Type': 'application/json' }
         },
       )
     }
 
     if (isOverloadedError) {
       return new Response(
-        'The provider is currently unavailable. Please try again later.',
+        JSON.stringify({ 
+          error: 'The AI service is currently overloaded. Please try again in a few moments.',
+          type: 'service_overload',
+          retryAfter: 30
+        }),
         {
-          status: 529,
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
         },
       )
     }
 
     if (isAccessDeniedError) {
       return new Response(
-        'Access denied. Please make sure your API key is valid.',
+        JSON.stringify({ 
+          error: 'Invalid API key or access denied. Please check your API key configuration.',
+          type: 'auth_error'
+        }),
         {
           status: 403,
+          headers: { 'Content-Type': 'application/json' }
         },
       )
     }
 
-    console.error('Error:', error)
+    if (isModelError) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'The selected AI model is not available. Please try a different model.',
+          type: 'model_error'
+        }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        },
+      )
+    }
+
+    if (isNetworkError) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Network connection failed. Please check your internet connection and try again.',
+          type: 'network_error'
+        }),
+        {
+          status: 502,
+          headers: { 'Content-Type': 'application/json' }
+        },
+      )
+    }
 
     return new Response(
-      'An unexpected error has occurred. Please try again later.',
+      JSON.stringify({
+        error: 'An unexpected error occurred. Please try again. If the problem persists, try using a different AI model.',
+        type: 'unknown_error',
+        details: error?.message || 'Unknown error'
+      }),
       {
         status: 500,
+        headers: { 'Content-Type': 'application/json' }
       },
     )
   }
