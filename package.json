@@ -1,6 +1,6 @@
 {
   "name": "codinit-app",
-  "version": "0.0.36",
+  "version": "0.0.37",
   "private": false,
   "scripts": {
     "postinstall": "patch-package",
@@ -69,6 +69,7 @@
     "react-syntax-highlighter": "^5.8.0",
     "react-textarea-autosize": "^8.5.3",
     "simple-icons": "^14.12.3",
+    "stripe": "^18.4.0",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
     "usehooks-ts": "^3.1.0",

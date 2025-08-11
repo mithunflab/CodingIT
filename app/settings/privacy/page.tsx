@@ -449,7 +449,7 @@ export default function PrivacySettings() {
                 Read our complete privacy policy for detailed information about data handling
               </p>
               <a 
-                href="https://codinit.dev/privacy-policy" 
+                href="https://codinit.dev/privacy" 
                 className="text-sm text-primary hover:underline"
                 target="_blank"
                 rel="noopener noreferrer"

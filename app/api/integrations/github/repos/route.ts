@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
+import { checkFeatureAccess } from '@/lib/usage-tracker'
 
 export const dynamic = 'force-dynamic'
 
@@ -110,10 +111,21 @@ export async function GET(request: NextRequest) {
       .eq('user_id', session.user.id)
       .eq('service_name', 'github')
 
+    // Get GitHub import usage limits
+    const usageInfo = await checkFeatureAccess(session.user.id, 'github_imports')
+
     return NextResponse.json({ 
       repositories: formattedRepos,
       total_count: repos.length,
-      has_more: repos.length === parseInt(per_page)
+      has_more: repos.length === parseInt(per_page),
+      usage_limits: {
+        can_import: usageInfo.canUse,
+        current_usage: usageInfo.currentUsage,
+        limit: usageInfo.limit,
+        is_unlimited: usageInfo.isUnlimited,
+        plan_name: usageInfo.planName,
+        upgrade_required: usageInfo.upgradeRequired
+      }
     })
   } catch (error) {
     console.error('Error fetching GitHub repositories:', error)

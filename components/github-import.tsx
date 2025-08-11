@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { ScrollArea } from './ui/scroll-area'
+import { useUpgradeDialog } from './upgrade-dialog'
 
 interface GitHubRepo {
   id: number
@@ -41,6 +42,15 @@ interface GitHubRepo {
   }
 }
 
+interface UsageLimits {
+  can_import: boolean
+  current_usage: number
+  limit: number
+  is_unlimited: boolean
+  plan_name: string
+  upgrade_required: boolean
+}
+
 interface GitHubImportProps {
   onImport?: (repo: GitHubRepo, files: any[]) => void
   onClose?: () => void
@@ -49,8 +59,10 @@ interface GitHubImportProps {
 export function GitHubImport({ onImport, onClose }: GitHubImportProps) {
   const { session } = useAuth(() => {}, () => {})
   const { toast } = useToast()
+  const { UpgradeDialog, openUpgradeDialog } = useUpgradeDialog()
   
   const [repositories, setRepositories] = useState<GitHubRepo[]>([])
+  const [usageLimits, setUsageLimits] = useState<UsageLimits | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedRepo, setSelectedRepo] = useState<GitHubRepo | null>(null)
@@ -68,6 +80,7 @@ export function GitHubImport({ onImport, onClose }: GitHubImportProps) {
       
       const data = await response.json()
       setRepositories(data.repositories || [])
+      setUsageLimits(data.usage_limits || null)
     } catch (error) {
       console.error('Error loading repositories:', error)
       toast({
@@ -83,38 +96,77 @@ export function GitHubImport({ onImport, onClose }: GitHubImportProps) {
   const importRepository = async (repo: GitHubRepo) => {
     if (!session?.user?.id) return
 
+    // Check if user can import more repositories
+    if (usageLimits && !usageLimits.can_import) {
+      openUpgradeDialog({
+        currentPlan: usageLimits.plan_name,
+        featureBlocked: {
+          type: 'github_imports',
+          currentUsage: usageLimits.current_usage,
+          limit: usageLimits.limit
+        },
+        triggerReason: 'feature_limit'
+      })
+      return
+    }
+
     setIsImporting(true)
     setSelectedRepo(repo)
     
     try {
-      // Fetch repository contents
-      const response = await fetch(
-        `/api/integrations/github/repos/${repo.owner.login}/${repo.name}`
-      )
+      // Use the new import API endpoint
+      const response = await fetch('/api/integrations/github/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          owner: repo.owner.login,
+          repo: repo.name,
+          importFiles: true
+        })
+      })
       
       if (!response.ok) {
-        throw new Error('Failed to fetch repository contents')
+        const errorData = await response.json()
+        if (response.status === 429 && errorData.code === 'FEATURE_LIMIT_EXCEEDED') {
+          openUpgradeDialog({
+            currentPlan: usageLimits?.plan_name || 'free',
+            featureBlocked: {
+              type: 'github_imports',
+              currentUsage: errorData.currentUsage,
+              limit: errorData.limit
+            },
+            triggerReason: 'feature_limit'
+          })
+          return
+        }
+        throw new Error(errorData.error || 'Failed to import repository')
       }
       
       const data = await response.json()
       
-      // Recursively fetch all files
-      const files = await fetchAllFiles(repo.owner.login, repo.name, data.contents || [])
-      
       toast({
         title: "Success",
-        description: `Successfully imported ${repo.name} with ${files.length} files.`,
+        description: `Successfully imported ${repo.name} with ${data.imported_files_count} files. ${data.remaining_imports === -1 ? 'Unlimited imports remaining' : `${data.remaining_imports} imports remaining this month`}.`,
       })
       
+      // Update usage limits
+      if (usageLimits) {
+        setUsageLimits({
+          ...usageLimits,
+          current_usage: usageLimits.current_usage + 1,
+          can_import: data.remaining_imports !== 0
+        })
+      }
+      
       if (onImport) {
-        onImport(repo, files)
+        onImport(repo, []) // Files are now handled by the API
       }
       
     } catch (error) {
       console.error('Error importing repository:', error)
       toast({
         title: "Error",
-        description: "Failed to import repository. Please try again.",
+        description: typeof error === 'object' && error && 'message' in error ? error.message as string : "Failed to import repository. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -222,6 +274,18 @@ export function GitHubImport({ onImport, onClose }: GitHubImportProps) {
         </div>
         <CardDescription>
           Select a repository to import into your workspace.
+          {usageLimits && (
+            <span className="block mt-2">
+              <Badge variant={usageLimits.can_import ? "secondary" : "destructive"} className="mr-2">
+                {usageLimits.current_usage} / {usageLimits.is_unlimited ? '∞' : usageLimits.limit} imports used
+              </Badge>
+              {usageLimits.plan_name === 'free' && (
+                <span className="text-xs text-muted-foreground">
+                  Upgrade to Pro for more imports
+                </span>
+              )}
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -304,14 +368,14 @@ export function GitHubImport({ onImport, onClose }: GitHubImportProps) {
                             variant="default"
                             size="sm"
                             onClick={() => importRepository(repo)}
-                            disabled={isImporting}
+                            disabled={isImporting || (usageLimits ? !usageLimits.can_import : false)}
                           >
                             {isImporting && selectedRepo?.id === repo.id ? (
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />
                             ) : (
                               <Download className="h-4 w-4 mr-2" />
                             )}
-                            Import
+                            {usageLimits && !usageLimits.can_import ? 'Upgrade Required' : 'Import'}
                           </Button>
                         </div>
                       </div>
@@ -329,6 +393,7 @@ export function GitHubImport({ onImport, onClose }: GitHubImportProps) {
           )}
         </div>
       </CardContent>
+      <UpgradeDialog currentPlan={usageLimits?.plan_name} />
     </Card>
   )
 }
