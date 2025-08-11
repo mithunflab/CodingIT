@@ -58,3 +58,4 @@ supabase
 schemas
 scripts
 .vscode
+mcp.json

@@ -7,21 +7,22 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServerClient()
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (authError || !user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Get user's default team
-    const { data: userTeam } = await supabase
+    const { data: userTeam, error: teamError } = await supabase
       .from('users_teams')
       .select('teams (id)')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .eq('is_default', true)
       .single()
 
-    if (!userTeam?.teams) {
+    if (teamError || !userTeam?.teams) {
+      console.error('Team lookup failed for user:', user.id, teamError)
       return NextResponse.json({ error: 'No default team found' }, { status: 400 })
     }
 

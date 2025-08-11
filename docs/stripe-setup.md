@@ -33,13 +33,13 @@ STRIPE_PRICE_ID_ENTERPRISE=price_...  # Enterprise plan monthly price ID
 **Pro Plan:**
 - Name: "Pro"
 - Description: "For serious developers"
-- Pricing: $20/month recurring
+- Pricing: $9/month recurring
 - Copy the Price ID and set it as `STRIPE_PRICE_ID_PRO`
 
 **Enterprise Plan:**
 - Name: "Enterprise" 
 - Description: "For teams and organizations"
-- Pricing: $100/month recurring
+- Pricing: $25/month recurring
 - Copy the Price ID and set it as `STRIPE_PRICE_ID_ENTERPRISE`
 
 ### 2. Configure Webhooks
@@ -111,13 +111,13 @@ The system includes these default limits:
 - 1,000 API calls per month
 - 30s execution time limit
 
-### Pro Plan ($20/month)
+### Pro Plan ($9/month)
 - 50 GitHub imports per month
 - 5GB storage  
 - 50,000 API calls per month
 - 300s execution time limit
 
-### Enterprise Plan ($100/month)
+### Enterprise Plan ($25/month)
 - Unlimited GitHub imports
 - Unlimited storage
 - Unlimited API calls

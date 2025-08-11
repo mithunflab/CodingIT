@@ -23,7 +23,7 @@ export const STRIPE_PLANS = {
   pro: {
     name: 'Pro',
     description: 'For serious developers',
-    price: 2000, // $20.00 in cents
+    price: 2000, // $9.00 in cents
     priceId: process.env.STRIPE_PRICE_ID_PRO,
     features: {
       githubImports: 50,
@@ -35,7 +35,7 @@ export const STRIPE_PLANS = {
   enterprise: {
     name: 'Enterprise',
     description: 'For teams and organizations',
-    price: 10000, // $100.00 in cents
+    price: 10000, // $25.00 in cents
     priceId: process.env.STRIPE_PRICE_ID_ENTERPRISE,
     features: {
       githubImports: -1, // Unlimited

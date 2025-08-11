@@ -24,7 +24,10 @@ export async function POST(request: NextRequest) {
       process.env.STRIPE_WEBHOOK_SECRET
     )
 
-    console.log(`Processing webhook event: ${event.type}`)
+    console.log(`Processing webhook event: ${event.type}`, {
+      eventId: event.id,
+      metadata: 'metadata' in event.data.object ? event.data.object.metadata : undefined
+    })
 
     // Handle the event
     switch (event.type) {
@@ -34,9 +37,10 @@ export async function POST(request: NextRequest) {
       case 'invoice.payment_succeeded':
       case 'invoice.payment_failed':
         await handleSubscriptionEvent(event)
+        console.log(`Successfully processed event: ${event.type} (${event.id})`)
         break
       default:
-        console.log(`Unhandled event type: ${event.type}`)
+        console.log(`Unhandled event type: ${event.type} (${event.id})`)
     }
 
     return NextResponse.json({ received: true })

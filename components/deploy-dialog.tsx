@@ -84,7 +84,7 @@ export function DeployDialog({
           .
         </div>
         <div className="text-sm text-muted-foreground">
-          All new accounts receive $100 worth of compute credits. Upgrade to{' '}
+          All new accounts receive $25 worth of compute credits. Upgrade to{' '}
           <a
             href="https://e2b.dev/dashboard?tab=billing"
             target="_blank"

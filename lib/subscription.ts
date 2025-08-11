@@ -187,6 +187,11 @@ export async function createCheckoutSession(
     cancel_url: cancelUrl,
     metadata: {
       team_id: teamId
+    },
+    subscription_data: {
+      metadata: {
+        team_id: teamId
+      }
     }
   })
 
@@ -214,14 +219,24 @@ export async function createPortalSession(teamId: string, returnUrl: string): Pr
 export async function handleSubscriptionEvent(event: any): Promise<void> {
   const supabase = createServerClient(true) // Use service role
   
+  console.log(`Handling subscription event: ${event.type}`, {
+    eventId: event.id,
+    teamId: event.data.object.metadata?.team_id,
+    subscriptionId: event.data.object.id
+  })
+  
   // Log the event
-  await supabase.from('subscription_events').insert({
+  const { error: logError } = await supabase.from('subscription_events').insert({
     team_id: event.data.object.metadata?.team_id,
     stripe_event_id: event.id,
     event_type: event.type,
     event_data: event.data.object,
     processed_at: new Date().toISOString()
   })
+  
+  if (logError) {
+    console.error('Failed to log subscription event:', logError)
+  }
 
   switch (event.type) {
     case 'customer.subscription.created':
@@ -248,11 +263,31 @@ async function handleSubscriptionUpdated(subscription: any): Promise<void> {
   const teamId = subscription.metadata?.team_id
   
   if (!teamId) {
-    console.error('No team_id in subscription metadata')
+    console.error('No team_id in subscription metadata', {
+      subscriptionId: subscription.id,
+      metadata: subscription.metadata
+    })
     return
   }
 
-  const planTier = getPlanByPriceId(subscription.items.data[0].price.id)
+  const priceId = subscription.items?.data?.[0]?.price?.id
+  if (!priceId) {
+    console.error('No price ID found in subscription', {
+      subscriptionId: subscription.id,
+      teamId
+    })
+    return
+  }
+
+  const planTier = getPlanByPriceId(priceId)
+  
+  console.log(`Updating team subscription`, {
+    teamId,
+    subscriptionId: subscription.id,
+    planTier,
+    priceId,
+    status: subscription.status
+  })
   
   const { error } = await supabase
     .from('teams')

@@ -12,9 +12,9 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createServerClient()
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (!session?.user?.id) {
+    if (authError || !user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const { data: userTeam } = await supabase
       .from('users_teams')
       .select('teams (id, name, email)')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .eq('is_default', true)
       .single()
 

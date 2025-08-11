@@ -28,6 +28,7 @@ import { useAuth } from '@/lib/auth'
 import { useFeatureFlag, useFeatureValue } from '@/hooks/use-edge-flags'
 import ErrorBoundary, { SettingsSection } from '@/components/error-boundary'
 import { STRIPE_PLANS, formatPrice } from '@/lib/stripe'
+import { useSearchParams } from 'next/navigation'
 
 interface BillingData {
   subscription: {
@@ -51,12 +52,40 @@ interface BillingData {
 export default function BillingSettings() {
   const { session, userTeam } = useAuth(() => {}, () => {})
   const { toast } = useToast()
+  const searchParams = useSearchParams()
   
   const { enabled: hasAdvancedAnalytics } = useFeatureFlag('advanced-analytics', false)
 
   const [billingData, setBillingData] = useState<BillingData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
+
+  // Handle Stripe redirect messages
+  useEffect(() => {
+    if (!searchParams) return
+    
+    const success = searchParams.get('success')
+    const canceled = searchParams.get('canceled')
+    
+    if (success === 'true') {
+      toast({
+        title: "Subscription Updated!",
+        description: "Your subscription has been successfully updated. Changes may take a few minutes to reflect.",
+      })
+      // Clean URL
+      window.history.replaceState({}, '', '/settings/billing')
+    }
+    
+    if (canceled === 'true') {
+      toast({
+        title: "Upgrade Canceled",
+        description: "You can always upgrade later from this page.",
+        variant: "default"
+      })
+      // Clean URL
+      window.history.replaceState({}, '', '/settings/billing')
+    }
+  }, [searchParams, toast])
 
   useEffect(() => {
     if (!session?.user?.id) return
