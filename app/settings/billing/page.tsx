@@ -23,7 +23,7 @@ import {
   ArrowUp,
   ExternalLink
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useAuth } from '@/lib/auth'
 import { useFeatureFlag, useFeatureValue } from '@/hooks/use-edge-flags'
 import ErrorBoundary, { SettingsSection } from '@/components/error-boundary'
@@ -49,7 +49,7 @@ interface BillingData {
   }>
 }
 
-export default function BillingSettings() {
+function BillingSettingsContent() {
   const { session, userTeam } = useAuth(() => {}, () => {})
   const { toast } = useToast()
   const searchParams = useSearchParams()
@@ -424,5 +424,17 @@ export default function BillingSettings() {
         </Card>
       </ErrorBoundary>
     </div>
+  )
+}
+
+export default function BillingSettings() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    }>
+      <BillingSettingsContent />
+    </Suspense>
   )
 }
