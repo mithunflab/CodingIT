@@ -8,7 +8,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ThemeToggle } from '@/components/ui/theme-toggle'
 import {
   Tooltip,
   TooltipContent,
@@ -87,14 +86,6 @@ export function NavBar({
               </Button>
             </TooltipTrigger>
             <TooltipContent>Clear chat</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        <TooltipProvider>
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <ThemeToggle />
-            </TooltipTrigger>
-            <TooltipContent>Toggle theme</TooltipContent>
           </Tooltip>
         </TooltipProvider>
         {session ? (

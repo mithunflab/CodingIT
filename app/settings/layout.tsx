@@ -1,7 +1,6 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { cn } from '@/lib/utils'
 import { 
   User, 
@@ -65,9 +64,6 @@ export default function SettingsLayout({
             </Button>
           </Link>
           <h1 className="text-2xl font-semibold">Settings</h1>
-          <div className="ml-auto">
-            <ThemeToggle />
-          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">

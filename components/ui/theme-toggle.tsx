@@ -9,34 +9,8 @@ export const ThemeToggle = forwardRef<
     className?: string
   }
 >(({ className, ...props }, ref) => {
-  const { setTheme, theme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-
-  // useEffect only runs on the client, so now we can safely show the UI
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) {
-    return null
-  }
-
-  return (
-    <Button
-      {...props}
-      ref={ref}
-      variant="ghost"
-      size="icon"
-      className={className}
-      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-    >
-      {theme === 'light' ? (
-        <SunIcon className="h-4 w-4 md:h-5 md:w-5" />
-      ) : (
-        <MoonIcon className="h-4 w-4 md:h-5 md:w-5" />
-      )}
-    </Button>
-  )
+  // Theme toggle is disabled - app is forced to dark mode
+  return null
 })
 
 ThemeToggle.displayName = 'ThemeToggle'
