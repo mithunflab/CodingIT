@@ -668,13 +668,56 @@ gatherUsageStats = false
 
   private async isDependencyAvailable(dep: string, template: TemplateId): Promise<boolean> {
     try {
+      // Import security utilities
+      const { validatePackageName, constructSafeURL, requestLimiter } = await import('../security')
+      
       if (template.includes('python') || template.includes('streamlit') || template.includes('gradio')) {
-        // Check PyPI
-        const response = await fetch(`https://pypi.org/pypi/${dep}/json`)
+        // Validate PyPI package name
+        if (!validatePackageName(dep, 'pypi')) {
+          return false
+        }
+
+        // Rate limiting
+        if (!requestLimiter.canMakeRequest(`pypi:${dep}`)) {
+          throw new Error('Rate limit exceeded')
+        }
+
+        // Construct safe URL
+        const url = constructSafeURL('pypi.org', `/pypi/${dep}/json`)
+        if (!url) {
+          return false
+        }
+
+        const response = await fetch(url.toString(), {
+          timeout: 5000,
+          headers: {
+            'User-Agent': 'CodingIT-DeploymentEngine/1.0'
+          }
+        })
         return response.ok
       } else {
-        // Check npm
-        const response = await fetch(`https://registry.npmjs.org/${dep}`)
+        // Validate npm package name
+        if (!validatePackageName(dep, 'npm')) {
+          return false
+        }
+
+        // Rate limiting
+        if (!requestLimiter.canMakeRequest(`npm:${dep}`)) {
+          throw new Error('Rate limit exceeded')
+        }
+
+        // Construct safe URL
+        const url = constructSafeURL('registry.npmjs.org', `/${dep}`)
+        if (!url) {
+          return false
+        }
+
+        const response = await fetch(url.toString(), {
+          timeout: 5000,
+          headers: {
+            'User-Agent': 'CodingIT-DeploymentEngine/1.0'
+          }
+        })
         return response.ok
       }
     } catch {

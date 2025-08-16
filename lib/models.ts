@@ -72,14 +72,41 @@ export function getModelClient(model: LLMModel, config: LLMModelConfig) {
       })(modelNameString),
   }
 
-  const createClient =
-    providerConfigs[providerId as keyof typeof providerConfigs]
-
-  if (!createClient) {
-    throw new Error(`Unsupported provider: ${providerId}`)
+  // Import security validation
+  const { validateProviderId } = await import('./security')
+  
+  // Validate provider ID against allowlist
+  if (!validateProviderId(providerId)) {
+    throw new Error(`Invalid or unsupported provider: ${providerId}`)
   }
 
-  return createClient()
+  // Use explicit provider matching instead of dynamic access
+  switch (providerId) {
+    case 'openai':
+      return providerConfigs.openai()
+    case 'anthropic':
+      return providerConfigs.anthropic()
+    case 'google':
+      return providerConfigs.google()
+    case 'vertex':
+      return providerConfigs.vertex()
+    case 'mistral':
+      return providerConfigs.mistral()
+    case 'groq':
+      return providerConfigs.groq()
+    case 'fireworks':
+      return providerConfigs.fireworks()
+    case 'togetherai':
+      return providerConfigs.togetherai()
+    case 'xai':
+      return providerConfigs.xai()
+    case 'deepseek':
+      return providerConfigs.deepseek()
+    case 'ollama':
+      return providerConfigs.ollama()
+    default:
+      throw new Error(`Unsupported provider: ${providerId}`)
+  }
 }
 
 export function getDefaultModelParams(model: LLMModel) {

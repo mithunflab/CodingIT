@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
+import { validateGitHubIdentifier, validateGitHubPath, validateGitRef, sanitizeForLogging } from '@/lib/security'
 
 export async function GET(
   request: NextRequest,
@@ -30,8 +31,31 @@ export async function GET(
     const path = searchParams.get('path') || ''
     const ref = searchParams.get('ref') || 'main'
 
-    const response = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${ref}`,
+    // Validate GitHub parameters
+    if (!validateGitHubIdentifier(owner, 'owner')) {
+      return NextResponse.json({ error: 'Invalid owner name' }, { status: 400 })
+    }
+
+    if (!validateGitHubIdentifier(repo, 'repo')) {
+      return NextResponse.json({ error: 'Invalid repository name' }, { status: 400 })
+    }
+
+    if (!validateGitHubPath(path)) {
+      return NextResponse.json({ error: 'Invalid path' }, { status: 400 })
+    }
+
+    if (!validateGitRef(ref)) {
+      return NextResponse.json({ error: 'Invalid reference' }, { status: 400 })
+    }
+
+    // Construct safe GitHub API URL
+    const baseUrl = 'https://api.github.com'
+    const repoPath = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents`
+    const encodedPath = path ? `/${encodeURIComponent(path)}` : ''
+    const encodedRef = encodeURIComponent(ref)
+    const apiUrl = `${baseUrl}${repoPath}${encodedPath}?ref=${encodedRef}`
+
+    const response = await fetch(apiUrl,
       {
         headers: {
           'Authorization': `Bearer ${integration.connection_data.access_token}`,
@@ -43,7 +67,13 @@ export async function GET(
 
     if (!response.ok) {
       const errorData = await response.json()
-      console.error('GitHub API error:', errorData)
+      console.error('GitHub API error:', {
+        status: response.status,
+        owner: sanitizeForLogging(owner),
+        repo: sanitizeForLogging(repo),
+        path: sanitizeForLogging(path),
+        error: sanitizeForLogging(JSON.stringify(errorData))
+      })
       
       if (response.status === 401) {
         await supabase

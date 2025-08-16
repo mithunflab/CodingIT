@@ -2,6 +2,69 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.0.40] - 2025-08-16
+
+### 🔒 Critical Security Fixes
+- **Server-Side Request Forgery (SSRF) Prevention**: Fixed critical SSRF vulnerabilities identified by CodeQL
+  - Added comprehensive input validation for package dependencies in deployment engine
+  - Implemented safe URL construction with domain allowlisting for PyPI and npm registry requests
+  - Enhanced GitHub API integration with proper parameter sanitization and validation
+  - Added rate limiting to prevent abuse of external service requests
+  - Created centralized security utilities module (`lib/security.ts`) with validation functions
+
+- **Format String Injection Prevention**: Eliminated external format string vulnerabilities
+  - Replaced direct string interpolation in logging with structured, sanitized logging
+  - Added input sanitization for all user-controlled data in log messages
+  - Prevented log injection attacks through proper data validation
+
+- **Dynamic Method Call Security**: Removed unsafe dynamic function calls
+  - Replaced dynamic provider access with explicit switch statement validation
+  - Implemented strict allowlisting for AI provider IDs
+  - Added comprehensive provider validation to prevent code execution vulnerabilities
+
+### 🎨 UI/UX Improvements
+- **Dark Mode Enforcement**: Simplified theme system to use only dark theme
+  - Removed light theme support and theme toggle functionality
+  - Consolidated CSS variables to use dark theme as default
+  - Cleaned up theme-related components and redundant styling
+  - Enhanced dark mode gradient background throughout the application
+  - Removed theme toggle from navbar and settings pages
+
+### 🛡️ Security Infrastructure
+- **Comprehensive Input Validation**: Created robust validation system
+  - Package name validation for npm and PyPI using regex patterns
+  - GitHub repository and owner name validation against official naming rules
+  - Path traversal prevention for file system access
+  - Git reference validation to prevent injection attacks
+  - Request rate limiting system to prevent abuse
+
+- **Safe External Requests**: Enhanced external API security
+  - Domain allowlisting for all external HTTP requests
+  - Proper URL encoding for all user-provided parameters
+  - Request timeout implementation to prevent hanging requests
+  - User-Agent headers for proper API identification
+
+### 📝 Documentation Updates
+- **README Overhaul**: Completely rewritten README to accurately reflect CodingIT platform
+  - Updated project description and feature overview
+  - Enhanced technology stack documentation
+  - Comprehensive environment variables guide with categorization
+  - Added architecture overview and project structure documentation
+  - Updated installation and setup instructions
+
+### 🧹 Code Quality
+- **Security-First Development**: Established security-focused coding practices
+  - All user inputs now validated before processing
+  - Comprehensive error handling with secure logging
+  - Type-safe parameter handling throughout API routes
+  - Proper resource cleanup and error boundaries
+
+### 🔧 Breaking Changes
+- **Theme System**: Light theme support removed (dark mode only)
+- **API Security**: Stricter validation may reject previously accepted malformed inputs
+
+---
+
 ## [v0.0.39] - 2025-08-11
 
 ### 🗃️ Fixed

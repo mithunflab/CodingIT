@@ -114,9 +114,16 @@ export async function middleware(req: NextRequest) {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.warn(`Error fetching key '${key}' from Edge Config:`, error);
+      // Import security function for safe logging
+      const { sanitizeForLogging } = await import('./lib/security')
+      const sanitizedKey = sanitizeForLogging(key)
+      
+      console.warn('Error fetching key from Edge Config:', {
+        key: sanitizedKey,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
       return NextResponse.json({ 
-        error: `Failed to fetch key '${key}'`,
+        error: 'Failed to fetch configuration key',
         key,
         found: false,
         timestamp: new Date().toISOString()

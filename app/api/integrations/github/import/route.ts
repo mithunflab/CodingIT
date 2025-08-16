@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 import { createUsageMiddleware } from '@/lib/usage-tracker'
+import { validateGitHubIdentifier, sanitizeForLogging } from '@/lib/security'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,6 +27,15 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Owner and repo are required' }, { status: 400 })
       }
 
+      // Validate GitHub parameters
+      if (!validateGitHubIdentifier(owner, 'owner')) {
+        return NextResponse.json({ error: 'Invalid owner name' }, { status: 400 })
+      }
+
+      if (!validateGitHubIdentifier(repo, 'repo')) {
+        return NextResponse.json({ error: 'Invalid repository name' }, { status: 400 })
+      }
+
       // Get GitHub integration
       const { data: integration } = await supabase
         .from('user_integrations')
@@ -39,8 +49,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'GitHub not connected' }, { status: 400 })
       }
 
-      // Get repository details
-      const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+      // Get repository details - construct safe URL
+      const repoUrl = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`
+      const repoResponse = await fetch(repoUrl, {
         headers: {
           'Authorization': `Bearer ${integration.connection_data.access_token}`,
           'Accept': 'application/vnd.github.v3+json',
@@ -91,8 +102,9 @@ export async function POST(request: NextRequest) {
       let importedFiles = []
 
       if (importFiles) {
-        // Fetch repository contents
-        const contentsResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents`, {
+        // Fetch repository contents - construct safe URL
+        const contentsUrl = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents`
+        const contentsResponse = await fetch(contentsUrl, {
           headers: {
             'Authorization': `Bearer ${integration.connection_data.access_token}`,
             'Accept': 'application/vnd.github.v3+json',
