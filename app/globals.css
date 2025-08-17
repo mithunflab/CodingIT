@@ -49,3 +49,24 @@
     );
   }
 }
+
+@layer components {
+  /* Semi-rounded buttons */
+  button {
+    border-radius: 0.5rem !important; /* rounded-lg */
+  }
+  
+  /* Rounded dialog edges */
+  [role="dialog"],
+  [role="alertdialog"] {
+    border-radius: 0.75rem !important; /* rounded-xl */
+  }
+  
+  /* Additional dialog-like components */
+  .dialog-content,
+  .alert-dialog-content,
+  .popover-content,
+  .dropdown-menu-content {
+    border-radius: 0.75rem !important; /* rounded-xl */
+  }
+}

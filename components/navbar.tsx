@@ -18,7 +18,7 @@ import {
   GitHubLogoIcon,
 } from '@radix-ui/react-icons'
 import { Session } from '@supabase/supabase-js'
-import { ArrowRight, LogOut, Trash, Undo, Settings, Menu, GitBranch, Rocket } from 'lucide-react'
+import { ArrowRight, LogOut, Trash, Undo, Settings, Menu } from 'lucide-react'
 import Link from 'next/link'
 import Icon from './logo'
 import { HeroPillSecond } from './announcement'
@@ -122,18 +122,6 @@ export function NavBar({
                 Star on GitHub
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/workflows">
-                  <GitBranch className="mr-2 h-4 w-4 text-muted-foreground" />
-                  Workflows
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/deployments">
-                  <Rocket className="mr-2 h-4 w-4 text-muted-foreground" />
-                  Deployments
-                </Link>
-              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/settings">
                   <Settings className="mr-2 h-4 w-4 text-muted-foreground" />

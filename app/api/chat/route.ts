@@ -61,7 +61,7 @@ export async function POST(req: Request) {
   console.log('model', model)
 
   const { model: modelNameString, apiKey: modelApiKey, ...modelParams } = config
-  const modelClient = getModelClient(model, config)
+  const modelClient = await getModelClient(model, config)
 
   try {
     const stream = await streamObject({

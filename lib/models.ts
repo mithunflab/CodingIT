@@ -26,7 +26,7 @@ export type LLMModelConfig = {
   maxTokens?: number
 }
 
-export function getModelClient(model: LLMModel, config: LLMModelConfig) {
+export async function getModelClient(model: LLMModel, config: LLMModelConfig) {
   const { id: modelNameString, providerId } = model
   const { apiKey, baseURL } = config
 
@@ -72,15 +72,12 @@ export function getModelClient(model: LLMModel, config: LLMModelConfig) {
       })(modelNameString),
   }
 
-  // Import security validation
   const { validateProviderId } = await import('./security')
   
-  // Validate provider ID against allowlist
   if (!validateProviderId(providerId)) {
     throw new Error(`Invalid or unsupported provider: ${providerId}`)
   }
 
-  // Use explicit provider matching instead of dynamic access
   switch (providerId) {
     case 'openai':
       return providerConfigs.openai()

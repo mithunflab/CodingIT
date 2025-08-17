@@ -2,6 +2,59 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.0.41] - 2025-08-17
+
+### 🎨 UI/UX Improvements
+- **Enhanced Button Design**: Updated all buttons to have semi-rounded corners for improved visual appeal
+  - Applied `border-radius: 0.5rem` (rounded-lg equivalent) to all button elements globally
+  - Consistent semi-rounded styling across all button variants and sizes
+  - Enhanced visual hierarchy and modern design language
+
+- **Rounded Dialog Components**: Modernized dialog and modal interfaces with rounded edges
+  - Applied `border-radius: 0.75rem` (rounded-xl equivalent) to all dialog components
+  - Updated regular dialogs, alert dialogs, popovers, and dropdown menus
+  - Improved visual consistency and contemporary design standards
+
+### 🧹 Code Cleanup & Optimization
+- **Workflow & Deployment System Removal**: Eliminated unused workflow and deployment functionality
+  - Removed entire `lib/deployment/` directory and all deployment-related files
+  - Deleted workflow library files (`workflow-detector.ts`, `workflow-engine.ts`, `workflow-persistence.ts`)
+  - Removed workflow and deployment API routes (`/api/chat/workflow/`, `/api/workflows/`, `/api/deployments/`)
+  - Eliminated workflow and deployment page components and UI directories
+  - Cleaned up navigation references and component imports
+  - Reduced codebase complexity and improved maintainability
+
+### 🔧 Technical Improvements
+- **CSS Architecture**: Implemented global CSS approach for consistent styling
+  - Centralized button and dialog styling in `globals.css` using CSS layers
+  - Removed individual component-level style overrides for better maintainability
+  - Used CSS `@layer components` for proper style precedence and organization
+
+- **Build Optimization**: Verified successful compilation and linting
+  - All TypeScript compilation errors resolved
+  - ESLint checks passing without warnings
+  - Successful production build verification
+
+### 🛡️ Security Enhancements
+- **Provider Validation**: Enhanced AI model provider security
+  - Fixed async function calls in `models.ts` for proper provider validation
+  - Maintained secure provider validation through dynamic imports
+  - Ensured type safety in model client initialization
+
+### 📦 Bundle Size Reduction
+- **Codebase Optimization**: Significant reduction in application bundle size
+  - Removed ~20+ unused files and directories related to workflows and deployments
+  - Eliminated redundant component files and unused imports
+  - Streamlined navigation and component architecture
+
+### 🔧 Breaking Changes
+- **Feature Removal**: Workflow and deployment functionality no longer available
+  - Users can no longer access workflow builder or deployment features
+  - Navigation menu simplified with workflow/deployment options removed
+  - Focus maintained on core AI-powered code generation and sandbox execution
+
+---
+
 ## [v0.0.40] - 2025-08-16
 
 ### 🔒 Critical Security Fixes

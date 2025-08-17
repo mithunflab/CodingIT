@@ -1,4 +1,3 @@
-import { DeployDialog } from './deploy-dialog'
 import { EnhancedCodeInterpreter } from './enhanced-code-interpreter'
 import { CodeEditor } from './code-editor'
 import { FragmentCode } from './fragment-code'
@@ -138,14 +137,6 @@ export function Preview({
           </div>
           {result && (
             <div className="flex items-center justify-end gap-2">
-              {isLinkAvailable && (
-                <DeployDialog
-                  url={result.url!}
-                  sbxId={result.sbxId!}
-                  teamID={teamID}
-                  accessToken={accessToken}
-                />
-              )}
             </div>
           )}
         </div>
