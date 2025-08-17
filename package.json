@@ -1,6 +1,6 @@
 {
   "name": "codinit-app",
-  "version": "0.0.37",
+  "version": "0.2.0",
   "private": false,
   "scripts": {
     "postinstall": "patch-package",
@@ -16,6 +16,8 @@
     "@ai-sdk/google-vertex": "latest",
     "@ai-sdk/mistral": "latest",
     "@ai-sdk/openai": "latest",
+    "@aws-sdk/client-s3": "^3.864.0",
+    "@aws-sdk/lib-storage": "^3.864.0",
     "@e2b/code-interpreter": "^1.0.2",
     "@flags-sdk/growthbook": "^0.1.0",
     "@google-cloud/aiplatform": "^4.2.0",
@@ -69,11 +71,13 @@
     "react-resizable-panels": "^3.0.3",
     "react-syntax-highlighter": "^5.8.0",
     "react-textarea-autosize": "^8.5.3",
+    "recharts": "^3.1.2",
     "simple-icons": "^14.12.3",
     "stripe": "^18.4.0",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
     "usehooks-ts": "^3.1.0",
+    "uuid": "^11.1.0",
     "zod": "^3.23.8"
   },
   "overrides": {
