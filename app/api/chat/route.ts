@@ -10,6 +10,8 @@ import ratelimit from '@/lib/ratelimit'
 import { fragmentSchema as schema } from '@/lib/schema'
 import { Templates } from '@/lib/templates'
 import { streamObject, LanguageModel, CoreMessage } from 'ai'
+import { ChatPersistence } from '@/lib/chat-persistence'
+import { createServerClient } from '@/lib/supabase-server'
 
 export const maxDuration = 300
 
@@ -28,6 +30,8 @@ export async function POST(req: Request) {
     template,
     model,
     config,
+    sessionId,
+    saveToHistory = true,
   }: {
     messages: CoreMessage[]
     userID: string | undefined
@@ -35,6 +39,8 @@ export async function POST(req: Request) {
     template: Templates
     model: LLMModel
     config: LLMModelConfig
+    sessionId?: string
+    saveToHistory?: boolean
   } = await req.json()
 
   const limit = !config.apiKey
@@ -59,9 +65,54 @@ export async function POST(req: Request) {
   console.log('userID', userID)
   console.log('teamID', teamID)
   console.log('model', model)
+  console.log('sessionId', sessionId)
 
   const { model: modelNameString, apiKey: modelApiKey, ...modelParams } = config
   const modelClient = await getModelClient(model, config)
+
+  // Save user message to history if enabled and user is authenticated
+  let currentSessionId = sessionId
+  if (saveToHistory && userID) {
+    try {
+      // Get the last user message from the messages array
+      const lastMessage = messages[messages.length - 1]
+      if (lastMessage && lastMessage.role === 'user') {
+        // Create new session if no sessionId provided
+        if (!currentSessionId) {
+          const session = await ChatPersistence.createSession(
+            userID,
+            teamID,
+            {
+              role: 'user',
+              content: typeof lastMessage.content === 'string' ? lastMessage.content : JSON.stringify(lastMessage.content),
+              model: model.id,
+              template: template.toString(),
+              metadata: {
+                userID,
+                teamID,
+              }
+            }
+          )
+          currentSessionId = session.sessionId
+        } else {
+          // Add message to existing session
+          await ChatPersistence.addMessage(userID, currentSessionId, {
+            role: 'user',
+            content: typeof lastMessage.content === 'string' ? lastMessage.content : JSON.stringify(lastMessage.content),
+            model: model.id,
+            template: template.toString(),
+            metadata: {
+              userID,
+              teamID,
+            }
+          })
+        }
+      }
+    } catch (historyError) {
+      console.error('Failed to save user message to history:', historyError)
+      // Continue with request even if history save fails
+    }
+  }
 
   try {
     const stream = await streamObject({
@@ -74,7 +125,18 @@ export async function POST(req: Request) {
       ...modelParams,
     })
 
-    return stream.toTextStreamResponse()
+    // Create response with session handling
+    const response = stream.toTextStreamResponse()
+    
+    // Add session ID to response headers if we created one
+    if (currentSessionId && currentSessionId !== sessionId) {
+      response.headers.set('X-Session-Id', currentSessionId)
+    }
+
+    // Note: Assistant response saving will be implemented in a future update
+    // when we have better streaming completion handling
+
+    return response
   } catch (error: any) {
     console.error('Chat API Error:', {
       message: error?.message,

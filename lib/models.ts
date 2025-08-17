@@ -11,7 +11,6 @@ export type LLMModel = {
   name: string
   provider: string
   providerId: string
-  isBeta?: boolean
 }
 
 export type LLMModelConfig = {
@@ -26,7 +25,7 @@ export type LLMModelConfig = {
   maxTokens?: number
 }
 
-export async function getModelClient(model: LLMModel, config: LLMModelConfig) {
+export function getModelClient(model: LLMModel, config: LLMModelConfig) {
   const { id: modelNameString, providerId } = model
   const { apiKey, baseURL } = config
 
@@ -72,48 +71,12 @@ export async function getModelClient(model: LLMModel, config: LLMModelConfig) {
       })(modelNameString),
   }
 
-  const { validateProviderId } = await import('./security')
-  
-  if (!validateProviderId(providerId)) {
-    throw new Error(`Invalid or unsupported provider: ${providerId}`)
+  const createClient =
+    providerConfigs[providerId as keyof typeof providerConfigs]
+
+  if (!createClient) {
+    throw new Error(`Unsupported provider: ${providerId}`)
   }
 
-  switch (providerId) {
-    case 'openai':
-      return providerConfigs.openai()
-    case 'anthropic':
-      return providerConfigs.anthropic()
-    case 'google':
-      return providerConfigs.google()
-    case 'vertex':
-      return providerConfigs.vertex()
-    case 'mistral':
-      return providerConfigs.mistral()
-    case 'groq':
-      return providerConfigs.groq()
-    case 'fireworks':
-      return providerConfigs.fireworks()
-    case 'togetherai':
-      return providerConfigs.togetherai()
-    case 'xai':
-      return providerConfigs.xai()
-    case 'deepseek':
-      return providerConfigs.deepseek()
-    case 'ollama':
-      return providerConfigs.ollama()
-    default:
-      throw new Error(`Unsupported provider: ${providerId}`)
-  }
-}
-
-export function getDefaultModelParams(model: LLMModel) {
-  const { id: modelNameString } = model
-
-  if (modelNameString.startsWith('gpt-5')) {
-    return {
-      temperature: 1,
-    }
-  }
-
-  return {}
+  return createClient()
 }

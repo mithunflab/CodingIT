@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useChat } from 'ai/react'
 import { Templates } from '@/lib/templates'
 import { LLMModel, LLMModelConfig } from '@/lib/models'
+import { ChatSession } from '@/lib/chat-persistence'
 
 export interface Message {
   id?: string
@@ -18,12 +19,18 @@ interface EnhancedChatConfig {
   template: Templates
   model: LLMModel
   config: LLMModelConfig
+  sessionId?: string
+  saveToHistory?: boolean
   onFinish?: (message: Message) => void
+  onSessionCreated?: (sessionId: string) => void
 }
 
 export function useEnhancedChat(chatConfig: EnhancedChatConfig) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isExecuting, setIsExecuting] = useState(false)
+  const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(chatConfig.sessionId)
+  const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [loadingSessions, setLoadingSessions] = useState(false)
   const [context, setContext] = useState({
     cwd: '/home/project',
     projectFiles: [] as string[],
@@ -40,6 +47,8 @@ export function useEnhancedChat(chatConfig: EnhancedChatConfig) {
       template: chatConfig.template,
       model: chatConfig.model,
       config: chatConfig.config,
+      sessionId: currentSessionId,
+      saveToHistory: chatConfig.saveToHistory ?? true,
       context
     },
     onFinish: chatConfig.onFinish
@@ -173,6 +182,146 @@ export function useEnhancedChat(chatConfig: EnhancedChatConfig) {
     [isExecuting, chatConfig.userID, trackError, context.previousErrors, updateContext],
   )
 
+  // Session management functions
+  const loadUserSessions = useCallback(async () => {
+    if (!chatConfig.userID) return
+
+    setLoadingSessions(true)
+    try {
+      const response = await fetch('/api/chat/sessions')
+      if (response.ok) {
+        const data = await response.json()
+        setSessions(data.sessions || [])
+      }
+    } catch (error) {
+      console.error('Failed to load user sessions:', error)
+    } finally {
+      setLoadingSessions(false)
+    }
+  }, [chatConfig.userID])
+
+  const createNewSession = useCallback(async (title?: string) => {
+    if (!chatConfig.userID) return null
+
+    try {
+      const response = await fetch('/api/chat/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId: chatConfig.teamID,
+          title,
+          model: chatConfig.model.id,
+          template: chatConfig.template,
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const newSessionId = data.session.sessionId
+        setCurrentSessionId(newSessionId)
+        setSessions(prev => [data.session, ...prev])
+        
+        if (chatConfig.onSessionCreated) {
+          chatConfig.onSessionCreated(newSessionId)
+        }
+        
+        return data.session
+      }
+    } catch (error) {
+      console.error('Failed to create new session:', error)
+    }
+    return null
+  }, [chatConfig.userID, chatConfig.teamID, chatConfig.model, chatConfig.template, chatConfig.onSessionCreated])
+
+  const loadSession = useCallback(async (sessionId: string) => {
+    if (!chatConfig.userID) return null
+
+    try {
+      const response = await fetch(`/api/chat/sessions/${sessionId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setCurrentSessionId(sessionId)
+        
+        // Convert session messages to the format expected by useChat
+        const formattedMessages = data.messages.map((msg: any) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          createdAt: msg.timestamp,
+        }))
+        
+        setMessages(formattedMessages)
+        return data.session
+      }
+    } catch (error) {
+      console.error('Failed to load session:', error)
+    }
+    return null
+  }, [chatConfig.userID, setMessages])
+
+  const updateSessionTitle = useCallback(async (sessionId: string, title: string) => {
+    try {
+      const response = await fetch(`/api/chat/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
+      })
+
+      if (response.ok) {
+        setSessions(prev => prev.map(session => 
+          session.sessionId === sessionId 
+            ? { ...session, title }
+            : session
+        ))
+      }
+    } catch (error) {
+      console.error('Failed to update session title:', error)
+    }
+  }, [])
+
+  const deleteSession = useCallback(async (sessionId: string) => {
+    try {
+      const response = await fetch(`/api/chat/sessions/${sessionId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        setSessions(prev => prev.filter(session => session.sessionId !== sessionId))
+        
+        // If we deleted the current session, clear it
+        if (currentSessionId === sessionId) {
+          setCurrentSessionId(undefined)
+          setMessages([])
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete session:', error)
+    }
+  }, [currentSessionId, setMessages])
+
+  // Load sessions on mount if user is authenticated
+  useEffect(() => {
+    if (chatConfig.userID && sessions.length === 0) {
+      loadUserSessions()
+    }
+  }, [chatConfig.userID, loadUserSessions, sessions.length])
+
+  // Handle session ID changes from the API response
+  useEffect(() => {
+    const handleResponse = (event: CustomEvent) => {
+      const sessionId = event.detail?.headers?.get?.('X-Session-Id')
+      if (sessionId && sessionId !== currentSessionId) {
+        setCurrentSessionId(sessionId)
+        if (chatConfig.onSessionCreated) {
+          chatConfig.onSessionCreated(sessionId)
+        }
+      }
+    }
+
+    // This would need to be implemented to capture the response headers from the chat API
+    // For now, we'll rely on the sessionId being included in the response
+  }, [currentSessionId, chatConfig.onSessionCreated])
+
   useEffect(() => {
     if (error) {
       trackError(error.message)
@@ -191,5 +340,14 @@ export function useEnhancedChat(chatConfig: EnhancedChatConfig) {
     updateContext,
     trackError,
     executeCode,
+    // Session management
+    currentSessionId,
+    sessions,
+    loadingSessions,
+    loadUserSessions,
+    createNewSession,
+    loadSession,
+    updateSessionTitle,
+    deleteSession,
   }
 }
