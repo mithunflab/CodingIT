@@ -81,3 +81,12 @@ export function getModelClient(model: LLMModel, config: LLMModelConfig) {
 
   return createClient()
 }
+
+export function getDefaultModelParams(model: LLMModel) {
+  // Return default parameters for the model
+  // This can be customized per provider/model if needed
+  return {
+    temperature: 0.7,
+    maxTokens: 4096,
+  }
+}

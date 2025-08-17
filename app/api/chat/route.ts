@@ -1,7 +1,6 @@
 import { Duration } from '@/lib/duration'
 import {
   getModelClient,
-  getDefaultModelParams,
   LLMModel,
   LLMModelConfig,
 } from '@/lib/models'
@@ -10,8 +9,6 @@ import ratelimit from '@/lib/ratelimit'
 import { fragmentSchema as schema } from '@/lib/schema'
 import { Templates } from '@/lib/templates'
 import { streamObject, LanguageModel, CoreMessage } from 'ai'
-import { ChatPersistence } from '@/lib/chat-persistence'
-import { createServerClient } from '@/lib/supabase-server'
 
 export const maxDuration = 300
 
@@ -30,8 +27,6 @@ export async function POST(req: Request) {
     template,
     model,
     config,
-    sessionId,
-    saveToHistory = true,
   }: {
     messages: CoreMessage[]
     userID: string | undefined
@@ -39,8 +34,6 @@ export async function POST(req: Request) {
     template: Templates
     model: LLMModel
     config: LLMModelConfig
-    sessionId?: string
-    saveToHistory?: boolean
   } = await req.json()
 
   const limit = !config.apiKey
@@ -64,55 +57,12 @@ export async function POST(req: Request) {
 
   console.log('userID', userID)
   console.log('teamID', teamID)
+  console.log('template', template)
   console.log('model', model)
-  console.log('sessionId', sessionId)
+  console.log('config', config)
 
   const { model: modelNameString, apiKey: modelApiKey, ...modelParams } = config
-  const modelClient = await getModelClient(model, config)
-
-  // Save user message to history if enabled and user is authenticated
-  let currentSessionId = sessionId
-  if (saveToHistory && userID) {
-    try {
-      // Get the last user message from the messages array
-      const lastMessage = messages[messages.length - 1]
-      if (lastMessage && lastMessage.role === 'user') {
-        // Create new session if no sessionId provided
-        if (!currentSessionId) {
-          const session = await ChatPersistence.createSession(
-            userID,
-            teamID,
-            {
-              role: 'user',
-              content: typeof lastMessage.content === 'string' ? lastMessage.content : JSON.stringify(lastMessage.content),
-              model: model.id,
-              template: template.toString(),
-              metadata: {
-                userID,
-                teamID,
-              }
-            }
-          )
-          currentSessionId = session.sessionId
-        } else {
-          // Add message to existing session
-          await ChatPersistence.addMessage(userID, currentSessionId, {
-            role: 'user',
-            content: typeof lastMessage.content === 'string' ? lastMessage.content : JSON.stringify(lastMessage.content),
-            model: model.id,
-            template: template.toString(),
-            metadata: {
-              userID,
-              teamID,
-            }
-          })
-        }
-      }
-    } catch (historyError) {
-      console.error('Failed to save user message to history:', historyError)
-      // Continue with request even if history save fails
-    }
-  }
+  const modelClient = getModelClient(model, config)
 
   try {
     const stream = await streamObject({
@@ -120,118 +70,52 @@ export async function POST(req: Request) {
       schema,
       system: toPrompt(template),
       messages,
-      maxRetries: 0,
-      ...getDefaultModelParams(model),
+      maxRetries: 0, // do not retry on errors
       ...modelParams,
     })
 
-    // Create response with session handling
-    const response = stream.toTextStreamResponse()
-    
-    // Add session ID to response headers if we created one
-    if (currentSessionId && currentSessionId !== sessionId) {
-      response.headers.set('X-Session-Id', currentSessionId)
-    }
-
-    // Note: Assistant response saving will be implemented in a future update
-    // when we have better streaming completion handling
-
-    return response
+    return stream.toTextStreamResponse()
   } catch (error: any) {
-    console.error('Chat API Error:', {
-      message: error?.message,
-      status: error?.statusCode,
-      provider: model,
-      stack: error?.stack
-    })
-
     const isRateLimitError =
-      error && (error.statusCode === 429 || error.message.includes('limit') || error.message.includes('rate'))
+      error && (error.statusCode === 429 || error.message.includes('limit'))
     const isOverloadedError =
       error && (error.statusCode === 529 || error.statusCode === 503)
     const isAccessDeniedError =
-      error && (error.statusCode === 403 || error.statusCode === 401 || error.message.includes('unauthorized') || error.message.includes('invalid') && error.message.includes('key'))
-    const isModelError = 
-      error && (error.statusCode === 404 || error.message.includes('not found') || error.message.includes('model'))
-    const isNetworkError = 
-      error && (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.message.includes('network'))
+      error && (error.statusCode === 403 || error.statusCode === 401)
 
     if (isRateLimitError) {
       return new Response(
-        JSON.stringify({ 
-          error: 'Rate limit exceeded. Please try again later or use your own API key.',
-          type: 'rate_limit',
-          retryAfter: 60
-        }),
+        'The provider is currently unavailable due to request limit. Try using your own API key.',
         {
           status: 429,
-          headers: { 'Content-Type': 'application/json' }
         },
       )
     }
 
     if (isOverloadedError) {
       return new Response(
-        JSON.stringify({ 
-          error: 'The AI service is currently overloaded. Please try again in a few moments.',
-          type: 'service_overload',
-          retryAfter: 30
-        }),
+        'The provider is currently unavailable. Please try again later.',
         {
-          status: 503,
-          headers: { 'Content-Type': 'application/json' }
+          status: 529,
         },
       )
     }
 
     if (isAccessDeniedError) {
       return new Response(
-        JSON.stringify({ 
-          error: 'Invalid API key or access denied. Please check your API key configuration.',
-          type: 'auth_error'
-        }),
+        'Access denied. Please make sure your API key is valid.',
         {
           status: 403,
-          headers: { 'Content-Type': 'application/json' }
         },
       )
     }
 
-    if (isModelError) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'The selected AI model is not available. Please try a different model.',
-          type: 'model_error'
-        }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        },
-      )
-    }
-
-    if (isNetworkError) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Network connection failed. Please check your internet connection and try again.',
-          type: 'network_error'
-        }),
-        {
-          status: 502,
-          headers: { 'Content-Type': 'application/json' }
-        },
-      )
-    }
+    console.error('Error:', error)
 
     return new Response(
-      JSON.stringify({
-        error: 'An unexpected error occurred. Please try again. If the problem persists, try using a different AI model.',
-        type: 'unknown_error',
-        details: error?.message || 'Unknown error'
-      }),
+      'An unexpected error has occurred. Please try again later.',
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
       },
     )
   }
