@@ -61,6 +61,7 @@ export function ChatHistory({
   const [searchQuery, setSearchQuery] = useState('')
   const [editingSession, setEditingSession] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
+  const [deletingSession, setDeletingSession] = useState<ChatSession | null>(null)
 
   const filteredSessions = sessions.filter(session =>
     session.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -107,6 +108,13 @@ export function ChatHistory({
   const startEditing = (session: ChatSession) => {
     setEditingSession(session.sessionId)
     setEditTitle(session.title || '')
+  }
+
+  const handleDeleteConfirm = () => {
+    if (deletingSession) {
+      onSessionDelete(deletingSession.sessionId)
+      setDeletingSession(null)
+    }
   }
 
   const SessionItem = ({ session }: { session: ChatSession }) => {
@@ -178,7 +186,10 @@ export function ChatHistory({
                 <Edit2 className="h-4 w-4 mr-2" />
                 Rename
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onSessionDelete(session.sessionId)}>
+              <DropdownMenuItem 
+                onClick={() => setDeletingSession(session)}
+                className="text-destructive focus:text-destructive"
+              >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
               </DropdownMenuItem>
@@ -294,6 +305,30 @@ export function ChatHistory({
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingSession} onOpenChange={() => setDeletingSession(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Chat Session</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &ldquo;{deletingSession?.title || 'Untitled Chat'}&rdquo;? 
+              This action cannot be undone and will permanently delete all messages in this chat session.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeletingSession(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

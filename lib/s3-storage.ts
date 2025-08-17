@@ -1,4 +1,4 @@
-import { S3Client, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
+import { S3Client, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, HeadObjectCommand } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 
 // S3 Client Configuration
@@ -15,6 +15,12 @@ const S3_BUCKET = process.env.S3_CHAT_BUCKET || 'codinit-chat-storage'
 export interface S3StorageConfig {
   bucket?: string
   region?: string
+}
+
+export interface S3ObjectMetadata {
+  etag?: string
+  lastModified?: Date
+  contentLength?: number
 }
 
 export class S3Storage {
@@ -50,6 +56,54 @@ export class S3Storage {
   }
 
   /**
+   * Upload data to S3 with conditional write using ETag
+   * @param key S3 object key
+   * @param data Data to upload
+   * @param expectedEtag Expected ETag for conditional write (use '*' for if-none-match)
+   * @param contentType Content type of the data
+   * @returns The new ETag of the uploaded object
+   */
+  async uploadObjectConditional(
+    key: string, 
+    data: string | Buffer | Uint8Array, 
+    expectedEtag?: string,
+    contentType = 'application/json'
+  ): Promise<string> {
+    try {
+      const uploadParams: any = {
+        Bucket: this.bucket,
+        Key: key,
+        Body: data,
+        ContentType: contentType,
+        ServerSideEncryption: 'AES256',
+      }
+
+      // Add conditional write parameters
+      if (expectedEtag === '*') {
+        // Only create if object doesn't exist
+        uploadParams.IfNoneMatch = '*'
+      } else if (expectedEtag) {
+        // Only update if ETag matches (object hasn't changed)
+        uploadParams.IfMatch = expectedEtag
+      }
+
+      const upload = new Upload({
+        client: this.client,
+        params: uploadParams,
+      })
+
+      const result = await upload.done()
+      return result.ETag?.replace(/"/g, '') || ''
+    } catch (error: any) {
+      if (error.name === 'PreconditionFailed' || error.statusCode === 412) {
+        throw new Error('Conditional write failed: object has been modified by another process')
+      }
+      console.error('Error uploading to S3:', error)
+      throw new Error(`Failed to upload to S3: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  /**
    * Download data from S3
    */
   async downloadObject(key: string): Promise<string | null> {
@@ -73,6 +127,68 @@ export class S3Storage {
       }
       console.error('Error downloading from S3:', error)
       throw new Error(`Failed to download from S3: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  /**
+   * Download data from S3 with metadata (including ETag)
+   */
+  async downloadObjectWithMetadata(key: string): Promise<{ content: string | null; metadata: S3ObjectMetadata }> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      })
+
+      const response = await this.client.send(command)
+      
+      const metadata: S3ObjectMetadata = {
+        etag: response.ETag?.replace(/"/g, ''),
+        lastModified: response.LastModified,
+        contentLength: response.ContentLength,
+      }
+
+      if (!response.Body) {
+        return { content: null, metadata }
+      }
+
+      const bodyContents = await response.Body.transformToString()
+      return { content: bodyContents, metadata }
+    } catch (error) {
+      if ((error as any)?.name === 'NoSuchKey') {
+        return { 
+          content: null, 
+          metadata: {} 
+        }
+      }
+      console.error('Error downloading from S3:', error)
+      throw new Error(`Failed to download from S3: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  /**
+   * Get object metadata without downloading content
+   */
+  async getObjectMetadata(key: string): Promise<S3ObjectMetadata | null> {
+    try {
+      const command = new HeadObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      })
+
+      const response = await this.client.send(command)
+      
+      return {
+        etag: response.ETag?.replace(/"/g, ''),
+        lastModified: response.LastModified,
+        contentLength: response.ContentLength,
+      }
+    } catch (error) {
+      if ((error as any)?.name === 'NotFound' || (error as any)?.name === 'NoSuchKey') {
+        return null
+      }
+      console.error('Error getting S3 metadata:', error)
+      throw new Error(`Failed to get S3 metadata: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -141,6 +257,18 @@ export class S3Storage {
   }
 
   /**
+   * Upload JSON data to S3 with conditional write
+   * @param key S3 object key
+   * @param data Data to upload as JSON
+   * @param expectedEtag Expected ETag for conditional write
+   * @returns The new ETag of the uploaded object
+   */
+  async uploadJSONConditional(key: string, data: any, expectedEtag?: string): Promise<string> {
+    const jsonString = JSON.stringify(data, null, 2)
+    return await this.uploadObjectConditional(key, jsonString, expectedEtag, 'application/json')
+  }
+
+  /**
    * Download and parse JSON data from S3
    */
   async downloadJSON<T = any>(key: string): Promise<T | null> {
@@ -151,6 +279,25 @@ export class S3Storage {
 
     try {
       return JSON.parse(jsonString) as T
+    } catch (error) {
+      console.error('Error parsing JSON from S3:', error)
+      throw new Error(`Failed to parse JSON from S3: ${error instanceof Error ? error.message : 'Invalid JSON'}`)
+    }
+  }
+
+  /**
+   * Download and parse JSON data from S3 with metadata
+   */
+  async downloadJSONWithMetadata<T = any>(key: string): Promise<{ data: T | null; metadata: S3ObjectMetadata }> {
+    const { content, metadata } = await this.downloadObjectWithMetadata(key)
+    
+    if (!content) {
+      return { data: null, metadata }
+    }
+
+    try {
+      const data = JSON.parse(content) as T
+      return { data, metadata }
     } catch (error) {
       console.error('Error parsing JSON from S3:', error)
       throw new Error(`Failed to parse JSON from S3: ${error instanceof Error ? error.message : 'Invalid JSON'}`)

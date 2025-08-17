@@ -62,7 +62,7 @@ export class ChatPersistence {
       createdAt: now,
       lastActivity: now,
       messageCount: initialMessage ? 1 : 0,
-      title: initialMessage?.content.slice(0, 50) + (initialMessage?.content && initialMessage.content.length > 50 ? '...' : '') || 'New Chat',
+      title: initialMessage ? ChatUtils.generateSessionTitle(initialMessage.content) : 'New Chat',
       model: initialMessage?.model,
       template: initialMessage?.template,
       status: 'active',
@@ -104,20 +104,41 @@ export class ChatPersistence {
       timestamp: now,
     }
 
-    // Get existing messages
     const messagesKey = S3Utils.getUserSessionKey(userId, sessionId)
-    const existingMessages = await s3Storage.downloadJSON<ChatMessage[]>(messagesKey) || []
+    const maxRetries = 3
+    let retryCount = 0
 
-    // Add new message
-    existingMessages.push(newMessage)
+    while (retryCount < maxRetries) {
+      try {
+        // Get existing messages with metadata (including ETag)
+        const { data: existingMessages, metadata } = await s3Storage.downloadJSONWithMetadata<ChatMessage[]>(messagesKey)
+        const messages = existingMessages || []
 
-    // Save updated messages
-    await s3Storage.uploadJSON(messagesKey, existingMessages)
+        // Add new message
+        messages.push(newMessage)
 
-    // Update session metadata
-    await this.updateSessionActivity(userId, sessionId, existingMessages.length)
+        // Atomic update using ETag for optimistic locking
+        await s3Storage.uploadJSONConditional(messagesKey, messages, metadata.etag)
 
-    return newMessage
+        // Update session metadata
+        await this.updateSessionActivity(userId, sessionId, messages.length)
+
+        return newMessage
+      } catch (error: any) {
+        if (error.message.includes('Conditional write failed') && retryCount < maxRetries - 1) {
+          // Retry if conditional write failed (concurrent modification detected)
+          retryCount++
+          // Add exponential backoff to reduce contention
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 100))
+          continue
+        }
+        
+        console.error('Error adding message to session:', error)
+        throw new Error(`Failed to add message: ${error.message}`)
+      }
+    }
+
+    throw new Error('Failed to add message after maximum retries due to concurrent modifications')
   }
 
   /**
@@ -226,22 +247,61 @@ export class ChatPersistence {
 
   /**
    * Search messages across user's sessions
+   * TODO: This implementation should be replaced with database-backed full-text search
+   * Current implementation uses optimizations to reduce S3 API calls but is still not ideal
    */
   static async searchMessages(userId: string, query: string, limit = 50): Promise<{ message: ChatMessage; session: ChatSession }[]> {
-    const sessions = await this.getUserSessions(userId)
+    // Short-circuit for empty queries
+    if (!query.trim()) {
+      return []
+    }
+
+    const sessions = await this.getUserSessions(userId, 100) // Limit sessions to avoid loading too much data
     const results: { message: ChatMessage; session: ChatSession }[] = []
+    const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 0)
 
-    for (const session of sessions) {
-      if (results.length >= limit) break
+    // Process sessions in batches to avoid overwhelming S3
+    const batchSize = 5
+    for (let i = 0; i < sessions.length && results.length < limit; i += batchSize) {
+      const sessionBatch = sessions.slice(i, i + batchSize)
+      
+      // Process batch concurrently but limit concurrent requests
+      const batchPromises = sessionBatch.map(async (session) => {
+        try {
+          // Quick filter: check if session title matches before loading all messages
+          const sessionTitleMatches = searchTerms.some(term => 
+            session.title?.toLowerCase().includes(term)
+          )
+          
+          const messages = await this.getSessionMessages(userId, session.sessionId)
+          
+          // If title matches, prioritize this session's messages
+          const matchingMessages = messages.filter(msg => {
+            const content = msg.content.toLowerCase()
+            return searchTerms.some(term => content.includes(term))
+          })
 
-      const messages = await this.getSessionMessages(userId, session.sessionId)
-      const matchingMessages = messages.filter(msg =>
-        msg.content.toLowerCase().includes(query.toLowerCase())
-      )
+          return matchingMessages.map(message => ({ message, session, titleMatch: sessionTitleMatches }))
+        } catch (error) {
+          console.error(`Error searching session ${session.sessionId}:`, error)
+          return []
+        }
+      })
 
-      for (const message of matchingMessages) {
+      const batchResults = await Promise.all(batchPromises)
+      
+      // Flatten and sort results (title matches first, then by timestamp)
+      const flatResults = batchResults.flat()
+      flatResults.sort((a, b) => {
+        if (a.titleMatch && !b.titleMatch) return -1
+        if (!a.titleMatch && b.titleMatch) return 1
+        return new Date(b.message.timestamp).getTime() - new Date(a.message.timestamp).getTime()
+      })
+
+      // Add to results respecting the limit
+      for (const result of flatResults) {
         if (results.length >= limit) break
-        results.push({ message, session })
+        results.push({ message: result.message, session: result.session })
       }
     }
 

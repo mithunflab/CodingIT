@@ -1,6 +1,6 @@
 {
   "name": "codinit-app",
-  "version": "0.0.37",
+  "version": "0.2.0",
   "private": false,
   "scripts": {
     "postinstall": "patch-package",
