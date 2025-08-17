@@ -11,6 +11,7 @@ export type LLMModel = {
   name: string
   provider: string
   providerId: string
+  isBeta?: boolean
 }
 
 export type LLMModelConfig = {
