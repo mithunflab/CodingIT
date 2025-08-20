@@ -1,9 +1,7 @@
 import { TemplateConfig } from '@/lib/templates';
 import { discussPrompt } from './discuss-prompt';
-import { getFineTunedPrompt } from './new-prompt';
 import optimizedPrompt from './optimized';
 import advancedPrompt from './advanced';
-import { getSystemPrompt } from './prompts';
 
 export type PromptMode = 'discuss' | 'finetuned' | 'optimized' | 'advanced' | 'system';
 
@@ -33,7 +31,14 @@ export function generatePrompt(config: PromptConfig): string {
       return discussPrompt();
     
     case 'finetuned':
-      return getFineTunedPrompt(cwd, supabase, designScheme);
+      return optimizedPrompt({
+        cwd,
+        allowedHtmlElements: [
+          'a', 'b', 'i', 'strong', 'em', 'code', 'pre', 'blockquote', 
+          'ul', 'ol', 'li', 'br', 'hr', 'img'
+        ],
+        supabase,
+      });
     
     case 'optimized':
       return optimizedPrompt({
@@ -58,7 +63,16 @@ export function generatePrompt(config: PromptConfig): string {
       });
     
     case 'system':
-      return getSystemPrompt(cwd, supabase, designScheme, template);
+      return advancedPrompt({
+        cwd,
+        allowedHtmlElements: [
+          'a', 'b', 'i', 'strong', 'em', 'code', 'pre', 'blockquote', 
+          'ul', 'ol', 'li', 'br', 'hr', 'img'
+        ],
+        supabase,
+        userLevel: context?.userLevel || 'expert',
+        projectComplexity: context?.projectComplexity || 'enterprise',
+      });
     
     default:
       // Default to advanced mode for production usage
@@ -129,7 +143,3 @@ export function selectPromptMode(
 }
 
 // Export all the new functionality
-export * from './template-validator';
-export * from './utils';
-export * from './new-prompt';
-export * from './manager';

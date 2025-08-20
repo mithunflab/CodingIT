@@ -26,7 +26,6 @@ import { SetStateAction, useCallback, useEffect, useState } from 'react'
 import { useLocalStorage } from 'usehooks-ts'
 import { useEnhancedChat } from '@/hooks/use-enhanced-chat'
 import { HeroPillSecond } from '@/components/announcement'
-import templatesData from '@/lib/templates'
 
 export default function Home() {
   const supabase = createSupabaseBrowserClient()
@@ -65,7 +64,7 @@ export default function Home() {
     teamID: userTeam?.id,
     model: modelsList.models.find(m => m.id === languageModel.model)!,
     config: languageModel,
-    template: templatesData,
+    template: templates,
   })
 
   const handleChatSelected = async (chatId: string) => {
@@ -87,10 +86,6 @@ export default function Home() {
   )
   const lastMessage = messages[messages.length - 1]
 
-  useEffect(() => {
-    if (lastMessage) {
-    }
-  }, [lastMessage])
 
   const { object, submit, isLoading, stop, error } = useObject({
     api: '/api/chat',
