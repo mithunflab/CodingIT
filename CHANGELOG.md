@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.2.1] - 2025-08-20
+
+### 🧹 Code Cleanup & Optimization
+- **Dead Code Removal**: Comprehensive cleanup of unused components and files
+  - Removed entire unused fragment composer system (`components/fragment-composer/`)
+  - Removed unused fragment library components (`components/fragment-library/`)
+  - Removed legacy prompt management files (`lib/prompts/manager.ts`, `new-prompt.ts`, `prompts.ts`, `template-validator.ts`, `utils.tsx`)
+  - Removed unused design scheme utilities (`lib/design-scheme.ts`)
+  - Removed unused publish action (`app/actions/publish.ts`)
+  - Removed unused Fireworks AI logo asset (`public/thirdparty/logos/fireworksai.svg`)
+  - **Impact**: Eliminated 6,982 lines of dead code across 16 files
+
+### 🚀 Performance Improvements
+- **Bundle Size Reduction**: Significant reduction in application bundle size
+  - Removed unused React components and utilities
+  - Eliminated redundant imports and dependencies
+  - Streamlined codebase architecture for better maintainability
+
+### 🔧 Technical Validation
+- **Build Verification**: Ensured all active code remains functional
+  - All API routes verified as actively used by components
+  - All dependencies confirmed as necessary for current functionality
+  - Successful production build with no breaking changes
+  - Zero impact on existing features and user workflows
+
+---
+
 ## [v0.2.0] - 2025-08-16
 
 ### S3 Chat Storage & MCP Integration
