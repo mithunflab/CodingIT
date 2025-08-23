@@ -87,7 +87,7 @@ In your terminal:
 ```
 git clone https://github.com/Gerome-Elassaad/CodinIT.dev-2.git
 ```
-Replace `Gerome-Elassaad/CodinIT.dev-2.git` with your actual repository details.
+Replace `Gerome-Elassaad/CodingIT.git` with your actual repository details.
 
 ## 🏧 Technology Stack
 
