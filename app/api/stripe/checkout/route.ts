@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (!userTeam?.teams) {
-      return NextResponse.json({ error: 'No default team found' }, { status: 400 })
+      return NextResponse.json({ error: 'Please set up your team first in settings' }, { status: 400 })
     }
 
     const team = userTeam.teams as any

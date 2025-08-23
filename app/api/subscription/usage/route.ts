@@ -23,7 +23,25 @@ export async function GET(request: NextRequest) {
 
     if (teamError || !userTeam?.teams) {
       console.error('Team lookup failed for user:', user.id, teamError)
-      return NextResponse.json({ error: 'No default team found' }, { status: 400 })
+      // Return default free tier limits instead of error
+      return NextResponse.json({
+        subscription: {
+          id: 'default',
+          name: 'Personal',
+          tier: 'free',
+          subscription_status: 'active',
+          cancel_at_period_end: false
+        },
+        usage_limits: [
+          {
+            usage_type: 'api_calls',
+            limit_value: 100,
+            current_usage: 0,
+            period_start: new Date().toISOString(),
+            period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          }
+        ]
+      })
     }
 
     const team = userTeam.teams as any

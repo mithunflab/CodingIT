@@ -52,14 +52,30 @@ export function getModelClient(model: LLMModel, config: LLMModelConfig) {
         apiKey: apiKey || process.env.FIREWORKS_API_KEY,
         baseURL: baseURL || 'https://api.fireworks.ai/inference/v1',
       })(modelNameString),
-    vertex: () =>
-      createVertex({
-        googleAuthOptions: {
-          credentials: JSON.parse(
-            process.env.GOOGLE_VERTEX_CREDENTIALS || '{}',
-          ),
-        },
-      })(modelNameString),
+    vertex: () => {
+      const vertexCredentials = process.env.GOOGLE_VERTEX_CREDENTIALS;
+      
+      // Handle both API key and JSON credentials
+      if (!vertexCredentials) {
+        // Fallback to Google AI SDK if no Vertex credentials
+        return createGoogleGenerativeAI({ 
+          apiKey: apiKey || process.env.GOOGLE_AI_API_KEY 
+        })(modelNameString);
+      }
+      
+      // Try to parse as JSON first (service account credentials)
+      try {
+        const credentials = JSON.parse(vertexCredentials);
+        return createVertex({
+          googleAuthOptions: { credentials },
+        })(modelNameString);
+      } catch {
+        // If not JSON, treat as API key and use Google AI SDK instead
+        return createGoogleGenerativeAI({ 
+          apiKey: vertexCredentials || apiKey || process.env.GOOGLE_AI_API_KEY 
+        })(modelNameString);
+      }
+    },
     xai: () =>
       createOpenAI({
         apiKey: apiKey || process.env.XAI_API_KEY,

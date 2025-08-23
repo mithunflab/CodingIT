@@ -14,6 +14,7 @@ type UserTeam = {
 type AuthContextType = {
   session: Session | null
   userTeam: UserTeam | undefined
+  loading: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -21,10 +22,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authView, setAuthView] = useState<any>('sign_in')
   const [authDialog, setAuthDialog] = useState(false)
-  const { session, userTeam } = useAuth(setAuthDialog, setAuthView)
+  const { session, userTeam, loading } = useAuth(setAuthDialog, setAuthView)
 
   return (
-    <AuthContext.Provider value={{ session, userTeam }}>
+    <AuthContext.Provider value={{ session, userTeam, loading }}>
       {children}
     </AuthContext.Provider>
   )

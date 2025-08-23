@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { evaluateCode } from '@/app/api/chat/codeInterpreter'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: Request) {
   try {
     const { sessionID, code } = await req.json()

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Sandbox, FileType } from '@e2b/code-interpreter'
 import { FileSystemNode } from '@/components/file-tree'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 async function listFilesRecursively(
   sandbox: Sandbox,
   path: string,

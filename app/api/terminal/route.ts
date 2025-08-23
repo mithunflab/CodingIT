@@ -2,6 +2,8 @@ import { Sandbox } from '@e2b/code-interpreter'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const maxDuration = 60
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {

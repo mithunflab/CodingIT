@@ -29,6 +29,7 @@ import { useFeatureFlag, useFeatureValue } from '@/hooks/use-edge-flags'
 import ErrorBoundary, { SettingsSection } from '@/components/error-boundary'
 import { STRIPE_PLANS, formatPrice } from '@/lib/stripe'
 import { useSearchParams } from 'next/navigation'
+import { BillingForm } from '@/components/billing-form'
 
 interface BillingData {
   subscription: {
@@ -199,6 +200,26 @@ function BillingSettingsContent() {
       })
     } finally {
       setIsUpdating(false)
+    }
+  }
+
+  const handleBillingFormSubmit = async (data: any) => {
+    try {
+      const response = await fetch('/api/billing/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update billing information')
+      }
+
+      const result = await response.json()
+      console.log('Billing information updated:', result)
+    } catch (error) {
+      console.error('Error updating billing info:', error)
+      throw error
     }
   }
 
@@ -379,6 +400,17 @@ function BillingSettingsContent() {
           </div>
         </SettingsSection>
       )}
+
+      {/* Billing Information Form */}
+      <SettingsSection
+        title="Billing Details"
+        description="Update your billing information and payment preferences"
+      >
+        <BillingForm
+          onSubmit={handleBillingFormSubmit}
+          isLoading={isLoading}
+        />
+      </SettingsSection>
 
       {/* Support */}
       <ErrorBoundary

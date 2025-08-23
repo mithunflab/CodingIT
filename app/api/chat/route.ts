@@ -11,6 +11,8 @@ import { Templates } from '@/lib/templates'
 import { streamObject, LanguageModel, CoreMessage } from 'ai'
 
 export const maxDuration = 300
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 const rateLimitMaxRequests = process.env.RATE_LIMIT_MAX_REQUESTS
   ? parseInt(process.env.RATE_LIMIT_MAX_REQUESTS)

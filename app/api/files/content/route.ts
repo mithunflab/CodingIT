@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { Sandbox } from '@e2b/code-interpreter'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 const E2B_API_KEY = process.env.E2B_API_KEY
 
 const sandboxTimeout = 10 * 60 * 1000

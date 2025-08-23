@@ -3,6 +3,7 @@ import { ChatPersistence } from '@/lib/chat-persistence'
 import { authenticateUser } from '@/lib/auth-utils'
 
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {

@@ -16,20 +16,37 @@ export interface EdgeConfigFeatureData {
 export class EdgeConfigAdapter {
   private clientKey: string;
   private fallbackAdapter: typeof growthbookAdapter;
+  private cachedData: EdgeConfigFeatureData | null = null;
+  private lastFetch: number = 0;
+  private cacheTimeout: number = 5 * 60 * 1000; // 5 minutes cache
 
   constructor(clientKey: string, fallbackAdapter: typeof growthbookAdapter) {
     this.clientKey = clientKey;
     this.fallbackAdapter = fallbackAdapter;
+    
+    // In development, use longer cache to reduce API calls
+    if (process.env.NODE_ENV === 'development') {
+      this.cacheTimeout = 15 * 60 * 1000; // 15 minutes in development
+    }
   }
 
   /**
    * Get feature flag data from Edge Config with fallback to GrowthBook API
    */
   async getFeatureData(): Promise<EdgeConfigFeatureData | null> {
+    // Check cache first
+    const now = Date.now();
+    if (this.cachedData && (now - this.lastFetch) < this.cacheTimeout) {
+      return this.cachedData;
+    }
+
     // Check if Edge Config is properly configured
     const edgeConfigConnectionString = process.env.EDGE_CONFIG;
     if (!edgeConfigConnectionString || !edgeConfigConnectionString.startsWith('https://')) {
-      console.log('⚠️ Edge Config not configured, using fallback data');
+      // Only log once per cache period to reduce spam
+      if (!this.cachedData || (now - this.lastFetch) >= this.cacheTimeout) {
+        console.log('⚠️ Edge Config not configured, using fallback data');
+      }
       return await this.fallbackToAPI();
     }
 
@@ -38,6 +55,8 @@ export class EdgeConfigAdapter {
       const edgeData = await get(this.clientKey) as EdgeConfigFeatureData;
       
       if (edgeData && edgeData.features) {
+        this.cachedData = edgeData;
+        this.lastFetch = now;
         console.log('✅ Features loaded from Edge Config (cached)', {
           featuresCount: Object.keys(edgeData.features).length,
           dateUpdated: edgeData.dateUpdated
@@ -47,7 +66,9 @@ export class EdgeConfigAdapter {
     } catch (error) {
       // Suppress error logging for invalid connection strings in development
       if (error instanceof Error && error.message.includes('Invalid connection string')) {
-        console.log('⚠️ Edge Config connection string invalid, using fallback');
+        if (!this.cachedData || (now - this.lastFetch) >= this.cacheTimeout) {
+          console.log('⚠️ Edge Config connection string invalid, using fallback');
+        }
       } else {
         console.warn('Edge Config not available, falling back:', error);
       }
@@ -57,12 +78,24 @@ export class EdgeConfigAdapter {
   }
 
   private async fallbackToAPI(): Promise<EdgeConfigFeatureData | null> {
+    // Check cache first
+    const now = Date.now();
+    if (this.cachedData && (now - this.lastFetch) < this.cacheTimeout) {
+      return this.cachedData;
+    }
+
     // Fallback to direct API call or mock data
     try {
       const apiEndpoint = process.env.GROWTHBOOK_API_ENDPOINT;
       if (!apiEndpoint) {
-        console.log('⚠️ GrowthBook API not configured, using mock data');
-        return this.getMockFeatureData();
+        // Only log once per cache period to reduce spam
+        if (!this.cachedData || (now - this.lastFetch) >= this.cacheTimeout) {
+          console.log('⚠️ GrowthBook API not configured, using mock data');
+        }
+        const mockData = this.getMockFeatureData();
+        this.cachedData = mockData;
+        this.lastFetch = now;
+        return mockData;
       }
 
       const response = await fetch(apiEndpoint);
@@ -71,6 +104,9 @@ export class EdgeConfigAdapter {
       }
 
       const apiData = await response.json();
+      this.cachedData = apiData;
+      this.lastFetch = now;
+      
       console.log('📡 Features loaded from GrowthBook API', {
         featuresCount: Object.keys(apiData.features || {}).length,
         dateUpdated: apiData.dateUpdated
@@ -79,7 +115,10 @@ export class EdgeConfigAdapter {
       return apiData;
     } catch (error) {
       console.warn('❌ Failed to fetch from API, using mock data:', error);
-      return this.getMockFeatureData();
+      const mockData = this.getMockFeatureData();
+      this.cachedData = mockData;
+      this.lastFetch = now;
+      return mockData;
     }
   }
 
