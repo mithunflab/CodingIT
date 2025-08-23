@@ -85,7 +85,7 @@
 In your terminal:
 
 ```
-git clone https://github.com/Gerome-Elassaad/CodinIT.dev-2.git
+git clone https://github.com/Gerome-Elassaad/CodingIT.git
 ```
 Replace `Gerome-Elassaad/CodingIT.git` with your actual repository details.
 
