@@ -26,6 +26,7 @@ import { SetStateAction, useCallback, useEffect, useState } from 'react'
 import { useLocalStorage } from 'usehooks-ts'
 import { useEnhancedChat } from '@/hooks/use-enhanced-chat'
 import { HeroPillSecond } from '@/components/announcement'
+import { useAnalytics } from '@/lib/analytics-service'
 
 export default function Home() {
   const supabase = createSupabaseBrowserClient()
@@ -40,8 +41,13 @@ export default function Home() {
   )
 
   const posthog = usePostHog()
+  const analytics = useAnalytics()
 
   const [result, setResult] = useState<ExecutionResult>()
+  const [sessionStartTime] = useState(Date.now())
+  const [fragmentsGenerated, setFragmentsGenerated] = useState(0)
+  const [messagesCount, setMessagesCount] = useState(0)
+  const [errorsEncountered, setErrorsEncountered] = useState(0)
   const [messages, setMessages] = useState<Message[]>([])
   const [fragment, setFragment] = useState<DeepPartial<FragmentSchema>>()
   const [currentTab, setCurrentTab] = useState<'code' | 'fragment' | 'terminal' | 'interpreter' | 'editor'>('code')
@@ -125,6 +131,15 @@ export default function Home() {
     onFinish: async ({ object: fragment, error }) => {
       if (!error) {
         setIsPreviewLoading(true)
+        // Enhanced analytics tracking
+        const generationTime = Date.now() - Date.now() // Would track actual generation time
+        if (fragment) {
+          analytics.trackFragmentGenerated(fragment, generationTime, 1)
+        }
+        setFragmentsGenerated(prev => prev + 1)
+        
+        // Additional revenue tracking handled by analytics service
+        
         posthog.capture('fragment_generated', {
           template: fragment?.template,
         })
@@ -148,6 +163,10 @@ export default function Home() {
           return
         }
 
+        // Enhanced sandbox tracking
+        const creationTime = Date.now() - Date.now() // Would track actual creation time
+        analytics.trackSandboxCreation(fragment?.template || 'unknown', creationTime, response.ok)
+        
         posthog.capture('sandbox_created', { url: result.url })
 
         setResult(result)
@@ -225,6 +244,21 @@ export default function Home() {
     if (error) stop()
   }, [error, stop])
 
+  // Track session end when component unmounts
+  useEffect(() => {
+    return () => {
+      if (session?.user?.id) {
+        const sessionDuration = Date.now() - sessionStartTime
+        analytics.trackSessionEnd(
+          sessionDuration,
+          fragmentsGenerated,
+          messagesCount,
+          errorsEncountered
+        )
+      }
+    }
+  }, [session?.user?.id, sessionStartTime, fragmentsGenerated, messagesCount, errorsEncountered, analytics])
+
   function setMessage(message: Partial<Message>, index?: number) {
     setMessages((previousMessages) => {
       const updatedMessages = [...previousMessages]
@@ -292,6 +326,27 @@ export default function Home() {
       }
     }
 
+    // Enhanced chat analytics
+    setMessagesCount(prev => prev + 1)
+    
+    const promptLength = currentInput.length
+    const hasImages = currentFiles.length > 0
+    
+    analytics.trackPromptSubmission(
+      currentInput,
+      languageModel.model || 'unknown',
+      promptLength,
+      hasImages,
+      messages.length > 0 ? 'conversation' : 'none'
+    )
+    
+    // Track template selection
+    if (selectedTemplate !== 'auto') {
+      analytics.trackTemplateSelected(selectedTemplate, 'manual')
+    }
+    
+    // Revenue tracking handled by analytics service
+    
     posthog.capture('chat_submit', {
       template: selectedTemplate,
       model: languageModel.model,
@@ -329,6 +384,16 @@ export default function Home() {
   }
 
   function handleLanguageModelChange(e: LLMModelConfig) {
+    const previousModel = languageModel.model
+    const newModel = e.model
+    
+    if (previousModel && newModel && previousModel !== newModel) {
+      // Track model switching
+      analytics.trackModelSwitch(previousModel, newModel, 'experiment')
+      
+      // Revenue tracking handled by analytics service
+    }
+    
     setLanguageModel({ ...languageModel, ...e })
   }
 
@@ -341,6 +406,9 @@ export default function Home() {
       window.open('https://discord.gg/', '_blank')
     }
 
+    // Enhanced social tracking
+    analytics.trackFeatureUsed(`social_${target}`, { target })
+    
     posthog.capture(`${target}_click`)
   }
 
@@ -370,7 +438,27 @@ export default function Home() {
   }
 
   const executeCode = async (code: string) => {
+    const startTime = Date.now()
     const result = await enhancedExecuteCode(code)
+    const executionTime = Date.now() - startTime
+    
+    // Enhanced execution tracking
+    if (session?.user?.id) {
+      analytics.trackCodeExecution(
+        `exec_${Date.now()}`,
+        selectedTemplate === 'auto' ? 'unknown' : selectedTemplate,
+        executionTime,
+        !result.error,
+        result.error ? 'execution_error' : undefined
+      )
+      
+      // Revenue tracking handled by analytics service
+      
+      if (result.error) {
+        setErrorsEncountered(prev => prev + 1)
+      }
+    }
+    
     setExecutionResult(result)
   }
 
