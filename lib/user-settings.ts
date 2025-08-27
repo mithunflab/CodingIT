@@ -31,6 +31,7 @@ export interface UserPreferences {
   security_alerts: boolean
   analytics_enabled?: boolean
   data_sharing_enabled?: boolean
+  telemetry_enabled?: boolean
   auto_template?: string
   created_at: string
   updated_at: string
@@ -258,6 +259,7 @@ function getDefaultPreferences(userId: string): UserPreferences {
     security_alerts: true,
     analytics_enabled: true,
     data_sharing_enabled: false,
+    telemetry_enabled: false,
     auto_template: 'nextjs-developer',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -283,6 +285,7 @@ export async function createUserPreferences(userId: string, preferences?: Partia
           security_alerts: preferences?.security_alerts ?? true,
           analytics_enabled: preferences?.analytics_enabled ?? true,
           data_sharing_enabled: preferences?.data_sharing_enabled ?? false,
+          telemetry_enabled: preferences?.telemetry_enabled ?? false,
           auto_template: preferences?.auto_template ?? 'nextjs-developer',
           ...preferences
         })

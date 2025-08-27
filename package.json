@@ -1,6 +1,6 @@
 {
   "name": "codinit-app",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": false,
   "scripts": {
     "dev": "next dev --turbo",

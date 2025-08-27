@@ -30,6 +30,7 @@ interface PrivacySettings {
   data_sharing: boolean
   activity_tracking: boolean
   personalization: boolean
+  telemetry_enabled: boolean
 }
 
 export default function PrivacySettings() {
@@ -41,7 +42,8 @@ export default function PrivacySettings() {
     marketing_emails: false,
     data_sharing: false,
     activity_tracking: true,
-    personalization: true
+    personalization: true,
+    telemetry_enabled: false
   })
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -62,7 +64,8 @@ export default function PrivacySettings() {
             marketing_emails: preferences.marketing_emails ?? false,
             data_sharing: preferences.data_sharing_enabled ?? false,
             activity_tracking: true,
-            personalization: preferences.ai_assistance ?? true
+            personalization: preferences.ai_assistance ?? true,
+            telemetry_enabled: preferences.telemetry_enabled ?? false
           })
         }
       } catch (error) {
@@ -102,6 +105,9 @@ export default function PrivacySettings() {
           updateData.ai_assistance = value
           break
         case 'activity_tracking':
+          break
+        case 'telemetry_enabled':
+          updateData.telemetry_enabled = value
           break
       }
 
@@ -356,6 +362,23 @@ export default function PrivacySettings() {
             <Switch
               checked={privacySettings.personalization}
               onCheckedChange={(checked: boolean) => handleUpdateSetting('personalization', checked)}
+              disabled={isUpdating}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                <h4 className="font-medium">Telemetry</h4>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Help us improve our products and services by sharing anonymous usage data. This data may be sold to third parties.
+              </p>
+            </div>
+            <Switch
+              checked={privacySettings.telemetry_enabled}
+              onCheckedChange={(checked: boolean) => handleUpdateSetting('telemetry_enabled', checked)}
               disabled={isUpdating}
             />
           </div>

@@ -1,5 +1,19 @@
 # Release Notes
 
+## Version 0.2.2 - Telemetry API Refactor 🚀
+
+**Release Date:** August 27, 2025
+
+### 🚀 Enhancements
+
+This release focuses on improving the code quality and maintainability of the telemetry API endpoint.
+
+#### 🛠️ Telemetry API Refactor
+- **Streamlined Authentication**: Implemented the `withAuth` higher-order function to simplify and secure the authentication process.
+- **Improved Type Safety**: Introduced a `TelemetryEvent` type to ensure that the data passed to the API is well-defined and consistent.
+- **Enhanced Error Handling**: Added a `try-catch` block to gracefully handle JSON parsing errors, making the API more robust.
+- **Module Path Correction**: Updated the import paths to use the `@/` alias, resolving any module resolution issues.
+
 ## Version 0.0.40 - Critical Security Updates & Dark Mode Enhancement 🔒
 
 **Release Date:** August 16, 2025

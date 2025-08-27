@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.2.2] - 2025-08-27
+
+### 🚀 Enhancements
+- **Telemetry API**: Refactored the telemetry API endpoint (`app/api/telemetry/route.ts`) to improve code quality and maintainability.
+  - Implemented `withAuth` higher-order function to streamline authentication.
+  - Introduced a specific `TelemetryEvent` type for better type safety.
+  - Added error handling for JSON parsing.
+  - Corrected module import paths to use aliases.
+
 ## [v0.2.1] - 2025-08-20
 
 ### 🧹 Code Cleanup & Optimization

@@ -8,6 +8,8 @@ import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import Script from 'next/script'
 import r from 'react-syntax-highlighter/dist/esm/languages/hljs/r'
+import { telemetryService } from '@/lib/telemetry-service'
+import React from 'react'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://codingit.vercel.app'),
@@ -44,6 +46,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  React.useEffect(() => {
+    telemetryService.track('app_load', {})
+  }, [])
+
   return (
     <html
       lang="en"
