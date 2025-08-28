@@ -72,7 +72,7 @@ export async function POST(req: Request) {
       schema,
       system: toPrompt(template),
       messages,
-      maxRetries: 0, // do not retry on errors
+      maxRetries: 2,
       ...modelParams,
     })
 

@@ -56,13 +56,15 @@ export default function Home() {
   const [isAuthDialogOpen, setAuthDialog] = useState(false)
   const [authView, setAuthView] = useState<ViewType>('sign_in')
   const [isRateLimited, setIsRateLimited] = useState(false)
+  const setAuthDialogCallback = useCallback(setAuthDialog, [])
+  const setAuthViewCallback = useCallback(setAuthView, [])
   const [errorMessage, setErrorMessage] = useState('')
   const [executionResult, setExecutionResult] = useState<ExecutionResult | undefined>(undefined)
   
   const [currentProject, setCurrentProject] = useState<Project | null>(null)
   const [isLoadingProject, setIsLoadingProject] = useState(false)
 
-  const { session, userTeam } = useAuth(setAuthDialog, setAuthView)
+  const { session, userTeam } = useAuth(setAuthDialogCallback, setAuthViewCallback)
 
 
   const { executeCode: enhancedExecuteCode } = useEnhancedChat({
