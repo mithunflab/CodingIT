@@ -61,7 +61,7 @@ export interface UserSecuritySettings {
 
 // Cache to prevent excessive API calls
 let tablesExistCache: { [key: string]: boolean } = {}
-let cacheTime: { [key: string]: number } = {}
+export let cacheTime: { [key: string]: number } = {}
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
 // Check if a table exists with caching

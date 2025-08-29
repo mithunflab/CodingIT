@@ -1,6 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { createSupabaseBrowserClient } from './supabase-browser'
 import { Message } from './messages'
+import { clearSettingsCache } from './user-settings'
 
 // The supabase client will be passed as an argument to functions.
 // A browser client is created here for convenience on the client-side.
@@ -97,6 +98,7 @@ export async function createProject(
   description?: string,
   teamId?: string
 ): Promise<Project | null> {
+  clearSettingsCache()
   return safeApiCall(supabase, async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('User not authenticated')

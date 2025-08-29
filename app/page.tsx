@@ -56,8 +56,13 @@ export default function Home() {
   const [isAuthDialogOpen, setAuthDialog] = useState(false)
   const [authView, setAuthView] = useState<ViewType>('sign_in')
   const [isRateLimited, setIsRateLimited] = useState(false)
-  const setAuthDialogCallback = useCallback(setAuthDialog, [])
-  const setAuthViewCallback = useCallback(setAuthView, [])
+  const setAuthDialogCallback = useCallback((isOpen: boolean) => {
+    setAuthDialog(isOpen)
+  }, [setAuthDialog])
+
+  const setAuthViewCallback = useCallback((view: ViewType) => {
+    setAuthView(view)
+  }, [setAuthView])
   const [errorMessage, setErrorMessage] = useState('')
   const [executionResult, setExecutionResult] = useState<ExecutionResult | undefined>(undefined)
   

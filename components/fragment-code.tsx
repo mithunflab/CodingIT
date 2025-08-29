@@ -85,7 +85,6 @@ export function FragmentCode({
         <CodeView
           code={currentFileContent || ''}
           lang={currentFile.split('.').pop() || ''}
-          onSave={() => {}}
         />
       </div>
     </div>

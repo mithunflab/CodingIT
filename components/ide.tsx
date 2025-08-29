@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { FileTree, FileSystemNode } from '@/components/file-tree'
-import { CodeView } from '@/components/code-view'
+import { CodeEditor } from '@/components/code-editor'
 import { GitHubImport } from '@/components/github-import'
 import { useAuth } from '@/lib/auth'
 import { Button } from './ui/button'
@@ -183,11 +183,11 @@ export function IDE() {
       </div>
       <div className="w-3/4">
         {selectedFile ? (
-          <CodeView
+          <CodeEditor
             key={selectedFile.path}
             code={selectedFile.content}
-            lang="typescript" // TODO: Detect language from file extension
-            onSave={(content) => handleSaveFile(selectedFile.path, content)}
+            lang={selectedFile.path.split('.').pop() || 'typescript'}
+            onChange={(content) => handleSaveFile(selectedFile.path, content || '')}
           />
         ) : (
           <div className="flex items-center justify-center h-full">

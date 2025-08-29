@@ -100,7 +100,7 @@ export function useAuth(
     })
 
     return () => subscription.unsubscribe()
-  }, [recovery, posthog])
+  }, [recovery, posthog, setAuthDialog, setAuthView])
 
   return {
     session,
