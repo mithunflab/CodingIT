@@ -138,7 +138,7 @@ curl http://localhost:3000/api/debug
 
 ### Issue: "401 Unauthorized"
 - **Cause**: Missing or invalid authentication token
-- **Solution**: Set `supabase_access_token` or ensure Supabase auth is working
+- **Solution**: Set `supabase_access_token` by running the "Login with Email" request in the Authentication folder first, or manually set it to your Supabase JWT token
 
 ### Issue: "E2B_API_KEY environment variable not found"
 - **Cause**: Missing E2B API key
